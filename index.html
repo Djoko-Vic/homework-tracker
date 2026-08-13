@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeworkHub — Retro Homework Tracker</title>
+  <meta name="description" content="Retro white themed student homework tracker with image uploads, streak tracking, and role-based login." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ===== APP SHELL ===== -->
+  <div id="app">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">📖</span>
+          <span class="logo-text">HomeworkHub</span>
+        </div>
+        <button id="btn-toggle-sidebar" class="icon-btn" title="Toggle sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Current User Badge in Sidebar -->
+      <div class="user-profile-card" id="user-profile-card">
+        <div class="user-avatar" id="sidebar-user-avatar">🍎</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-user-name">Teacher View</div>
+          <div class="user-role-badge" id="sidebar-user-role">Teacher Admin</div>
+        </div>
+        <button class="icon-btn icon-btn-sm" id="btn-switch-user" title="Switch User / Logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item teacher-only" data-view="students" id="nav-students">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Students</span>
+        </button>
+        <button class="nav-item" data-view="tasks" id="nav-tasks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span id="nav-tasks-label">My Homework</span>
+        </button>
+        <button class="nav-item" data-view="streaks" id="nav-streaks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          <span>Streak Tracker</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-date" id="sidebar-date"></div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main id="main">
+
+      <!-- TOP BAR -->
+      <header id="topbar">
+        <div class="topbar-left">
+          <h1 id="page-title">Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="search-wrap" id="search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="global-search" placeholder="Search tasks or students…" />
+          </div>
+          <button class="btn btn-secondary teacher-only" id="btn-login-modal" title="Switch User">
+            🔑 Switch User
+          </button>
+          <button class="icon-btn teacher-only" id="btn-add-primary" title="Add new">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== VIEWS ===== -->
+      <div id="view-container">
+
+        <!-- DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view active">
+          <div class="welcome-banner" id="welcome-banner">
+            <div class="welcome-text">
+              <h2 id="welcome-heading">Welcome back, Teacher! ✏️</h2>
+              <p id="welcome-subtext">Here is an overview of student assignments and streaks.</p>
+            </div>
+            <div class="welcome-badge" id="welcome-streak-badge">
+              <span class="fire-icon">🔥</span>
+              <div>
+                <strong id="banner-streak-val">0</strong>
+                <small>Day Streak</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-row" id="stats-row"></div>
+          
+          <div class="dashboard-grid">
+            <div class="panel" id="panel-recent-submissions">
+              <div class="panel-header">
+                <h2>📸 Recent Submissions</h2>
+              </div>
+              <div class="panel-body" id="recent-submissions-list"></div>
+            </div>
+            <div class="panel" id="panel-top-streaks">
+              <div class="panel-header">
+                <h2>🔥 Streak Leaderboard</h2>
+              </div>
+              <div class="panel-body" id="top-streaks-list"></div>
+            </div>
+            <div class="panel panel-wide" id="panel-pending">
+              <div class="panel-header">
+                <h2>⏳ Homework Tasks To Do</h2>
+                <span class="badge" id="pending-count-badge">0</span>
+              </div>
+              <div class="panel-body" id="pending-tasks-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- STUDENTS VIEW (TEACHER ONLY) -->
+        <section id="view-students" class="view">
+          <div class="student-toolbar">
+            <input type="text" id="student-search" class="text-input" placeholder="Search students by name or grade…" />
+            <button class="btn btn-primary" id="btn-add-student">+ Add New Student</button>
+          </div>
+          <div class="student-grid" id="student-grid"></div>
+        </section>
+
+        <!-- TASKS VIEW -->
+        <section id="view-tasks" class="view">
+          <div class="tasks-toolbar">
+            <select id="task-filter-student" class="select-input teacher-only">
+              <option value="all">All Students</option>
+            </select>
+            <select id="task-filter-status" class="select-input">
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="submitted">Submitted</option>
+              <option value="approved">Approved</option>
+            </select>
+            <button class="btn btn-primary teacher-only" id="btn-add-task">+ Create Assignment</button>
+          </div>
+          <div class="tasks-list" id="tasks-list"></div>
+        </section>
+
+        <!-- STREAKS VIEW -->
+        <section id="view-streaks" class="view">
+          <div class="streaks-grid" id="streaks-grid"></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- LOGIN / ROLE SWITCHER MODAL -->
+  <div class="modal-overlay" id="modal-login">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3>🔒 Select Account / Role</h3>
+        <button class="modal-close" data-modal="modal-login">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-intro-text">Choose whether you are logging in as a Teacher or a Student:</p>
+        
+        <div class="role-selector">
+          <button class="role-card active" id="role-btn-teacher" onclick="selectLoginRole('teacher')">
+            <div class="role-icon">👩‍🏫</div>
+            <div class="role-title">Teacher Portal</div>
+            <div class="role-desc">Full access: assign tasks, review & approve images, manage students</div>
+          </button>
+          
+          <button class="role-card" id="role-btn-student" onclick="selectLoginRole('student')">
+            <div class="role-icon">🎒</div>
+            <div class="role-title">Student Portal</div>
+            <div class="role-desc">Upload homework photos, view assigned tasks & streak progress</div>
+          </button>
+        </div>
+
+        <!-- Student selector dropdown (shown when Student role selected) -->
+        <div id="student-login-select-wrap" class="form-group hidden" style="margin-top: 16px;">
+          <label>Select Student Name:</label>
+          <select id="login-student-select" class="select-input" style="width: 100%; margin-top: 6px;"></select>
+          
+          <div class="form-group" style="margin-top: 12px;">
+            <label>PIN (Optional / Default: 1234):</label>
+            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN (e.g. 1234)" value="1234" />
+          </div>
+        </div>
+
+        <div id="teacher-login-pass-wrap" class="form-group" style="margin-top: 16px;">
+          <label>Teacher Password (Default: admin):</label>
+          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password" value="admin" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-modal="modal-login">Cancel</button>
+        <button class="btn btn-primary" id="btn-do-login">Login Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Student Modal -->
+  <div class="modal-overlay" id="modal-student">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-student-title">Add Student</h3>
+        <button class="modal-close" data-modal="modal-student">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Student Name</label>
+          <input type="text" id="input-student-name" class="text-input" placeholder="e.g. Sarah Johnson" />
+        </div>
+        <div class="form-group">
+          <label>Grade / Level</label>
+          <input type="text" id="input-student-grade" class="text-input" placeholder="e.g. Grade 5 English" />
+        </div>
+        <div class="form-group">
+          <label>Student Login PIN</label>
+          <input type="text" id="input-student-passcode" class="text-input" placeholder="4-digit PIN (default 1234)" value="1234" />
+        </div>
+        <div class="form-group">
+          <label>Avatar Color</label>
+          <div class="color-picker" id="color-picker"></div>
+        </div>
+        <input type="hidden" id="input-student-id" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-modal="modal-student">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-student">Save Student</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Task Modal -->
+  <div class="modal-overlay" id="modal-task">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-task-title">Add Task</h3>
+        <button class="modal-close" data-modal="modal-task">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Task Title</label>
+          <input type="text" id="input-task-title" class="text-input" placeholder="e.g. Grammar Unit 4 Exercises" />
+        </div>
+        <div class="form-group">
+          <label>Description & Instructions</label>
+          <textarea id="input-task-desc" class="text-input textarea" placeholder="Instructions for student (e.g. Take a clear photo of page 42)..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Assign To</label>
+          <select id="input-task-student" class="select-input"></select>
+        </div>
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" id="input-task-due" class="text-input" />
+        </div>
+        <input type="hidden" id="input-task-id" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-modal="modal-task">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-task">Save Assignment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Detail / Upload Modal -->
+  <div class="modal-overlay" id="modal-student-detail">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div class="modal-student-info" id="modal-student-info"></div>
+        <button class="modal-close" data-modal="modal-student-detail">✕</button>
+      </div>
+      <div class="modal-body" id="modal-student-tasks"></div>
+    </div>
+  </div>
+
+  <!-- Image Viewer Modal -->
+  <div class="modal-overlay" id="modal-image-viewer">
+    <div class="modal modal-img">
+      <button class="modal-close modal-close-img" data-modal="modal-image-viewer">✕</button>
+      <img id="viewer-img" src="" alt="Submission" />
+      <div class="viewer-caption" id="viewer-caption"></div>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>Confirm Delete</h3>
+        <button class="modal-close" data-modal="modal-confirm">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message">Are you sure you want to delete this item?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-modal="modal-confirm">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-delete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
