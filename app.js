@@ -697,22 +697,38 @@ function hasSubmissionToday(task) {
 }
 
 function getTaskStatus(task) {
-  // Daily recurring: resets each day — approved only persists until midnight
+  // Daily recurring: resets each day
   if (task.isRecurring) {
-    if (hasSubmissionToday(task)) return 'submitted';
+    if (task.status === 'approved' && task.approvedAt) {
+      const approvedDay = new Date(task.approvedAt).toDateString();
+      if (approvedDay === new Date().toDateString()) return 'approved';
+    }
+    if (hasSubmissionToday(task)) {
+      // Has photos today but not yet submitted
+      if (task.status !== 'submitted' && task.status !== 'approved') return 'draft';
+      return task.status;
+    }
     return 'pending';
   }
   if (task.status === 'approved') return 'approved';
-  if (task.submissions && task.submissions.length > 0) return 'submitted';
+  if (task.status === 'submitted') return 'submitted';
+  // Has photos but student hasn’t clicked Submit yet
+  if (task.submissions && task.submissions.length > 0) return 'draft';
   if (isOverdue(task.dueDate)) return 'overdue';
   return 'pending';
 }
 
 function getStatusLabel(task) {
   const s = getTaskStatus(task);
-  const labels = { approved: 'Approved', submitted: 'Submitted', pending: 'Pending', overdue: 'Overdue' };
+  const labels = {
+    approved: '✅ Đã duyệt',
+    submitted: '📨 Đã nộp',
+    draft:    '📷 Chưa nộp',
+    pending:  '⏳ Chưa làm',
+    overdue:  '⚠️ Quá hạn',
+  };
   const recurBadge = task.isRecurring ? '<span class="badge-recurring">🔁 Hàng ngày</span> ' : '';
-  return `${recurBadge}<span class="status-pill status-${s}">${labels[s]}</span>`;
+  return `${recurBadge}<span class="status-pill status-${s}">${labels[s] || s}</span>`;
 }
 
 function renderTaskCard(task) {
@@ -720,6 +736,8 @@ function renderTaskCard(task) {
   const status = getTaskStatus(task);
   const subs = task.submissions || [];
   const isT = isTeacher();
+  const canUpload = !isT && status !== 'approved' && status !== 'submitted';
+  const canSubmit = !isT && status === 'draft' && subs.length > 0;
 
   return `
     <div class="task-card" id="task-card-${task.id}">
@@ -730,30 +748,32 @@ function renderTaskCard(task) {
             ${escHtml(task.title)}
           </div>
           <div class="task-card-meta">
-            ${student ? `<span>Student: <strong>${escHtml(student.name)}</strong></span>` : ''}
-            ${task.dueDate ? `<span>Due: ${formatDate(task.dueDate)}</span>` : ''}
-            <span>${subs.length} photo${subs.length !== 1 ? 's' : ''} uploaded</span>
+            ${student ? `<span>Học sinh: <strong>${escHtml(student.name)}</strong></span>` : ''}
+            ${task.dueDate ? `<span>Hạn: ${formatDate(task.dueDate)}</span>` : ''}
+            <span>${subs.length} ảnh đã chụp</span>
           </div>
         </div>
         <div class="task-card-actions">
-          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">Approve Homework</button>` : ''}
-          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>Approved</button>` : ''}
+          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">Duyệt bài</button>` : ''}
+          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>Đã duyệt ✅</button>` : ''}
           ${isT ? `
-          <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Delete</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Sửa</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Xóa</button>` : ''}
         </div>
       </div>
       <div class="task-card-body">
         ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
         ${task.isRecurring ? `<div class="recurring-info">🔁 Task này lặp lại mỗi ngày — học sinh phải nộp ảnh mới mỗi ngày.</div>` : ''}
-        ${status !== 'approved' ? `
+        ${isT && status === 'pending' ? `<div class="teacher-waiting-note">⏳ Học sinh chưa upload ảnh bài tập.</div>` : ''}
+        ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">📷 Học sinh đã upload ảnh nhưng chưa nộp chính thức.</div>` : ''}
+        ${canUpload ? `
         <div class="upload-zone" id="drop-${task.id}"
           onclick="openUploadConfirm('${task.id}')"
           ondragover="handleDragOver(event,'${task.id}')"
           ondragleave="handleDragLeave(event,'${task.id}')"
           ondrop="handleDrop(event,'${task.id}')">
-          <div>📸 Upload Homework Photo</div>
-          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">Click để xác nhận và upload ảnh bài tập</div>
+          <div>📸 Chụp ảnh bài tập</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Thêm ảnh nữa hoặc nộp bài bên dưới' : 'Click hoặc kéo thả ảnh vào đây'}</div>
           <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
         </div>` : ''}
         ${subs.length > 0 ? `
@@ -761,10 +781,17 @@ function renderTaskCard(task) {
           ${subs.map((sub, idx) => `
             <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)}')">
               <img src="${sub.data}" alt="Submission ${idx + 1}" />
-              ${status !== 'approved' ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${idx})">✕</button>` : ''}
+              ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${idx})">✕</button>` : ''}
             </div>
           `).join('')}
         </div>` : ''}
+        ${canSubmit ? `
+        <div class="submit-homework-bar">
+          <div class="submit-homework-hint">📌 Kiểm tra lại ảnh rồi bấm nộp bài</div>
+          <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">📨 Nộp bài cho giáo viên</button>
+        </div>` : ''}
+        ${!isT && status === 'submitted' ? `<div class="submitted-notice">📨 Bài đã được nộp — đợi giáo viên duyệt!</div>` : ''}
+        ${!isT && status === 'approved' ? `<div class="approved-notice">✅ Bài đã được duyệt! Chúc mừng 🎉</div>` : ''}
       </div>
     </div>
   `;
@@ -887,7 +914,7 @@ function openStudentDetail(studentId) {
             ${subs.map((sub, idx) => `
               <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)}')">
                 <img src="${sub.data}" alt="Submission ${idx + 1}" />
-                ${status !== 'approved' ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${idx});refreshStudentDetail('${studentId}')">✕</button>` : ''}
+                ${status !== 'approved' ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${idx});refreshStudentDetail('${studentId}')">✕</button>` : ''}}
               </div>
             `).join('')}
           </div>` : ''}
@@ -918,14 +945,8 @@ function openStudentDetailForTask(studentId) {
 
 // ── UPLOAD CONFIRMATION ────────────────────────────────────
 function openUploadConfirm(taskId, studentDetailId = null) {
-  if (isTeacher()) {
-    // Teachers can upload directly without confirmation
-    const inputId = studentDetailId ? `modal-fi-${taskId}` : `file-input-${taskId}`;
-    const fi = document.getElementById(inputId);
-    if (fi) fi.click();
-    return;
-  }
-  // Students must confirm first
+  // Students must confirm first — teachers cannot upload
+  if (isTeacher()) return;
   pendingUploadTaskId = { taskId, studentDetailId };
   const task = state.tasks.find(t => t.id === taskId);
   document.getElementById('upload-confirm-task-name').textContent = task ? task.title : 'this task';
@@ -984,7 +1005,7 @@ async function processFiles(files, taskId) {
       if (loaded === files.length) {
         saveState();
         renderView(currentView);
-        toast(`Homework image uploaded!`, 'success');
+        toast(`Đã thêm ${files.length} ảnh! Bấm "Nộp bài" để gửi cho giáo viên.`, 'info');
       }
     };
     reader.readAsDataURL(file);
@@ -1006,7 +1027,7 @@ async function removeSubmission(event, taskId, idx) {
 
   saveState();
   renderView(currentView);
-  toast('Image deleted.', 'info');
+  toast('Đã xóa ảnh.', 'info');
 }
 
 function handleDragOver(event, id) {
@@ -1024,6 +1045,29 @@ function handleDrop(event, taskId) {
   if (el) el.classList.remove('drag-over');
   const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
   if (files.length) processFiles(files, taskId);
+}
+
+// ── SUBMIT HOMEWORK (Student official submission) ──────────
+function submitHomework(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task || !task.submissions || task.submissions.length === 0) {
+    toast('Vui lòng upload ảnh trước khi nộp bài!', 'error');
+    return;
+  }
+  if (isTeacher()) return;
+
+  task.status = 'submitted';
+  task.submittedAt = new Date().toISOString();
+
+  if (isCloudEnabled && supabaseClient) {
+    supabaseClient.from('tasks').update({ status: 'submitted' }).eq('id', task.id)
+      .then(({ error }) => { if (error) console.warn('Cloud submit error:', error); });
+  }
+
+  saveState();
+  closeModal('modal-student-detail');
+  renderView(currentView);
+  toast('📨 Bài đã được nộp cho giáo viên! Hãy đợi duyệt.', 'success');
 }
 
 // ── APPROVE TASK ───────────────────────────────────────────

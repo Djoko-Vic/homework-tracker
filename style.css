@@ -641,3 +641,82 @@ html, body {
   margin-bottom: 10px;
 }
 
+/* ── SUBMIT HOMEWORK BAR ── */
+.submit-homework-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--terracotta-dim), rgba(217,107,67,0.06));
+  border: 1.5px solid rgba(217,107,67,0.3);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.submit-homework-hint {
+  font-size: 12px;
+  color: var(--terracotta);
+  font-weight: 600;
+}
+.btn-submit-homework {
+  background: var(--terracotta);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn-submit-homework:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-submit-homework:active { transform: translateY(0); }
+
+/* ── STATUS NOTICE BOXES ── */
+.submitted-notice {
+  background: rgba(61,90,128,0.08);
+  border: 1px solid rgba(61,90,128,0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--denim);
+  margin-top: 10px;
+  text-align: center;
+}
+.approved-notice {
+  background: rgba(74,124,89,0.1);
+  border: 1px solid rgba(74,124,89,0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sage);
+  margin-top: 10px;
+  text-align: center;
+}
+.teacher-waiting-note {
+  background: var(--bg3);
+  border: 1px dashed var(--border-h);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.draft-note {
+  background: rgba(217,155,38,0.08);
+  border-color: rgba(217,155,38,0.3);
+  color: var(--mustard);
+}
+
+/* ── DRAFT STATUS PILL ── */
+.status-draft {
+  background: rgba(217,155,38,0.15);
+  color: var(--mustard);
+  border: 1px solid rgba(217,155,38,0.3);
+}
