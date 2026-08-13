@@ -1185,6 +1185,23 @@ function confirmDeleteStudent(id) {
   openModal('modal-confirm');
 }
 
+// ── RECURRING TOGGLE (JS-driven) ───────────────────────────
+function toggleRecurringUI() {
+  const hidden = document.getElementById('input-task-recurring');
+  const visual = document.getElementById('toggle-switch-visual');
+  if (!hidden) return;
+  const newVal = hidden.value !== 'true';
+  hidden.value = String(newVal);
+  if (visual) visual.classList.toggle('active', newVal);
+}
+
+function setRecurringUI(val) {
+  const hidden = document.getElementById('input-task-recurring');
+  const visual = document.getElementById('toggle-switch-visual');
+  if (hidden) hidden.value = String(!!val);
+  if (visual) visual.classList.toggle('active', !!val);
+}
+
 // ── ADD / EDIT TASK ────────────────────────────────────────
 function openAddTask() {
   const sel = document.getElementById('input-task-student');
@@ -1195,8 +1212,7 @@ function openAddTask() {
   document.getElementById('input-task-desc').value = '';
   document.getElementById('input-task-id').value = '';
   document.getElementById('input-task-due').value = '';
-  const recurChk = document.getElementById('input-task-recurring');
-  if (recurChk) recurChk.checked = false;
+  setRecurringUI(false);
   openModal('modal-task');
 }
 
