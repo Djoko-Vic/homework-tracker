@@ -569,29 +569,21 @@ html, body {
   .dashboard-grid { grid-template-columns: 1fr; }
 }
 
-/* ── TOGGLE SWITCH (Recurring Daily Task) ── */
+/* ── TOGGLE SWITCH (JS-driven, Recurring Daily Task) ── */
 .toggle-label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
   font-weight: 600;
   font-size: 13px;
   color: var(--text);
+  padding: 6px 0;
 }
-/* Visually hidden but still functional for :checked state */
-.toggle-checkbox {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  margin: 0;
-  pointer-events: none;
-}
-.toggle-switch {
+.toggle-switch-js {
   position: relative;
-  width: 44px;
+  width: 46px;
   height: 26px;
   background: var(--border);
   border-radius: 99px;
@@ -599,7 +591,7 @@ html, body {
   transition: background 0.2s;
   cursor: pointer;
 }
-.toggle-switch::after {
+.toggle-switch-js::after {
   content: '';
   position: absolute;
   top: 4px;
@@ -608,14 +600,14 @@ html, body {
   height: 18px;
   background: #fff;
   border-radius: 50%;
-  transition: transform 0.2s;
+  transition: transform 0.22s cubic-bezier(.4,0,.2,1);
   box-shadow: 0 1px 4px rgba(0,0,0,0.22);
 }
-.toggle-checkbox:checked + .toggle-switch {
+.toggle-switch-js.active {
   background: var(--terracotta);
 }
-.toggle-checkbox:checked + .toggle-switch::after {
-  transform: translateX(18px);
+.toggle-switch-js.active::after {
+  transform: translateX(20px);
 }
 .toggle-desc {
   font-weight: 400;

@@ -1216,8 +1216,7 @@ function editTask(id) {
   document.getElementById('input-task-student').value = task.studentId;
   document.getElementById('input-task-due').value = task.dueDate || '';
   document.getElementById('input-task-id').value = task.id;
-  const recurChk = document.getElementById('input-task-recurring');
-  if (recurChk) recurChk.checked = !!task.isRecurring;
+  setRecurringUI(!!task.isRecurring);
   openModal('modal-task');
 }
 
@@ -1227,8 +1226,8 @@ async function saveTask() {
   const studentId = document.getElementById('input-task-student').value;
   const dueDate = document.getElementById('input-task-due').value;
   const id = document.getElementById('input-task-id').value;
-  const recurChk = document.getElementById('input-task-recurring');
-  const isRecurring = recurChk ? recurChk.checked : false;
+  const recurEl = document.getElementById('input-task-recurring');
+  const isRecurring = recurEl ? (recurEl.value === 'true' || recurEl.checked === true) : false;
   if (!title) { toast('Please enter a task title.', 'error'); return; }
   if (!studentId) { toast('Please select a student.', 'error'); return; }
 

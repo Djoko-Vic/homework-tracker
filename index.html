@@ -286,11 +286,11 @@
           <input type="date" id="input-task-due" class="text-input" />
         </div>
         <div class="form-group">
-          <label class="toggle-label">
-            <input type="checkbox" id="input-task-recurring" class="toggle-checkbox" />
-            <span class="toggle-switch"></span>
+          <div class="toggle-label" id="recurring-toggle-wrap" onclick="toggleRecurringUI()">
+            <div class="toggle-switch-js" id="toggle-switch-visual"></div>
             <span class="toggle-text">🔁 Lặp lại hàng ngày <span class="toggle-desc">(Học sinh phải nộp ảnh mới mỗi ngày)</span></span>
-          </label>
+          </div>
+          <input type="hidden" id="input-task-recurring" value="false" />
         </div>
         <input type="hidden" id="input-task-id" />
       </div>
