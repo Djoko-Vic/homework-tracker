@@ -63,7 +63,8 @@ function loadState() {
       const parsed = JSON.parse(raw);
       state.students = parsed.students || [];
       state.tasks = parsed.tasks || [];
-      state.currentUser = parsed.currentUser || null;
+      // Always require manual login on every page load
+      state.currentUser = null;
     } catch (e) {
       console.warn('Failed to parse state:', e);
       state = { students: [], tasks: [], currentUser: null };
