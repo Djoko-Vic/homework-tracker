@@ -1,11 +1,10 @@
 /* =========================================================
-   HomeworkHub — app.js (Retro White & Role-Based Auth)
-   Supports Teacher View vs Student View with PIN Auth
+   HomeworkHub — app.js (Montserrat & Text-Only Sidebar)
    ========================================================= */
 
 'use strict';
 
-const STORAGE_KEY = 'homeworkhub_retro_v3';
+const STORAGE_KEY = 'homeworkhub_retro_v4';
 const AVATAR_COLORS = [
   '#d96b43', '#4a7c59', '#d99b26', '#3d5a80',
   '#6b5b95', '#c94a53', '#2a9d8f', '#e76f51',
@@ -196,42 +195,43 @@ function updateRoleUI() {
   const roleEl = document.getElementById('sidebar-user-role');
 
   if (isT) {
-    avatarEl.textContent = '👩‍🏫';
+    avatarEl.textContent = 'T';
+    avatarEl.style.background = 'var(--terracotta-dim)';
     nameEl.textContent = 'Teacher View';
-    roleEl.textContent = 'Admin / Teacher';
+    roleEl.textContent = 'Teacher Admin';
   } else {
     const s = state.students.find(st => st.id === user.studentId);
-    avatarEl.textContent = s ? initials(s.name) : '🎒';
-    if (s) avatarEl.style.background = s.color;
+    avatarEl.textContent = s ? initials(s.name) : 'S';
+    if (s) avatarEl.style.background = s.color || 'var(--denim)';
     nameEl.textContent = s ? s.name : 'Student View';
     roleEl.textContent = s ? (s.grade || 'Student') : 'Student Portal';
   }
 
-  // Teacher-only element visibility
+  // Teacher-only elements
   document.querySelectorAll('.teacher-only').forEach(el => {
     if (isT) el.classList.remove('teacher-only-hide');
     else el.classList.add('teacher-only-hide');
   });
 
-  // Tasks navigation label
+  // Nav tasks label
   const navTasksLabel = document.getElementById('nav-tasks-label');
   if (navTasksLabel) {
-    navTasksLabel.textContent = isT ? 'All Assignments' : 'My Homework';
+    navTasksLabel.textContent = isT ? 'Assignments' : 'My Homework';
   }
 
-  // Welcome banner text
+  // Welcome banner
   const heading = document.getElementById('welcome-heading');
   const subtext = document.getElementById('welcome-subtext');
   const bannerStreak = document.getElementById('banner-streak-val');
 
   if (isT) {
-    heading.textContent = 'Welcome back, Teacher! ✏️';
+    heading.textContent = 'Welcome back, Teacher!';
     subtext.textContent = 'Overview of all student assignments, homework uploads, and streaks.';
     const maxStreak = Math.max(0, ...state.students.map(s => getStudentStreak(s.id).streak));
     bannerStreak.textContent = maxStreak;
   } else {
     const s = state.students.find(st => st.id === user.studentId);
-    heading.textContent = `Welcome back, ${s ? s.name : 'Student'}! 🎒`;
+    heading.textContent = `Welcome back, ${s ? s.name : 'Student'}!`;
     subtext.textContent = 'Here are your homework assignments to complete and upload images for.';
     const streak = s ? getStudentStreak(s.id).streak : 0;
     bannerStreak.textContent = streak;
@@ -249,7 +249,6 @@ function selectLoginRole(role) {
   if (role === 'student') {
     studentWrap.classList.remove('hidden');
     teacherWrap.classList.add('hidden');
-    // Populate dropdown
     const select = document.getElementById('login-student-select');
     select.innerHTML = state.students.map(s => `<option value="${s.id}">${escHtml(s.name)} (${escHtml(s.grade || 'Student')})</option>`).join('');
   } else {
@@ -262,14 +261,14 @@ function handleDoLogin() {
   if (selectedRoleInModal === 'teacher') {
     const pass = document.getElementById('input-teacher-pass').value;
     if (pass !== 'admin' && pass.trim() !== '') {
-      // Allow flexible login for demo
+      // Flexible login for demo
     }
     state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
     saveState();
     updateRoleUI();
     closeModal('modal-login');
     renderView(currentView);
-    toast('Logged in as Teacher Admin! 👩‍🏫', 'success');
+    toast('Logged in as Teacher Admin!', 'success');
   } else {
     const select = document.getElementById('login-student-select');
     const studentId = select.value;
@@ -278,7 +277,6 @@ function handleDoLogin() {
     const student = state.students.find(s => s.id === studentId);
     const pin = document.getElementById('input-student-pin').value.trim();
     
-    // Check PIN if set
     if (student.pin && pin !== student.pin && pin !== '1234') {
       toast('Incorrect PIN passcode.', 'error');
       return;
@@ -289,7 +287,7 @@ function handleDoLogin() {
     updateRoleUI();
     closeModal('modal-login');
     renderView(currentView);
-    toast(`Welcome, ${student ? student.name : 'Student'}! 🎒`, 'success');
+    toast(`Welcome, ${student ? student.name : 'Student'}!`, 'success');
   }
 }
 
@@ -303,7 +301,9 @@ function navigateTo(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`view-${view}`).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelector(`.nav-item[data-view="${view}"]`).classList.add('active');
+  const activeNavBtn = document.querySelector(`.nav-item[data-view="${view}"]`);
+  if (activeNavBtn) activeNavBtn.classList.add('active');
+
   document.getElementById('page-title').textContent =
     { dashboard: 'Dashboard', students: 'Manage Students', tasks: isTeacher() ? 'Assignments' : 'My Tasks', streaks: 'Streak Tracker' }[view];
   renderView(view);
@@ -329,7 +329,7 @@ function renderStats() {
   const isT = isTeacher();
   const currentStudentId = state.currentUser.studentId;
 
-  let totalTasks, submitted, approved, streakVal;
+  let totalTasks, submitted, approved;
 
   if (isT) {
     const totalStudents = state.students.length;
@@ -340,8 +340,8 @@ function renderStats() {
     const stats = [
       { icon: '👥', label: 'Total Students', value: totalStudents, color: 'var(--violet)', bg: 'var(--violet-dim)' },
       { icon: '📖', label: 'Assigned Tasks', value: totalTasks, color: 'var(--denim)', bg: 'var(--denim-dim)' },
-      { icon: '📸', label: 'Uploaded Submissions', value: submitted, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
-      { icon: '✅', label: 'Approved Tasks', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
+      { icon: '📸', label: 'Submissions', value: submitted, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
+      { icon: '✅', label: 'Approved', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
     ];
     document.getElementById('stats-row').innerHTML = stats.map(s => `
       <div class="stat-card">
@@ -419,12 +419,7 @@ function renderTopStreaks() {
   let studentStreaks = state.students.map(s => ({
     student: s,
     ...getStudentStreak(s.id),
-  })).sort((a, b) => b.streak - a.streak);
-
-  if (!isT) {
-    // Show top 3 plus current student highlight
-  }
-  studentStreaks = studentStreaks.slice(0, 5);
+  })).sort((a, b) => b.streak - a.streak).slice(0, 5);
 
   const el = document.getElementById('top-streaks-list');
   if (!studentStreaks.length) {
@@ -471,7 +466,7 @@ function renderPendingTasks() {
   }).join('');
 }
 
-// ── STUDENTS VIEW (TEACHER ONLY) ───────────────────────────
+// ── STUDENTS VIEW ──────────────────────────────────────────
 function renderStudents(filter = '') {
   const search = (filter || document.getElementById('student-search').value || '').toLowerCase();
   const filtered = state.students.filter(s => s.name.toLowerCase().includes(search) || (s.grade && s.grade.toLowerCase().includes(search)));
@@ -493,7 +488,6 @@ function renderStudents(filter = '') {
     const progress = stats.total > 0 ? Math.round((stats.submitted / stats.total) * 100) : 0;
     return `
       <div class="student-card" onclick="openStudentDetail('${student.id}')">
-        <style>#student-card-${student.id}::before { background: ${student.color}; }</style>
         <div class="student-card-header">
           <div class="student-avatar" style="background:${student.color}">${initials(student.name)}</div>
           <div>
@@ -519,9 +513,9 @@ function renderStudents(filter = '') {
           </div>
         </div>
         <div class="student-card-actions" onclick="event.stopPropagation()">
-          <button class="btn btn-ghost btn-sm" onclick="openStudentDetail('${student.id}')">📋 Tasks</button>
-          <button class="btn btn-ghost btn-sm" onclick="editStudent('${student.id}')">✏️ Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteStudent('${student.id}')">🗑️</button>
+          <button class="btn btn-ghost btn-sm" onclick="openStudentDetail('${student.id}')">Tasks</button>
+          <button class="btn btn-ghost btn-sm" onclick="editStudent('${student.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteStudent('${student.id}')">Delete</button>
         </div>
       </div>
     `;
@@ -582,7 +576,7 @@ function getTaskStatus(task) {
 
 function getStatusLabel(task) {
   const s = getTaskStatus(task);
-  const labels = { approved: '✅ Approved', submitted: '📤 Submitted', pending: '⏳ Pending', overdue: '⚠️ Overdue' };
+  const labels = { approved: 'Approved', submitted: 'Submitted', pending: 'Pending', overdue: 'Overdue' };
   return `<span class="status-pill status-${s}">${labels[s]}</span>`;
 }
 
@@ -601,21 +595,17 @@ function renderTaskCard(task) {
             ${escHtml(task.title)}
           </div>
           <div class="task-card-meta">
-            ${student ? `<span>👤 Student: <strong>${escHtml(student.name)}</strong></span>` : ''}
-            ${task.dueDate ? `<span>📅 Due: ${formatDate(task.dueDate)}</span>` : ''}
-            <span>🖼️ ${subs.length} image${subs.length !== 1 ? 's' : ''} uploaded</span>
+            ${student ? `<span>Student: <strong>${escHtml(student.name)}</strong></span>` : ''}
+            ${task.dueDate ? `<span>Due: ${formatDate(task.dueDate)}</span>` : ''}
+            <span>${subs.length} photo${subs.length !== 1 ? 's' : ''} uploaded</span>
           </div>
         </div>
         <div class="task-card-actions">
-          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">✅ Approve Homework</button>` : ''}
-          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>✅ Approved</button>` : ''}
+          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">Approve Homework</button>` : ''}
+          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>Approved</button>` : ''}
           ${isT ? `
-          <button class="icon-btn" title="Edit" onclick="editTask('${task.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <button class="icon-btn" title="Delete" onclick="confirmDeleteTask('${task.id}')" style="color:var(--rose)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          </button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Delete</button>` : ''}
         </div>
       </div>
       <div class="task-card-body">
@@ -626,8 +616,8 @@ function renderTaskCard(task) {
           ondragover="handleDragOver(event,'${task.id}')"
           ondragleave="handleDragLeave(event,'${task.id}')"
           ondrop="handleDrop(event,'${task.id}')">
-          <div style="font-size:24px;margin-bottom:4px">📸 Upload Homework Image</div>
-          <div>Click or drag photos of your finished homework here</div>
+          <div>📸 Upload Homework Photo</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">Click or drop photos here</div>
           <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
         </div>` : ''}
         ${subs.length > 0 ? `
@@ -703,7 +693,7 @@ function renderStreaks() {
         </div>
 
         <div>
-          <div class="calendar-label" style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;">Last 30 Days</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;">Last 30 Days</div>
           <div class="calendar-grid">${calHtml}</div>
         </div>
       </div>
@@ -724,7 +714,7 @@ function openStudentDetail(studentId) {
     <div class="student-avatar" style="background:${student.color}">${initials(student.name)}</div>
     <div>
       <strong>${escHtml(student.name)}</strong>
-      <span style="color:var(--text-2);font-size:12px">${escHtml(student.grade || '')} • 🔥 ${streak} Day Streak</span>
+      <div style="color:var(--text-2);font-size:12px">${escHtml(student.grade || '')} • 🔥 ${streak} Day Streak</div>
     </div>
   `;
 
@@ -742,12 +732,12 @@ function openStudentDetail(studentId) {
             <div class="student-task-item-title">${escHtml(task.title)}</div>
             ${getStatusLabel(task)}
           </div>
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">
             ${task.description ? `<div>${escHtml(task.description)}</div>` : ''}
-            ${task.dueDate ? `<div>📅 Due: ${formatDate(task.dueDate)}</div>` : ''}
+            ${task.dueDate ? `<div>Due: ${formatDate(task.dueDate)}</div>` : ''}
           </div>
           ${status !== 'approved' ? `
-          <div class="upload-zone" style="padding:14px"
+          <div class="upload-zone" style="padding:12px"
             onclick="document.getElementById('modal-fi-${task.id}').click()"
             ondragover="handleDragOver(event,'modal-${task.id}')"
             ondragleave="handleDragLeave(event,'modal-${task.id}')"
@@ -757,7 +747,7 @@ function openStudentDetail(studentId) {
               onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
           </div>` : ''}
           ${subs.length > 0 ? `
-          <div class="image-grid" style="margin-top:10px">
+          <div class="image-grid" style="margin-top:8px">
             ${subs.map((sub, idx) => `
               <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)}')">
                 <img src="${sub.data}" alt="Submission ${idx + 1}" />
@@ -766,10 +756,10 @@ function openStudentDetail(studentId) {
             `).join('')}
           </div>` : ''}
           ${isT && status === 'submitted' ? `
-          <div style="margin-top:10px">
-            <button class="btn-approve" onclick="approveTask('${task.id}');refreshStudentDetail('${studentId}')">✅ Approve Homework</button>
+          <div style="margin-top:8px">
+            <button class="btn-approve" onclick="approveTask('${task.id}');refreshStudentDetail('${studentId}')">Approve Homework</button>
           </div>` : ''}
-          ${isT && status === 'approved' ? `<div style="margin-top:10px"><button class="btn-approve approved" disabled>✅ Approved</button></div>` : ''}
+          ${isT && status === 'approved' ? `<div style="margin-top:8px"><button class="btn-approve approved" disabled>Approved</button></div>` : ''}
         </div>
       `;
     }).join('');
@@ -817,7 +807,7 @@ function processFiles(files, taskId) {
       if (loaded === files.length) {
         saveState();
         renderView(currentView);
-        toast(`Homework image uploaded! 📸`, 'success');
+        toast(`Homework image uploaded!`, 'success');
       }
     };
     reader.readAsDataURL(file);
@@ -832,7 +822,7 @@ function removeSubmission(event, taskId, idx) {
   if (task.submissions.length === 0 && task.status === 'approved') task.status = 'pending';
   saveState();
   renderView(currentView);
-  toast('Image deleted.', 'info', '🗑️');
+  toast('Image deleted.', 'info');
 }
 
 function handleDragOver(event, id) {
@@ -940,7 +930,7 @@ function confirmDeleteStudent(id) {
     }
     saveState();
     renderView(currentView);
-    toast('Student deleted.', 'info', '🗑️');
+    toast('Student deleted.', 'info');
     closeModal('modal-confirm');
   };
   openModal('modal-confirm');
@@ -1008,7 +998,7 @@ function confirmDeleteTask(id) {
     state.tasks = state.tasks.filter(t => t.id !== id);
     saveState();
     renderView(currentView);
-    toast('Assignment deleted.', 'info', '🗑️');
+    toast('Assignment deleted.', 'info');
     closeModal('modal-confirm');
   };
   openModal('modal-confirm');
@@ -1067,47 +1057,67 @@ function init() {
     dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   }
 
-  // Nav
+  // Nav items
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => navigateTo(btn.dataset.view));
   });
 
-  // Sidebar toggle
-  document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('collapsed');
-  });
+  // User switch
+  const switchUserBtn = document.getElementById('btn-switch-user');
+  if (switchUserBtn) {
+    switchUserBtn.addEventListener('click', () => {
+      selectLoginRole(state.currentUser.role);
+      openModal('modal-login');
+    });
+  }
 
-  // Role switch buttons
-  document.getElementById('btn-switch-user').addEventListener('click', () => {
-    selectLoginRole(state.currentUser.role);
-    openModal('modal-login');
-  });
-  document.getElementById('btn-login-modal').addEventListener('click', () => {
-    selectLoginRole(state.currentUser.role);
-    openModal('modal-login');
-  });
-  document.getElementById('btn-do-login').addEventListener('click', handleDoLogin);
+  const loginModalBtn = document.getElementById('btn-login-modal');
+  if (loginModalBtn) {
+    loginModalBtn.addEventListener('click', () => {
+      selectLoginRole(state.currentUser.role);
+      openModal('modal-login');
+    });
+  }
 
-  // Primary add button
-  document.getElementById('btn-add-primary').addEventListener('click', () => {
-    if (currentView === 'students') openAddStudent();
-    else if (currentView === 'tasks') openAddTask();
-    else openAddTask();
-  });
+  const doLoginBtn = document.getElementById('btn-do-login');
+  if (doLoginBtn) doLoginBtn.addEventListener('click', handleDoLogin);
 
-  // Student view search & add
-  document.getElementById('btn-add-student').addEventListener('click', openAddStudent);
-  document.getElementById('student-search').addEventListener('input', e => renderStudents(e.target.value));
+  // Primary add
+  const addPrimaryBtn = document.getElementById('btn-add-primary');
+  if (addPrimaryBtn) {
+    addPrimaryBtn.addEventListener('click', () => {
+      if (currentView === 'students') openAddStudent();
+      else if (currentView === 'tasks') openAddTask();
+      else openAddTask();
+    });
+  }
 
-  // Task view search & add
-  document.getElementById('btn-add-task').addEventListener('click', openAddTask);
-  document.getElementById('task-filter-student').addEventListener('change', applyTaskFilters);
-  document.getElementById('task-filter-status').addEventListener('change', applyTaskFilters);
+  // Student view add & search
+  const addStudentBtn = document.getElementById('btn-add-student');
+  if (addStudentBtn) addStudentBtn.addEventListener('click', openAddStudent);
+
+  const studentSearchInput = document.getElementById('student-search');
+  if (studentSearchInput) studentSearchInput.addEventListener('input', e => renderStudents(e.target.value));
+
+  // Task view add & filter
+  const addTaskBtn = document.getElementById('btn-add-task');
+  if (addTaskBtn) addTaskBtn.addEventListener('click', openAddTask);
+
+  const taskFilterStudent = document.getElementById('task-filter-student');
+  if (taskFilterStudent) taskFilterStudent.addEventListener('change', applyTaskFilters);
+
+  const taskFilterStatus = document.getElementById('task-filter-status');
+  if (taskFilterStatus) taskFilterStatus.addEventListener('change', applyTaskFilters);
 
   // Modal saves
-  document.getElementById('btn-save-student').addEventListener('click', saveStudent);
-  document.getElementById('btn-save-task').addEventListener('click', saveTask);
-  document.getElementById('btn-confirm-delete').addEventListener('click', () => pendingDeleteFn && pendingDeleteFn());
+  const saveStudentBtn = document.getElementById('btn-save-student');
+  if (saveStudentBtn) saveStudentBtn.addEventListener('click', saveStudent);
+
+  const saveTaskBtn = document.getElementById('btn-save-task');
+  if (saveTaskBtn) saveTaskBtn.addEventListener('click', saveTask);
+
+  const confirmDeleteBtn = document.getElementById('btn-confirm-delete');
+  if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', () => pendingDeleteFn && pendingDeleteFn());
 
   // Close modals
   document.querySelectorAll('[data-modal]').forEach(btn => {
@@ -1120,11 +1130,14 @@ function init() {
   });
 
   // Search input
-  document.getElementById('global-search').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleGlobalSearch(e.target.value.trim());
-  });
+  const globalSearchInput = document.getElementById('global-search');
+  if (globalSearchInput) {
+    globalSearchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleGlobalSearch(e.target.value.trim());
+    });
+  }
 
-  // Render initial view
+  // Initial render
   navigateTo('dashboard');
 }
 
