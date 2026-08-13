@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     student_id UUID REFERENCES public.students(id) ON DELETE CASCADE,
     due_date DATE,
     status TEXT NOT NULL DEFAULT 'pending',
+    is_recurring BOOLEAN DEFAULT false,
     approved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -48,6 +48,7 @@ let currentView = 'dashboard';
 let selectedColor = AVATAR_COLORS[0];
 let selectedRoleInModal = 'teacher';
 let pendingDeleteFn = null;
+let pendingUploadTaskId = null; // for upload confirmation dialog
 
 // ── PERSISTENCE ────────────────────────────────────────────
 function saveState() {
@@ -680,7 +681,27 @@ function applyTaskFilters() {
   });
 }
 
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function hasSubmissionToday(task) {
+  if (!task.submissions || task.submissions.length === 0) return false;
+  const today = todayKey();
+  return task.submissions.some(sub => {
+    const d = new Date(sub.date);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return k === today;
+  });
+}
+
 function getTaskStatus(task) {
+  // Daily recurring: resets each day — approved only persists until midnight
+  if (task.isRecurring) {
+    if (hasSubmissionToday(task)) return 'submitted';
+    return 'pending';
+  }
   if (task.status === 'approved') return 'approved';
   if (task.submissions && task.submissions.length > 0) return 'submitted';
   if (isOverdue(task.dueDate)) return 'overdue';
@@ -690,7 +711,8 @@ function getTaskStatus(task) {
 function getStatusLabel(task) {
   const s = getTaskStatus(task);
   const labels = { approved: 'Approved', submitted: 'Submitted', pending: 'Pending', overdue: 'Overdue' };
-  return `<span class="status-pill status-${s}">${labels[s]}</span>`;
+  const recurBadge = task.isRecurring ? '<span class="badge-recurring">🔁 Hàng ngày</span> ' : '';
+  return `${recurBadge}<span class="status-pill status-${s}">${labels[s]}</span>`;
 }
 
 function renderTaskCard(task) {
@@ -723,14 +745,15 @@ function renderTaskCard(task) {
       </div>
       <div class="task-card-body">
         ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
+        ${task.isRecurring ? `<div class="recurring-info">🔁 Task này lặp lại mỗi ngày — học sinh phải nộp ảnh mới mỗi ngày.</div>` : ''}
         ${status !== 'approved' ? `
         <div class="upload-zone" id="drop-${task.id}"
-          onclick="document.getElementById('file-input-${task.id}').click()"
+          onclick="openUploadConfirm('${task.id}')"
           ondragover="handleDragOver(event,'${task.id}')"
           ondragleave="handleDragLeave(event,'${task.id}')"
           ondrop="handleDrop(event,'${task.id}')">
           <div>📸 Upload Homework Photo</div>
-          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">Click or drop photos here</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">Click để xác nhận và upload ảnh bài tập</div>
           <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
         </div>` : ''}
         ${subs.length > 0 ? `
@@ -851,11 +874,11 @@ function openStudentDetail(studentId) {
           </div>
           ${status !== 'approved' ? `
           <div class="upload-zone" style="padding:12px"
-            onclick="document.getElementById('modal-fi-${task.id}').click()"
+            onclick="openUploadConfirm('${task.id}', '${studentId}')"
             ondragover="handleDragOver(event,'modal-${task.id}')"
             ondragleave="handleDragLeave(event,'modal-${task.id}')"
             ondrop="handleDrop(event,'${task.id}')">
-            <div>📸 Click to upload homework photo</div>
+            <div>📸 Xác nhận và upload ảnh bài tập</div>
             <input type="file" id="modal-fi-${task.id}" accept="image/*" multiple style="display:none"
               onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
           </div>` : ''}
@@ -891,6 +914,32 @@ function openStudentDetailForTask(studentId) {
   const sel = document.getElementById('task-filter-student');
   if (sel) sel.value = studentId;
   applyTaskFilters();
+}
+
+// ── UPLOAD CONFIRMATION ────────────────────────────────────
+function openUploadConfirm(taskId, studentDetailId = null) {
+  if (isTeacher()) {
+    // Teachers can upload directly without confirmation
+    const inputId = studentDetailId ? `modal-fi-${taskId}` : `file-input-${taskId}`;
+    const fi = document.getElementById(inputId);
+    if (fi) fi.click();
+    return;
+  }
+  // Students must confirm first
+  pendingUploadTaskId = { taskId, studentDetailId };
+  const task = state.tasks.find(t => t.id === taskId);
+  document.getElementById('upload-confirm-task-name').textContent = task ? task.title : 'this task';
+  openModal('modal-upload-confirm');
+}
+
+function doConfirmedUpload() {
+  closeModal('modal-upload-confirm');
+  if (!pendingUploadTaskId) return;
+  const { taskId, studentDetailId } = pendingUploadTaskId;
+  pendingUploadTaskId = null;
+  const inputId = studentDetailId ? `modal-fi-${taskId}` : `file-input-${taskId}`;
+  const fi = document.getElementById(inputId);
+  if (fi) fi.click();
 }
 
 // ── UPLOADS ────────────────────────────────────────────────
@@ -1101,6 +1150,8 @@ function openAddTask() {
   document.getElementById('input-task-desc').value = '';
   document.getElementById('input-task-id').value = '';
   document.getElementById('input-task-due').value = '';
+  const recurChk = document.getElementById('input-task-recurring');
+  if (recurChk) recurChk.checked = false;
   openModal('modal-task');
 }
 
@@ -1120,6 +1171,8 @@ function editTask(id) {
   document.getElementById('input-task-student').value = task.studentId;
   document.getElementById('input-task-due').value = task.dueDate || '';
   document.getElementById('input-task-id').value = task.id;
+  const recurChk = document.getElementById('input-task-recurring');
+  if (recurChk) recurChk.checked = !!task.isRecurring;
   openModal('modal-task');
 }
 
@@ -1129,23 +1182,25 @@ async function saveTask() {
   const studentId = document.getElementById('input-task-student').value;
   const dueDate = document.getElementById('input-task-due').value;
   const id = document.getElementById('input-task-id').value;
+  const recurChk = document.getElementById('input-task-recurring');
+  const isRecurring = recurChk ? recurChk.checked : false;
   if (!title) { toast('Please enter a task title.', 'error'); return; }
   if (!studentId) { toast('Please select a student.', 'error'); return; }
 
   if (id) {
     const task = state.tasks.find(t => t.id === id);
-    if (task) { task.title = title; task.description = description; task.studentId = studentId; task.dueDate = dueDate; }
+    if (task) { task.title = title; task.description = description; task.studentId = studentId; task.dueDate = dueDate; task.isRecurring = isRecurring; }
     if (isCloudEnabled && supabaseClient) {
-      await supabaseClient.from('tasks').update({ title, description, student_id: studentId, due_date: dueDate }).eq('id', id);
+      await supabaseClient.from('tasks').update({ title, description, student_id: studentId, due_date: dueDate, is_recurring: isRecurring }).eq('id', id);
     }
     toast('Task updated!', 'success');
   } else {
-    const newTask = { id: uid(), title, description, studentId, dueDate, status: 'pending', submissions: [], createdAt: new Date().toISOString() };
+    const newTask = { id: uid(), title, description, studentId, dueDate, isRecurring, status: 'pending', submissions: [], createdAt: new Date().toISOString() };
     state.tasks.push(newTask);
     if (isCloudEnabled && supabaseClient) {
-      await supabaseClient.from('tasks').insert([{ title, description, student_id: studentId, due_date: dueDate }]);
+      await supabaseClient.from('tasks').insert([{ title, description, student_id: studentId, due_date: dueDate, is_recurring: isRecurring }]);
     }
-    toast('Assignment created!', 'success');
+    toast(isRecurring ? 'Daily recurring task created! 🔁' : 'Assignment created!', 'success');
   }
   saveState();
   closeModal('modal-task');
