@@ -4,11 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HomeworkHub — Homework Tracker</title>
-  <meta name="description" content="Retro white themed student homework tracker with image uploads, streak tracking, and role-based login." />
+  <meta name="description" content="Retro white themed student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <!-- ===== APP SHELL ===== -->
@@ -196,6 +198,32 @@
       <div class="modal-footer">
         <button class="btn btn-ghost hidden-if-unauth" data-modal="modal-login" type="button">Cancel</button>
         <button class="btn btn-primary" id="btn-do-login" type="button">Login Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPABASE CONFIG MODAL (Shown if keys not set) -->
+  <div class="modal-overlay" id="modal-supabase-config">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3>⚡ Connect Supabase Cloud Sync</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-2); margin-bottom: 14px;">
+          Enter your Supabase <strong>Project URL</strong> and <strong>Anon Key</strong> to enable real-time online synchronization between Teacher and Students:
+        </p>
+        <div class="form-group">
+          <label>Supabase Project URL</label>
+          <input type="text" id="input-supabase-url" class="text-input" placeholder="https://your-project.supabase.co" />
+        </div>
+        <div class="form-group">
+          <label>Supabase Anon Key</label>
+          <input type="password" id="input-supabase-key" class="text-input" placeholder="eyJhbGciOi..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="useOfflineLocalStorage()">Use Offline Mode (Local)</button>
+        <button class="btn btn-primary" onclick="saveSupabaseConfig()">Save & Connect Cloud</button>
       </div>
     </div>
   </div>

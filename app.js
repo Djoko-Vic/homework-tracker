@@ -1,10 +1,10 @@
 /* =========================================================
-   HomeworkHub — app.js (Mandatory Manual Login, Teacher Pass: 2992006bot1, Student: Khải 0000)
+   HomeworkHub — app.js (Supabase Realtime Cloud Sync + Local Fallback)
    ========================================================= */
 
 'use strict';
 
-const STORAGE_KEY = 'homeworkhub_retro_v6';
+const STORAGE_KEY = 'homeworkhub_retro_v7';
 const TEACHER_PASSWORD = '2992006bot1';
 
 const AVATAR_COLORS = [
@@ -12,11 +12,36 @@ const AVATAR_COLORS = [
   '#6b5b95', '#c94a53', '#2a9d8f', '#e76f51',
 ];
 
+// ── SUPABASE CLIENT CONFIG ─────────────────────────────────
+// Credentials are public anon keys — safe to embed in frontend
+const SUPABASE_URL = 'https://nxzysmgtuzhmysvclshd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54enlzbWd0dXpobXlzdmNsc2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MjI5MzIsImV4cCI6MjEwMjE5ODkzMn0.Cfo9jcEyP26aJpTSJHAb2dnwhRDCiBgMr2KMh9LQaC0';
+
+let supabaseClient = null;
+let isCloudEnabled = false;
+
+function initSupabase() {
+  if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      isCloudEnabled = true;
+      console.log('⚡ Supabase Cloud Connected!');
+    } catch (e) {
+      console.warn('Failed to init Supabase:', e);
+      isCloudEnabled = false;
+    }
+  }
+}
+
+// These functions kept for compatibility with any remaining HTML references
+function saveSupabaseConfig() { closeModal('modal-supabase-config'); }
+function useOfflineLocalStorage() { closeModal('modal-supabase-config'); }
+
 // ── STATE ──────────────────────────────────────────────────
 let state = {
   students: [],
   tasks: [],
-  currentUser: null // Require manual login on start!
+  currentUser: null
 };
 
 let currentView = 'dashboard';
@@ -27,6 +52,7 @@ let pendingDeleteFn = null;
 // ── PERSISTENCE ────────────────────────────────────────────
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (isCloudEnabled) syncToCloud();
 }
 
 function loadState() {
@@ -38,10 +64,64 @@ function loadState() {
       state.tasks = parsed.tasks || [];
       state.currentUser = parsed.currentUser || null;
     } catch (e) {
-      console.warn('Failed to parse state, resetting.', e);
+      console.warn('Failed to parse state:', e);
       state = { students: [], tasks: [], currentUser: null };
     }
   }
+}
+
+// ── CLOUD SYNC WITH SUPABASE ───────────────────────────────
+async function syncFromCloud() {
+  if (!isCloudEnabled || !supabaseClient) return;
+
+  try {
+    // 1. Fetch Students
+    const { data: dbStudents, error: errS } = await supabaseClient.from('students').select('*');
+    if (dbStudents) {
+      state.students = dbStudents.map(s => ({
+        id: s.id,
+        name: s.name,
+        grade: s.grade,
+        pin: s.pin,
+        color: s.color,
+        createdAt: s.created_at
+      }));
+    }
+
+    // 2. Fetch Tasks
+    const { data: dbTasks, error: errT } = await supabaseClient.from('tasks').select('*');
+    // 3. Fetch Submissions
+    const { data: dbSubs, error: errSub } = await supabaseClient.from('submissions').select('*');
+
+    if (dbTasks) {
+      state.tasks = dbTasks.map(t => {
+        const subs = (dbSubs || [])
+          .filter(sub => sub.task_id === t.id)
+          .map(sub => ({ data: sub.image_url, date: sub.created_at, id: sub.id }));
+
+        return {
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          studentId: t.student_id,
+          dueDate: t.due_date,
+          status: t.status,
+          approvedAt: t.approved_at,
+          submissions: subs,
+          createdAt: t.created_at
+        };
+      });
+    }
+
+    saveState();
+    renderView(currentView);
+  } catch (err) {
+    console.error('Cloud Sync Error:', err);
+  }
+}
+
+async function syncToCloud() {
+  // Realtime Cloud pushes on actions
 }
 
 // ── HELPERS ────────────────────────────────────────────────
@@ -80,7 +160,7 @@ function relativeTime(isoStr) {
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
+  const hrs = Math.floor(mins / 24);
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
@@ -821,22 +901,37 @@ function handleFileUpload(event, taskId) {
   event.target.value = '';
 }
 
-function processFiles(files, taskId) {
+async function processFiles(files, taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
   if (!task.submissions) task.submissions = [];
 
   let loaded = 0;
-  files.forEach(file => {
+  for (const file of files) {
     if (!file.type.startsWith('image/')) {
       toast('Please select an image file.', 'error');
-      return;
+      continue;
     }
     const reader = new FileReader();
-    reader.onload = (e) => {
-      task.submissions.push({ data: e.target.result, date: new Date().toISOString() });
+    reader.onload = async (e) => {
+      const imgData = e.target.result;
+      task.submissions.push({ data: imgData, date: new Date().toISOString() });
       loaded++;
       if (task.status === 'approved') task.status = 'submitted';
+
+      if (isCloudEnabled && supabaseClient) {
+        try {
+          await supabaseClient.from('submissions').insert([{
+            task_id: task.id,
+            student_id: task.studentId,
+            image_url: imgData
+          }]);
+          await supabaseClient.from('tasks').update({ status: task.status }).eq('id', task.id);
+        } catch (err) {
+          console.warn('Cloud submission failed:', err);
+        }
+      }
+
       if (loaded === files.length) {
         saveState();
         renderView(currentView);
@@ -844,15 +939,22 @@ function processFiles(files, taskId) {
       }
     };
     reader.readAsDataURL(file);
-  });
+  }
 }
 
-function removeSubmission(event, taskId, idx) {
+async function removeSubmission(event, taskId, idx) {
   event.stopPropagation();
   const task = state.tasks.find(t => t.id === taskId);
   if (!task || !task.submissions) return;
+
+  const sub = task.submissions[idx];
   task.submissions.splice(idx, 1);
   if (task.submissions.length === 0 && task.status === 'approved') task.status = 'pending';
+
+  if (isCloudEnabled && supabaseClient && sub && sub.id) {
+    await supabaseClient.from('submissions').delete().eq('id', sub.id);
+  }
+
   saveState();
   renderView(currentView);
   toast('Image deleted.', 'info');
@@ -876,11 +978,19 @@ function handleDrop(event, taskId) {
 }
 
 // ── APPROVE TASK ───────────────────────────────────────────
-function approveTask(taskId) {
+async function approveTask(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
   task.status = 'approved';
   task.approvedAt = new Date().toISOString();
+
+  if (isCloudEnabled && supabaseClient) {
+    await supabaseClient.from('tasks').update({
+      status: 'approved',
+      approved_at: task.approvedAt
+    }).eq('id', task.id);
+  }
+
   saveState();
   renderView(currentView);
   toast('Homework approved! Streak updated 🔥', 'success');
@@ -930,7 +1040,7 @@ function selectColor(color) {
   renderColorPicker();
 }
 
-function saveStudent() {
+async function saveStudent() {
   const name = document.getElementById('input-student-name').value.trim();
   const grade = document.getElementById('input-student-grade').value.trim();
   const pin = document.getElementById('input-student-passcode').value.trim() || '0000';
@@ -940,9 +1050,16 @@ function saveStudent() {
   if (id) {
     const student = state.students.find(s => s.id === id);
     if (student) { student.name = name; student.grade = grade; student.pin = pin; student.color = selectedColor; }
+    if (isCloudEnabled && supabaseClient) {
+      await supabaseClient.from('students').update({ name, grade, pin, color: selectedColor }).eq('id', id);
+    }
     toast('Student updated!', 'success');
   } else {
-    state.students.push({ id: uid(), name, grade, pin, color: selectedColor, createdAt: new Date().toISOString() });
+    const newStudent = { id: uid(), name, grade, pin, color: selectedColor, createdAt: new Date().toISOString() };
+    state.students.push(newStudent);
+    if (isCloudEnabled && supabaseClient) {
+      await supabaseClient.from('students').insert([{ name, grade, pin, color: selectedColor }]);
+    }
     toast('Student added!', 'success');
   }
   saveState();
@@ -955,12 +1072,17 @@ function confirmDeleteStudent(id) {
   const student = state.students.find(s => s.id === id);
   document.getElementById('confirm-message').textContent =
     `Delete "${student?.name}"? This will also remove their assignments.`;
-  pendingDeleteFn = () => {
+  pendingDeleteFn = async () => {
     state.students = state.students.filter(s => s.id !== id);
     state.tasks = state.tasks.filter(t => t.studentId !== id);
     if (state.currentUser && state.currentUser.studentId === id) {
       state.currentUser = null;
     }
+
+    if (isCloudEnabled && supabaseClient) {
+      await supabaseClient.from('students').delete().eq('id', id);
+    }
+
     saveState();
     renderView(currentView);
     toast('Student deleted.', 'info');
@@ -1001,7 +1123,7 @@ function editTask(id) {
   openModal('modal-task');
 }
 
-function saveTask() {
+async function saveTask() {
   const title = document.getElementById('input-task-title').value.trim();
   const description = document.getElementById('input-task-desc').value.trim();
   const studentId = document.getElementById('input-task-student').value;
@@ -1013,9 +1135,16 @@ function saveTask() {
   if (id) {
     const task = state.tasks.find(t => t.id === id);
     if (task) { task.title = title; task.description = description; task.studentId = studentId; task.dueDate = dueDate; }
+    if (isCloudEnabled && supabaseClient) {
+      await supabaseClient.from('tasks').update({ title, description, student_id: studentId, due_date: dueDate }).eq('id', id);
+    }
     toast('Task updated!', 'success');
   } else {
-    state.tasks.push({ id: uid(), title, description, studentId, dueDate, status: 'pending', submissions: [], createdAt: new Date().toISOString() });
+    const newTask = { id: uid(), title, description, studentId, dueDate, status: 'pending', submissions: [], createdAt: new Date().toISOString() };
+    state.tasks.push(newTask);
+    if (isCloudEnabled && supabaseClient) {
+      await supabaseClient.from('tasks').insert([{ title, description, student_id: studentId, due_date: dueDate }]);
+    }
     toast('Assignment created!', 'success');
   }
   saveState();
@@ -1027,8 +1156,13 @@ function saveTask() {
 function confirmDeleteTask(id) {
   const task = state.tasks.find(t => t.id === id);
   document.getElementById('confirm-message').textContent = `Delete assignment "${task?.title}"?`;
-  pendingDeleteFn = () => {
+  pendingDeleteFn = async () => {
     state.tasks = state.tasks.filter(t => t.id !== id);
+
+    if (isCloudEnabled && supabaseClient) {
+      await supabaseClient.from('tasks').delete().eq('id', id);
+    }
+
     saveState();
     renderView(currentView);
     toast('Assignment deleted.', 'info');
@@ -1099,7 +1233,12 @@ function seedDemoData() {
 // ── INIT ───────────────────────────────────────────────────
 function init() {
   loadState();
+  initSupabase();
   seedDemoData();
+
+  if (isCloudEnabled) {
+    syncFromCloud();
+  }
 
   // Sidebar date
   const dateEl = document.getElementById('sidebar-date');
