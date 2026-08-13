@@ -1185,23 +1185,6 @@ function confirmDeleteStudent(id) {
   openModal('modal-confirm');
 }
 
-// ── RECURRING TOGGLE (JS-driven) ───────────────────────────
-function toggleRecurringUI() {
-  const hidden = document.getElementById('input-task-recurring');
-  const visual = document.getElementById('toggle-switch-visual');
-  if (!hidden) return;
-  const newVal = hidden.value !== 'true';
-  hidden.value = String(newVal);
-  if (visual) visual.classList.toggle('active', newVal);
-}
-
-function setRecurringUI(val) {
-  const hidden = document.getElementById('input-task-recurring');
-  const visual = document.getElementById('toggle-switch-visual');
-  if (hidden) hidden.value = String(!!val);
-  if (visual) visual.classList.toggle('active', !!val);
-}
-
 // ── ADD / EDIT TASK ────────────────────────────────────────
 function openAddTask() {
   const sel = document.getElementById('input-task-student');
@@ -1212,7 +1195,8 @@ function openAddTask() {
   document.getElementById('input-task-desc').value = '';
   document.getElementById('input-task-id').value = '';
   document.getElementById('input-task-due').value = '';
-  setRecurringUI(false);
+  const recurChk = document.getElementById('input-task-recurring');
+  if (recurChk) recurChk.checked = false;
   openModal('modal-task');
 }
 
@@ -1232,7 +1216,8 @@ function editTask(id) {
   document.getElementById('input-task-student').value = task.studentId;
   document.getElementById('input-task-due').value = task.dueDate || '';
   document.getElementById('input-task-id').value = task.id;
-  setRecurringUI(!!task.isRecurring);
+  const recurChk = document.getElementById('input-task-recurring');
+  if (recurChk) recurChk.checked = !!task.isRecurring;
   openModal('modal-task');
 }
 
@@ -1242,8 +1227,8 @@ async function saveTask() {
   const studentId = document.getElementById('input-task-student').value;
   const dueDate = document.getElementById('input-task-due').value;
   const id = document.getElementById('input-task-id').value;
-  const recurEl = document.getElementById('input-task-recurring');
-  const isRecurring = recurEl ? (recurEl.value === 'true' || recurEl.checked === true) : false;
+  const recurChk = document.getElementById('input-task-recurring');
+  const isRecurring = recurChk ? recurChk.checked : false;
   if (!title) { toast('Please enter a task title.', 'error'); return; }
   if (!studentId) { toast('Please select a student.', 'error'); return; }
 
