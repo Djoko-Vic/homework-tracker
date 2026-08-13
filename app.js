@@ -1,10 +1,12 @@
 /* =========================================================
-   HomeworkHub — app.js (Montserrat & Text-Only Sidebar)
+   HomeworkHub — app.js (Mandatory Manual Login, Teacher Pass: 2992006bot1, Student: Khải 0000)
    ========================================================= */
 
 'use strict';
 
-const STORAGE_KEY = 'homeworkhub_retro_v4';
+const STORAGE_KEY = 'homeworkhub_retro_v5';
+const TEACHER_PASSWORD = '2992006bot1';
+
 const AVATAR_COLORS = [
   '#d96b43', '#4a7c59', '#d99b26', '#3d5a80',
   '#6b5b95', '#c94a53', '#2a9d8f', '#e76f51',
@@ -14,7 +16,7 @@ const AVATAR_COLORS = [
 let state = {
   students: [],
   tasks: [],
-  currentUser: { role: 'teacher', studentId: null, name: 'Teacher' }
+  currentUser: null // Require manual login on start!
 };
 
 let currentView = 'dashboard';
@@ -31,15 +33,15 @@ function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     try {
-      state = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      state.students = parsed.students || [];
+      state.tasks = parsed.tasks || [];
+      state.currentUser = parsed.currentUser || null;
     } catch (e) {
       console.warn('Failed to parse state, resetting.', e);
-      state = { students: [], tasks: [], currentUser: { role: 'teacher', studentId: null, name: 'Teacher' } };
+      state = { students: [], tasks: [], currentUser: null };
     }
   }
-  if (!state.students) state.students = [];
-  if (!state.tasks) state.tasks = [];
-  if (!state.currentUser) state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
 }
 
 // ── HELPERS ────────────────────────────────────────────────
@@ -181,11 +183,25 @@ function getStudentStats(studentId) {
 }
 
 // ── ROLE & USER SESSION ────────────────────────────────────
+function isLoggedIn() {
+  return state.currentUser !== null;
+}
+
 function isTeacher() {
-  return state.currentUser.role === 'teacher';
+  return state.currentUser && state.currentUser.role === 'teacher';
 }
 
 function updateRoleUI() {
+  if (!isLoggedIn()) {
+    document.body.classList.add('unauthenticated');
+    document.getElementById('sidebar-user-avatar').textContent = '?';
+    document.getElementById('sidebar-user-avatar').style.background = 'var(--bg3)';
+    document.getElementById('sidebar-user-name').textContent = 'Not Logged In';
+    document.getElementById('sidebar-user-role').textContent = 'Please Login';
+    return;
+  }
+
+  document.body.classList.remove('unauthenticated');
   const user = state.currentUser;
   const isT = isTeacher();
 
@@ -259,9 +275,10 @@ function selectLoginRole(role) {
 
 function handleDoLogin() {
   if (selectedRoleInModal === 'teacher') {
-    const pass = document.getElementById('input-teacher-pass').value;
-    if (pass !== 'admin' && pass.trim() !== '') {
-      // Flexible login for demo
+    const pass = document.getElementById('input-teacher-pass').value.trim();
+    if (pass !== TEACHER_PASSWORD) {
+      toast('Incorrect Teacher Password!', 'error');
+      return;
     }
     state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
     saveState();
@@ -271,13 +288,13 @@ function handleDoLogin() {
     toast('Logged in as Teacher Admin!', 'success');
   } else {
     const select = document.getElementById('login-student-select');
-    const studentId = select.value;
+    const studentId = select ? select.value : null;
     if (!studentId) { toast('Please select a student account.', 'error'); return; }
 
     const student = state.students.find(s => s.id === studentId);
     const pin = document.getElementById('input-student-pin').value.trim();
-    
-    if (student.pin && pin !== student.pin && pin !== '1234') {
+
+    if (!student || (student.pin && pin !== student.pin)) {
       toast('Incorrect PIN passcode.', 'error');
       return;
     }
@@ -293,6 +310,10 @@ function handleDoLogin() {
 
 // ── NAVIGATION ─────────────────────────────────────────────
 function navigateTo(view) {
+  if (!isLoggedIn()) {
+    openModal('modal-login');
+    return;
+  }
   if (!isTeacher() && view === 'students') {
     toast('Student accounts can only view tasks and streaks.', 'info');
     return;
@@ -311,6 +332,7 @@ function navigateTo(view) {
 
 function renderView(view) {
   updateRoleUI();
+  if (!isLoggedIn()) return;
   if (view === 'dashboard') renderDashboard();
   if (view === 'students') renderStudents();
   if (view === 'tasks') renderTasks();
@@ -327,15 +349,13 @@ function renderDashboard() {
 
 function renderStats() {
   const isT = isTeacher();
-  const currentStudentId = state.currentUser.studentId;
-
-  let totalTasks, submitted, approved;
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
 
   if (isT) {
     const totalStudents = state.students.length;
-    totalTasks = state.tasks.length;
-    submitted = state.tasks.filter(t => t.submissions && t.submissions.length > 0).length;
-    approved = state.tasks.filter(t => t.status === 'approved').length;
+    const totalTasks = state.tasks.length;
+    const submitted = state.tasks.filter(t => t.submissions && t.submissions.length > 0).length;
+    const approved = state.tasks.filter(t => t.status === 'approved').length;
 
     const stats = [
       { icon: '👥', label: 'Total Students', value: totalStudents, color: 'var(--violet)', bg: 'var(--violet-dim)' },
@@ -354,9 +374,9 @@ function renderStats() {
     `).join('');
   } else {
     const myTasks = state.tasks.filter(t => t.studentId === currentStudentId);
-    totalTasks = myTasks.length;
-    submitted = myTasks.filter(t => t.submissions && t.submissions.length > 0).length;
-    approved = myTasks.filter(t => t.status === 'approved').length;
+    const totalTasks = myTasks.length;
+    const submitted = myTasks.filter(t => t.submissions && t.submissions.length > 0).length;
+    const approved = myTasks.filter(t => t.status === 'approved').length;
     const { streak } = getStudentStreak(currentStudentId);
 
     const stats = [
@@ -380,7 +400,7 @@ function renderStats() {
 function renderRecentSubmissions() {
   const allSubs = [];
   const isT = isTeacher();
-  const currentStudentId = state.currentUser.studentId;
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
 
   state.tasks.forEach(task => {
     if (!isT && task.studentId !== currentStudentId) return;
@@ -414,7 +434,7 @@ function renderRecentSubmissions() {
 
 function renderTopStreaks() {
   const isT = isTeacher();
-  const currentStudentId = state.currentUser.studentId;
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
 
   let studentStreaks = state.students.map(s => ({
     student: s,
@@ -438,7 +458,7 @@ function renderTopStreaks() {
 
 function renderPendingTasks() {
   const isT = isTeacher();
-  const currentStudentId = state.currentUser.studentId;
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
 
   let pending = state.tasks.filter(t => {
     if (!isT && t.studentId !== currentStudentId) return false;
@@ -535,7 +555,7 @@ function renderTasks() {
 
 function applyTaskFilters() {
   const isT = isTeacher();
-  const currentStudentId = state.currentUser.studentId;
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
   const studentFilter = isT ? document.getElementById('task-filter-student').value : currentStudentId;
   const statusFilter = document.getElementById('task-filter-status').value;
 
@@ -638,7 +658,7 @@ function renderTaskCard(task) {
 function renderStreaks() {
   const grid = document.getElementById('streaks-grid');
   const isT = isTeacher();
-  const currentStudentId = state.currentUser.studentId;
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
 
   let list = [...state.students];
   if (!isT) {
@@ -865,7 +885,7 @@ function openAddStudent() {
   document.getElementById('modal-student-title').textContent = 'Add New Student';
   document.getElementById('input-student-name').value = '';
   document.getElementById('input-student-grade').value = '';
-  document.getElementById('input-student-passcode').value = '1234';
+  document.getElementById('input-student-passcode').value = '0000';
   document.getElementById('input-student-id').value = '';
   selectedColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
   renderColorPicker();
@@ -878,7 +898,7 @@ function editStudent(id) {
   document.getElementById('modal-student-title').textContent = 'Edit Student';
   document.getElementById('input-student-name').value = student.name;
   document.getElementById('input-student-grade').value = student.grade || '';
-  document.getElementById('input-student-passcode').value = student.pin || '1234';
+  document.getElementById('input-student-passcode').value = student.pin || '0000';
   document.getElementById('input-student-id').value = student.id;
   selectedColor = student.color || AVATAR_COLORS[0];
   renderColorPicker();
@@ -900,7 +920,7 @@ function selectColor(color) {
 function saveStudent() {
   const name = document.getElementById('input-student-name').value.trim();
   const grade = document.getElementById('input-student-grade').value.trim();
-  const pin = document.getElementById('input-student-passcode').value.trim() || '1234';
+  const pin = document.getElementById('input-student-passcode').value.trim() || '0000';
   const id = document.getElementById('input-student-id').value;
   if (!name) { toast('Please enter a student name.', 'error'); return; }
 
@@ -925,8 +945,8 @@ function confirmDeleteStudent(id) {
   pendingDeleteFn = () => {
     state.students = state.students.filter(s => s.id !== id);
     state.tasks = state.tasks.filter(t => t.studentId !== id);
-    if (state.currentUser.studentId === id) {
-      state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
+    if (state.currentUser && state.currentUser.studentId === id) {
+      state.currentUser = null;
     }
     saveState();
     renderView(currentView);
@@ -1020,30 +1040,48 @@ function handleGlobalSearch(q) {
   navigateTo('tasks');
 }
 
-// ── SEED DEMO DATA ─────────────────────────────────────────
+// ── SEED DEMO DATA (Student: Khải, PIN: 0000) ───────────────
 function seedDemoData() {
-  if (state.students.length > 0) return;
+  // Ensure Khải with PIN 0000 is present
+  const existingKhai = state.students.find(s => s.name === 'Khải');
+  if (!existingKhai) {
+    const khhaiStudent = {
+      id: uid(),
+      name: 'Khải',
+      grade: 'English Student',
+      pin: '0000',
+      color: '#d96b43',
+      createdAt: new Date().toISOString()
+    };
+    state.students = [khhaiStudent];
 
-  const students = [
-    { id: uid(), name: 'Lily Chen', grade: 'Grade 5 English', pin: '1234', color: '#d96b43', createdAt: new Date().toISOString() },
-    { id: uid(), name: 'James Park', grade: 'Grade 5 English', pin: '1234', color: '#4a7c59', createdAt: new Date().toISOString() },
-    { id: uid(), name: 'Mia Santos', grade: 'Grade 4 Reading', pin: '1234', color: '#3d5a80', createdAt: new Date().toISOString() },
-  ];
+    const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-  const tasks = [
-    { id: uid(), title: 'Reading Unit 3: Story Summary', description: 'Read pages 15-25 and upload a photo of your written summary.', studentId: students[0].id, dueDate: today, status: 'pending', submissions: [], createdAt: new Date().toISOString() },
-    { id: uid(), title: 'Grammar Worksheet #4', description: 'Complete past tense exercise on page 42.', studentId: students[0].id, dueDate: tomorrow, status: 'pending', submissions: [], createdAt: new Date().toISOString() },
-    { id: uid(), title: 'Vocabulary Definitions', description: 'Write down definitions for all 10 target words.', studentId: students[1].id, dueDate: yesterday, status: 'pending', submissions: [], createdAt: new Date().toISOString() },
-    { id: uid(), title: 'Creative Writing Journal', description: 'Write a 1-page story about a summer trip.', studentId: students[2].id, dueDate: tomorrow, status: 'pending', submissions: [], createdAt: new Date().toISOString() },
-  ];
-
-  state.students = students;
-  state.tasks = tasks;
-  saveState();
+    state.tasks = [
+      {
+        id: uid(),
+        title: 'English Reading & Writing Unit 1',
+        description: 'Complete the comprehension exercises on pages 10-15 and upload clear photos of your work.',
+        studentId: khhaiStudent.id,
+        dueDate: today,
+        status: 'pending',
+        submissions: [],
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: uid(),
+        title: 'Vocabulary & Spelling Practice',
+        description: 'Write down 15 new target words with their meanings and example sentences.',
+        studentId: khhaiStudent.id,
+        dueDate: tomorrow,
+        status: 'pending',
+        submissions: [],
+        createdAt: new Date().toISOString()
+      }
+    ];
+    saveState();
+  }
 }
 
 // ── INIT ───────────────────────────────────────────────────
@@ -1066,7 +1104,7 @@ function init() {
   const switchUserBtn = document.getElementById('btn-switch-user');
   if (switchUserBtn) {
     switchUserBtn.addEventListener('click', () => {
-      selectLoginRole(state.currentUser.role);
+      selectLoginRole(state.currentUser ? state.currentUser.role : 'teacher');
       openModal('modal-login');
     });
   }
@@ -1074,7 +1112,7 @@ function init() {
   const loginModalBtn = document.getElementById('btn-login-modal');
   if (loginModalBtn) {
     loginModalBtn.addEventListener('click', () => {
-      selectLoginRole(state.currentUser.role);
+      selectLoginRole(state.currentUser ? state.currentUser.role : 'teacher');
       openModal('modal-login');
     });
   }
@@ -1121,11 +1159,21 @@ function init() {
 
   // Close modals
   document.querySelectorAll('[data-modal]').forEach(btn => {
-    btn.addEventListener('click', () => closeModal(btn.dataset.modal));
+    btn.addEventListener('click', () => {
+      if (btn.dataset.modal === 'modal-login' && !isLoggedIn()) {
+        toast('Please log in first.', 'info');
+        return;
+      }
+      closeModal(btn.dataset.modal);
+    });
   });
+
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => {
-      if (e.target === overlay) closeModal(overlay.id);
+      if (e.target === overlay) {
+        if (overlay.id === 'modal-login' && !isLoggedIn()) return;
+        closeModal(overlay.id);
+      }
     });
   });
 
@@ -1137,8 +1185,14 @@ function init() {
     });
   }
 
-  // Initial render
-  navigateTo('dashboard');
+  // Initial login check
+  if (!isLoggedIn()) {
+    updateRoleUI();
+    selectLoginRole('teacher');
+    openModal('modal-login');
+  } else {
+    navigateTo('dashboard');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

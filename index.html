@@ -7,7 +7,7 @@
   <meta name="description" content="Retro white themed student homework tracker with image uploads, streak tracking, and role-based login." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -24,12 +24,12 @@
 
       <!-- Current User Badge in Sidebar -->
       <div class="user-profile-card" id="user-profile-card">
-        <div class="user-avatar" id="sidebar-user-avatar">T</div>
+        <div class="user-avatar" id="sidebar-user-avatar">?</div>
         <div class="user-info">
-          <div class="user-name" id="sidebar-user-name">Teacher View</div>
-          <div class="user-role-badge" id="sidebar-user-role">Teacher Admin</div>
+          <div class="user-name" id="sidebar-user-name">Not Logged In</div>
+          <div class="user-role-badge" id="sidebar-user-role">Please Login</div>
         </div>
-        <button class="btn-text-sm" id="btn-switch-user" title="Switch User">
+        <button class="btn-text-sm" id="btn-switch-user" title="Switch User / Logout">
           Switch
         </button>
       </div>
@@ -66,7 +66,7 @@
           <div class="search-wrap" id="search-wrap">
             <input type="text" id="global-search" placeholder="Search tasks or students…" />
           </div>
-          <button class="btn btn-secondary teacher-only" id="btn-login-modal">
+          <button class="btn btn-secondary" id="btn-login-modal">
             Switch Account
           </button>
           <button class="btn btn-primary teacher-only" id="btn-add-primary">
@@ -82,8 +82,8 @@
         <section id="view-dashboard" class="view active">
           <div class="welcome-banner" id="welcome-banner">
             <div class="welcome-text">
-              <h2 id="welcome-heading">Welcome back, Teacher!</h2>
-              <p id="welcome-subtext">Here is an overview of student assignments and streaks.</p>
+              <h2 id="welcome-heading">Welcome to HomeworkHub!</h2>
+              <p id="welcome-subtext">Please log in to view assignments and streak progress.</p>
             </div>
             <div class="welcome-badge" id="welcome-streak-badge">
               <span class="fire-icon">🔥</span>
@@ -160,16 +160,16 @@
   <div class="modal-overlay" id="modal-login">
     <div class="modal modal-md">
       <div class="modal-header">
-        <h3>Select Account / Role</h3>
-        <button class="modal-close" data-modal="modal-login">✕</button>
+        <h3>Login to HomeworkHub</h3>
+        <button class="modal-close hidden-if-unauth" data-modal="modal-login">✕</button>
       </div>
       <div class="modal-body">
-        <p class="modal-intro-text">Choose whether you are logging in as a Teacher or a Student:</p>
+        <p class="modal-intro-text">Select your role to log in:</p>
         
         <div class="role-selector">
           <button class="role-card active" id="role-btn-teacher" onclick="selectLoginRole('teacher')">
             <div class="role-title">Teacher Portal</div>
-            <div class="role-desc">Full access: assign tasks, review & approve images, manage students</div>
+            <div class="role-desc">Full access: assign tasks, review & approve photos, manage students</div>
           </button>
           
           <button class="role-card" id="role-btn-student" onclick="selectLoginRole('student')">
@@ -183,18 +183,18 @@
           <select id="login-student-select" class="select-input" style="width: 100%; margin-top: 6px;"></select>
           
           <div class="form-group" style="margin-top: 12px;">
-            <label>PIN (Default: 1234):</label>
-            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN" value="1234" />
+            <label>Student PIN:</label>
+            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter 4-digit PIN (e.g. 0000)" />
           </div>
         </div>
 
         <div id="teacher-login-pass-wrap" class="form-group" style="margin-top: 16px;">
-          <label>Teacher Password (Default: admin):</label>
-          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password" value="admin" />
+          <label>Teacher Password:</label>
+          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password" />
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" data-modal="modal-login">Cancel</button>
+        <button class="btn btn-ghost hidden-if-unauth" data-modal="modal-login">Cancel</button>
         <button class="btn btn-primary" id="btn-do-login">Login Now</button>
       </div>
     </div>
@@ -210,15 +210,15 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Student Name</label>
-          <input type="text" id="input-student-name" class="text-input" placeholder="e.g. Sarah Johnson" />
+          <input type="text" id="input-student-name" class="text-input" placeholder="e.g. Khải" />
         </div>
         <div class="form-group">
           <label>Grade / Level</label>
-          <input type="text" id="input-student-grade" class="text-input" placeholder="e.g. Grade 5 English" />
+          <input type="text" id="input-student-grade" class="text-input" placeholder="e.g. English Student" />
         </div>
         <div class="form-group">
           <label>Student Login PIN</label>
-          <input type="text" id="input-student-passcode" class="text-input" placeholder="4-digit PIN (default 1234)" value="1234" />
+          <input type="text" id="input-student-passcode" class="text-input" placeholder="4-digit PIN (e.g. 0000)" value="0000" />
         </div>
         <div class="form-group">
           <label>Avatar Color</label>
