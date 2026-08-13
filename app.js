@@ -4,7 +4,7 @@
 
 'use strict';
 
-const STORAGE_KEY = 'homeworkhub_retro_v5';
+const STORAGE_KEY = 'homeworkhub_retro_v6';
 const TEACHER_PASSWORD = '2992006bot1';
 
 const AVATAR_COLORS = [
@@ -99,13 +99,19 @@ function toast(message, type = 'info', icon = null) {
 }
 
 function openModal(id) {
-  document.getElementById(id).classList.add('open');
-  document.body.style.overflow = 'hidden';
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-  document.body.style.overflow = '';
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.remove('open');
+    document.body.style.overflow = '';
+  }
 }
 
 function escHtml(str) {
@@ -273,11 +279,18 @@ function selectLoginRole(role) {
   }
 }
 
+function openLoginDialog() {
+  selectLoginRole('teacher');
+  document.getElementById('input-teacher-pass').value = '';
+  document.getElementById('input-student-pin').value = '';
+  openModal('modal-login');
+}
+
 function handleDoLogin() {
   if (selectedRoleInModal === 'teacher') {
     const pass = document.getElementById('input-teacher-pass').value.trim();
     if (pass !== TEACHER_PASSWORD) {
-      toast('Incorrect Teacher Password!', 'error');
+      toast('Incorrect Teacher Password! (Required: 2992006bot1)', 'error');
       return;
     }
     state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
@@ -295,7 +308,7 @@ function handleDoLogin() {
     const pin = document.getElementById('input-student-pin').value.trim();
 
     if (!student || (student.pin && pin !== student.pin)) {
-      toast('Incorrect PIN passcode.', 'error');
+      toast('Incorrect PIN passcode! (Default: 0000)', 'error');
       return;
     }
 
@@ -311,7 +324,7 @@ function handleDoLogin() {
 // ── NAVIGATION ─────────────────────────────────────────────
 function navigateTo(view) {
   if (!isLoggedIn()) {
-    openModal('modal-login');
+    openLoginDialog();
     return;
   }
   if (!isTeacher() && view === 'students') {
@@ -1042,7 +1055,6 @@ function handleGlobalSearch(q) {
 
 // ── SEED DEMO DATA (Student: Khải, PIN: 0000) ───────────────
 function seedDemoData() {
-  // Ensure Khải with PIN 0000 is present
   const existingKhai = state.students.find(s => s.name === 'Khải');
   if (!existingKhai) {
     const khhaiStudent = {
@@ -1100,21 +1112,15 @@ function init() {
     btn.addEventListener('click', () => navigateTo(btn.dataset.view));
   });
 
-  // User switch
+  // User switch buttons
   const switchUserBtn = document.getElementById('btn-switch-user');
   if (switchUserBtn) {
-    switchUserBtn.addEventListener('click', () => {
-      selectLoginRole(state.currentUser ? state.currentUser.role : 'teacher');
-      openModal('modal-login');
-    });
+    switchUserBtn.addEventListener('click', openLoginDialog);
   }
 
   const loginModalBtn = document.getElementById('btn-login-modal');
   if (loginModalBtn) {
-    loginModalBtn.addEventListener('click', () => {
-      selectLoginRole(state.currentUser ? state.currentUser.role : 'teacher');
-      openModal('modal-login');
-    });
+    loginModalBtn.addEventListener('click', openLoginDialog);
   }
 
   const doLoginBtn = document.getElementById('btn-do-login');
@@ -1188,8 +1194,7 @@ function init() {
   // Initial login check
   if (!isLoggedIn()) {
     updateRoleUI();
-    selectLoginRole('teacher');
-    openModal('modal-login');
+    openLoginDialog();
   } else {
     navigateTo('dashboard');
   }
