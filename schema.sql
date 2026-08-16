@@ -3,6 +3,10 @@
 -- Paste and Run this in Supabase SQL Editor (https://supabase.com)
 -- =========================================================
 
+-- Quick Migration (Run this if you already have existing tables):
+-- ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;
+
+
 -- 1. Create Students Table
 CREATE TABLE IF NOT EXISTS public.students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

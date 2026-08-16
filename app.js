@@ -92,8 +92,11 @@ async function syncFromCloud() {
 
     // 2. Fetch Tasks
     const { data: dbTasks, error: errT } = await supabaseClient.from('tasks').select('*');
+    if (errT) console.error('Error fetching tasks from Supabase:', errT);
+
     // 3. Fetch Submissions
     const { data: dbSubs, error: errSub } = await supabaseClient.from('submissions').select('*');
+    if (errSub) console.error('Error fetching submissions from Supabase:', errSub);
 
     if (dbTasks) {
       state.tasks = dbTasks.map(t => {
@@ -106,8 +109,9 @@ async function syncFromCloud() {
           title: t.title,
           description: t.description,
           studentId: t.student_id,
-          dueDate: t.due_date,
+          dueDate: t.due_date || '',
           status: t.status,
+          isRecurring: !!t.is_recurring,
           approvedAt: t.approved_at,
           submissions: subs,
           createdAt: t.created_at
@@ -128,7 +132,14 @@ async function syncToCloud() {
 
 // ── HELPERS ────────────────────────────────────────────────
 function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 function initials(name) {
@@ -992,11 +1003,17 @@ async function processFiles(files, taskId) {
 
       if (isCloudEnabled && supabaseClient) {
         try {
-          await supabaseClient.from('submissions').insert([{
+          const { data: subData, error: subErr } = await supabaseClient.from('submissions').insert([{
             task_id: task.id,
             student_id: task.studentId,
             image_url: imgData
-          }]);
+          }]).select();
+          if (subErr) {
+            console.warn('Cloud submission failed:', subErr);
+          } else if (subData && subData[0]) {
+            const lastSub = task.submissions[task.submissions.length - 1];
+            if (lastSub) lastSub.id = subData[0].id;
+          }
           await supabaseClient.from('tasks').update({ status: task.status }).eq('id', task.id);
         } catch (err) {
           console.warn('Cloud submission failed:', err);
@@ -1145,14 +1162,25 @@ async function saveStudent() {
     const student = state.students.find(s => s.id === id);
     if (student) { student.name = name; student.grade = grade; student.pin = pin; student.color = selectedColor; }
     if (isCloudEnabled && supabaseClient) {
-      await supabaseClient.from('students').update({ name, grade, pin, color: selectedColor }).eq('id', id);
+      const { error } = await supabaseClient.from('students').update({ name, grade, pin, color: selectedColor }).eq('id', id);
+      if (error) {
+        console.error('Supabase update student error:', error);
+        toast(`Lỗi lưu học sinh: ${error.message}`, 'error');
+      }
     }
     toast('Student updated!', 'success');
   } else {
-    const newStudent = { id: uid(), name, grade, pin, color: selectedColor, createdAt: new Date().toISOString() };
+    const newStudentId = uid();
+    const newStudent = { id: newStudentId, name, grade, pin, color: selectedColor, createdAt: new Date().toISOString() };
     state.students.push(newStudent);
     if (isCloudEnabled && supabaseClient) {
-      await supabaseClient.from('students').insert([{ name, grade, pin, color: selectedColor }]);
+      const { data, error } = await supabaseClient.from('students').insert([{ id: newStudentId, name, grade, pin, color: selectedColor }]).select();
+      if (error) {
+        console.error('Supabase insert student error:', error);
+        toast(`Lỗi lưu học sinh: ${error.message}`, 'error');
+      } else if (data && data[0]) {
+        newStudent.id = data[0].id;
+      }
     }
     toast('Student added!', 'success');
   }
@@ -1234,16 +1262,56 @@ async function saveTask() {
 
   if (id) {
     const task = state.tasks.find(t => t.id === id);
-    if (task) { task.title = title; task.description = description; task.studentId = studentId; task.dueDate = dueDate; task.isRecurring = isRecurring; }
+    if (task) {
+      task.title = title;
+      task.description = description;
+      task.studentId = studentId;
+      task.dueDate = dueDate;
+      task.isRecurring = isRecurring;
+    }
     if (isCloudEnabled && supabaseClient) {
-      await supabaseClient.from('tasks').update({ title, description, student_id: studentId, due_date: dueDate, is_recurring: isRecurring }).eq('id', id);
+      const { error } = await supabaseClient.from('tasks').update({
+        title,
+        description,
+        student_id: studentId,
+        due_date: dueDate || null,
+        is_recurring: isRecurring
+      }).eq('id', id);
+      if (error) {
+        console.error('Supabase update task error:', error);
+        toast(`Lỗi lưu Supabase: ${error.message}`, 'error');
+      }
     }
     toast('Task updated!', 'success');
   } else {
-    const newTask = { id: uid(), title, description, studentId, dueDate, isRecurring, status: 'pending', submissions: [], createdAt: new Date().toISOString() };
+    const newTaskId = uid();
+    const newTask = {
+      id: newTaskId,
+      title,
+      description,
+      studentId,
+      dueDate,
+      isRecurring,
+      status: 'pending',
+      submissions: [],
+      createdAt: new Date().toISOString()
+    };
     state.tasks.push(newTask);
     if (isCloudEnabled && supabaseClient) {
-      await supabaseClient.from('tasks').insert([{ title, description, student_id: studentId, due_date: dueDate, is_recurring: isRecurring }]);
+      const { data, error } = await supabaseClient.from('tasks').insert([{
+        id: newTaskId,
+        title,
+        description,
+        student_id: studentId,
+        due_date: dueDate || null,
+        is_recurring: isRecurring
+      }]).select();
+      if (error) {
+        console.error('Supabase insert task error:', error);
+        toast(`Lỗi lưu Supabase: ${error.message}`, 'error');
+      } else if (data && data[0]) {
+        newTask.id = data[0].id;
+      }
     }
     toast(isRecurring ? 'Daily recurring task created! 🔁' : 'Assignment created!', 'success');
   }
