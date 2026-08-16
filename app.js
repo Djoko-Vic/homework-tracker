@@ -761,7 +761,15 @@ function getStatusLabel(task) {
 function renderTaskCard(task) {
   const student = state.students.find(s => s.id === task.studentId);
   const status = getTaskStatus(task);
-  const subs = task.submissions || [];
+  // For daily recurring tasks, only show today's submissions
+  const allSubs = task.submissions || [];
+  const subs = task.isRecurring
+    ? allSubs.filter(sub => {
+        const d = new Date(sub.date);
+        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return k === todayKey();
+      })
+    : allSubs;
   const isT = isTeacher();
   const canUpload = !isT && status !== 'approved' && status !== 'submitted';
   const canSubmit = !isT && status === 'draft' && subs.length > 0;
@@ -805,10 +813,10 @@ function renderTaskCard(task) {
         </div>` : ''}
         ${subs.length > 0 ? `
         <div class="image-grid">
-          ${subs.map((sub, idx) => `
+          ${subs.map((sub) => `
             <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)}')">
-              <img src="${sub.data}" alt="Submission ${idx + 1}" />
-              ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${idx})">✕</button>` : ''}
+              <img src="${sub.data}" alt="Submission" />
+              ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)})">✕</button>` : ''}
             </div>
           `).join('')}
         </div>` : ''}
@@ -915,7 +923,15 @@ function openStudentDetail(studentId) {
   } else {
     body.innerHTML = tasks.map(task => {
       const status = getTaskStatus(task);
-      const subs = task.submissions || [];
+      // For daily recurring tasks, only show today's submissions
+      const allSubs = task.submissions || [];
+      const subs = task.isRecurring
+        ? allSubs.filter(sub => {
+            const d = new Date(sub.date);
+            const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            return k === todayKey();
+          })
+        : allSubs;
       return `
         <div class="student-task-item">
           <div class="student-task-item-header">
@@ -938,10 +954,10 @@ function openStudentDetail(studentId) {
           </div>` : ''}
           ${subs.length > 0 ? `
           <div class="image-grid" style="margin-top:8px">
-            ${subs.map((sub, idx) => `
+            ${subs.map((sub) => `
               <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)}')">
-                <img src="${sub.data}" alt="Submission ${idx + 1}" />
-                ${status !== 'approved' ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${idx});refreshStudentDetail('${studentId}')">✕</button>` : ''}}
+                <img src="${sub.data}" alt="Submission" />
+                ${status !== 'approved' ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)});refreshStudentDetail('${studentId}')">✕</button>` : ''}
               </div>
             `).join('')}
           </div>` : ''}
@@ -970,18 +986,18 @@ function openStudentDetailForTask(studentId) {
   applyTaskFilters();
 }
 
-// ── UPLOAD CONFIRMATION ────────────────────────────────────
+// ── UPLOAD (No confirmation popup — direct file picker) ───
 function openUploadConfirm(taskId, studentDetailId = null) {
-  // Students must confirm first — teachers cannot upload
+  // Teachers cannot upload
   if (isTeacher()) return;
-  pendingUploadTaskId = { taskId, studentDetailId };
-  const task = state.tasks.find(t => t.id === taskId);
-  document.getElementById('upload-confirm-task-name').textContent = task ? task.title : 'this task';
-  openModal('modal-upload-confirm');
+  // Bypass popup — open file picker directly
+  const inputId = studentDetailId ? `modal-fi-${taskId}` : `file-input-${taskId}`;
+  const fi = document.getElementById(inputId);
+  if (fi) fi.click();
 }
 
 function doConfirmedUpload() {
-  closeModal('modal-upload-confirm');
+  // Legacy stub kept in case referenced elsewhere
   if (!pendingUploadTaskId) return;
   const { taskId, studentDetailId } = pendingUploadTaskId;
   pendingUploadTaskId = null;
@@ -1123,10 +1139,61 @@ async function approveTask(taskId) {
 }
 
 // ── IMAGE VIEWER ───────────────────────────────────────────
+let _viewerScale = 1;
+let _viewerRotation = 0;
+let _viewerSrc = '';
+
 function openImageViewer(src, caption) {
-  document.getElementById('viewer-img').src = src;
+  _viewerSrc = src;
+  _viewerScale = 1;
+  _viewerRotation = 0;
+  const img = document.getElementById('viewer-img');
+  img.src = src;
+  img.style.transform = '';
   document.getElementById('viewer-caption').textContent = caption || '';
   openModal('modal-image-viewer');
+}
+
+function _applyViewerTransform() {
+  const img = document.getElementById('viewer-img');
+  img.style.transform = `scale(${_viewerScale}) rotate(${_viewerRotation}deg)`;
+}
+
+function viewerZoomIn() {
+  _viewerScale = Math.min(_viewerScale + 0.25, 5);
+  _applyViewerTransform();
+}
+
+function viewerZoomOut() {
+  _viewerScale = Math.max(_viewerScale - 0.25, 0.25);
+  _applyViewerTransform();
+}
+
+function viewerRotateCW() {
+  _viewerRotation = (_viewerRotation + 90) % 360;
+  _applyViewerTransform();
+}
+
+function viewerRotateCCW() {
+  _viewerRotation = (_viewerRotation - 90 + 360) % 360;
+  _applyViewerTransform();
+}
+
+function viewerDownload() {
+  if (!_viewerSrc) return;
+  const a = document.createElement('a');
+  a.href = _viewerSrc;
+  // Extract a filename hint from caption or fallback
+  const cap = document.getElementById('viewer-caption').textContent || 'homework';
+  a.download = cap.replace(/[^a-z0-9一-鿿À-ɏ _-]/gi, '_').slice(0, 60) + '.jpg';
+  a.click();
+}
+
+function handleViewerBackdropClick(e) {
+  // Close only when clicking the dark overlay (not the modal itself)
+  if (e.target === document.getElementById('modal-image-viewer')) {
+    closeModal('modal-image-viewer');
+  }
 }
 
 // ── ADD / EDIT STUDENT ─────────────────────────────────────

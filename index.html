@@ -312,36 +312,28 @@
   </div>
 
   <!-- Image Viewer Modal -->
-  <div class="modal-overlay" id="modal-image-viewer">
+  <div class="modal-overlay" id="modal-image-viewer" onclick="handleViewerBackdropClick(event)">
     <div class="modal modal-img">
-      <button class="modal-close modal-close-img" data-modal="modal-image-viewer" type="button">✕</button>
-      <img id="viewer-img" src="" alt="Submission" />
-      <div class="viewer-caption" id="viewer-caption"></div>
+      <!-- Toolbar -->
+      <div class="viewer-toolbar">
+        <div class="viewer-caption" id="viewer-caption"></div>
+        <div class="viewer-actions">
+          <button class="viewer-btn" onclick="viewerZoomOut()" title="Thu nhỏ">🔍−</button>
+          <button class="viewer-btn" onclick="viewerZoomIn()" title="Phóng to">🔍+</button>
+          <button class="viewer-btn" onclick="viewerRotateCCW()" title="Xoay ngược chiều kim đồng hồ">↺</button>
+          <button class="viewer-btn" onclick="viewerRotateCW()" title="Xoay theo chiều kim đồng hồ">↻</button>
+          <button class="viewer-btn" onclick="viewerDownload()" title="Tải ảnh">⬇</button>
+          <button class="viewer-btn viewer-btn-close" onclick="closeModal('modal-image-viewer')" title="Đóng">✕</button>
+        </div>
+      </div>
+      <!-- Image -->
+      <div class="viewer-img-wrap" id="viewer-img-wrap">
+        <img id="viewer-img" src="" alt="Submission" />
+      </div>
     </div>
   </div>
 
-  <!-- Upload Confirmation Modal (Students only) -->
-  <div class="modal-overlay" id="modal-upload-confirm">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3>📸 Xác nhận nộp bài</h3>
-        <button class="modal-close" data-modal="modal-upload-confirm" type="button">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size:14px; color:var(--text-1); margin-bottom:8px">
-          Bạn có chắc chắn muốn nộp ảnh bài tập cho:
-        </p>
-        <p style="font-weight:700; font-size:15px; color:var(--terracotta);" id="upload-confirm-task-name">Task name</p>
-        <p style="font-size:12px; color:var(--text-3); margin-top:8px">
-          Ảnh sẽ được gửi lên cho giáo viên kiểm tra. Hãy chắc chắn ảnh rõ nét và đầy đủ.
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" data-modal="modal-upload-confirm" type="button">Hủy</button>
-        <button class="btn btn-primary" onclick="doConfirmedUpload()" type="button">📸 Chọn ảnh để nộp</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Confirm Delete Modal -->
   <div class="modal-overlay" id="modal-confirm">

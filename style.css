@@ -539,8 +539,70 @@ html, body {
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1.5px solid var(--border); }
 .modal-close { background: transparent; border: none; font-size: 18px; color: var(--text-3); cursor: pointer; }
 
-#viewer-img { max-width: 85vw; max-height: 80vh; border-radius: var(--radius); }
-.viewer-caption { text-align: center; color: var(--text-2); font-size: 13px; margin-top: 10px; font-weight: 600; }
+/* IMAGE VIEWER */
+.modal-img {
+  background: #1a1814;
+  border-color: rgba(255,255,255,0.08);
+  max-width: 92vw;
+  width: 92vw;
+  display: flex;
+  flex-direction: column;
+  max-height: 95vh;
+  padding: 0;
+  overflow: hidden;
+}
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  gap: 12px;
+  flex-shrink: 0;
+}
+.viewer-caption {
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.viewer-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.viewer-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+  line-height: 1;
+}
+.viewer-btn:hover { background: rgba(255,255,255,0.22); transform: scale(1.08); }
+.viewer-btn-close { background: rgba(217,107,67,0.3); border-color: rgba(217,107,67,0.5); }
+.viewer-btn-close:hover { background: rgba(217,107,67,0.55); }
+.viewer-img-wrap {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 16px;
+}
+#viewer-img {
+  max-width: 100%;
+  max-height: calc(95vh - 80px);
+  border-radius: 6px;
+  transition: transform 0.25s ease;
+  transform-origin: center center;
+  display: block;
+}
 
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 6px; }
