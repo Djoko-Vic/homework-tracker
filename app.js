@@ -72,14 +72,21 @@ function loadState() {
   }
 }
 
-// ── CLOUD SYNC WITH SUPABASE ───────────────────────────────
+// ── CLOUD SYNC WITH SUPABASE ────────────────────────────────
+let isSyncing = false;
+
 async function syncFromCloud() {
   if (!isCloudEnabled || !supabaseClient) return;
+  if (isSyncing) return; // prevent concurrent syncs
+  isSyncing = true;
 
   try {
     // 1. Fetch Students
     const { data: dbStudents, error: errS } = await supabaseClient.from('students').select('*');
-    if (dbStudents) {
+    if (errS) {
+      console.error('Error fetching students from Supabase:', errS);
+    } else if (dbStudents && dbStudents.length > 0) {
+      // Only overwrite students if Supabase actually returned records
       state.students = dbStudents.map(s => ({
         id: s.id,
         name: s.name,
@@ -98,7 +105,9 @@ async function syncFromCloud() {
     const { data: dbSubs, error: errSub } = await supabaseClient.from('submissions').select('*');
     if (errSub) console.error('Error fetching submissions from Supabase:', errSub);
 
-    if (dbTasks) {
+    // Only overwrite tasks if Supabase returned a non-empty list OR we have no local tasks.
+    // This prevents a failed/empty Supabase response from wiping out locally-stored tasks.
+    if (dbTasks && !errT && (dbTasks.length > 0 || state.tasks.length === 0)) {
       state.tasks = dbTasks.map(t => {
         const subs = (dbSubs || [])
           .filter(sub => sub.task_id === t.id)
@@ -117,12 +126,17 @@ async function syncFromCloud() {
           createdAt: t.created_at
         };
       });
+    } else if (dbTasks && !errT && dbTasks.length === 0 && state.tasks.length > 0) {
+      // Supabase returned empty but we have local tasks — keep local, don't overwrite
+      console.warn('Supabase returned 0 tasks but local state has tasks — keeping local data.');
     }
 
     saveState();
     renderView(currentView);
   } catch (err) {
     console.error('Cloud Sync Error:', err);
+  } finally {
+    isSyncing = false;
   }
 }
 
