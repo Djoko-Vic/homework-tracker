@@ -580,13 +580,14 @@ function renderPendingTasks() {
   }
   el.innerHTML = pending.slice(0, 10).map(task => {
     const student = state.students.find(s => s.id === task.studentId);
-    const overdue = isOverdue(task.dueDate);
+    const overdue = task.isRecurring ? false : isOverdue(task.dueDate);
+    const dueDisplay = task.isRecurring ? 'Hôm nay' : (task.dueDate ? formatDate(task.dueDate) : '—');
     return `
       <div class="pending-item" onclick="openStudentDetailForTask('${task.studentId}')">
         <div class="pending-dot" style="${overdue ? 'background:var(--rose)' : ''}"></div>
         <div class="pending-task-name">${escHtml(task.title)}</div>
         <div class="pending-student">${student ? escHtml(student.name) : '—'}</div>
-        <div class="pending-due ${overdue ? 'overdue' : ''}">${task.dueDate ? formatDate(task.dueDate) : '—'}</div>
+        <div class="pending-due ${overdue ? 'overdue' : ''}">${dueDisplay}</div>
       </div>
     `;
   }).join('');
@@ -761,7 +762,7 @@ function renderTaskCard(task) {
           </div>
           <div class="task-card-meta">
             ${student ? `<span>Học sinh: <strong>${escHtml(student.name)}</strong></span>` : ''}
-            ${task.dueDate ? `<span>Hạn: ${formatDate(task.dueDate)}</span>` : ''}
+            ${task.isRecurring ? `<span>Hạn nộp: <strong>Mỗi ngày</strong></span>` : (task.dueDate ? `<span>Hạn: ${formatDate(task.dueDate)}</span>` : '')}
             <span>${subs.length} ảnh đã chụp</span>
           </div>
         </div>
@@ -909,7 +910,7 @@ function openStudentDetail(studentId) {
           </div>
           <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">
             ${task.description ? `<div>${escHtml(task.description)}</div>` : ''}
-            ${task.dueDate ? `<div>Due: ${formatDate(task.dueDate)}</div>` : ''}
+            ${task.isRecurring ? `<div>Hạn: Mỗi ngày (Lặp lại hàng ngày)</div>` : (task.dueDate ? `<div>Due: ${formatDate(task.dueDate)}</div>` : '')}
           </div>
           ${status !== 'approved' ? `
           <div class="upload-zone" style="padding:12px"
@@ -1213,6 +1214,20 @@ function confirmDeleteStudent(id) {
   openModal('modal-confirm');
 }
 
+function handleRecurringToggle() {
+  const recurChk = document.getElementById('input-task-recurring');
+  const dueGroup = document.getElementById('form-group-task-due');
+  const dueInput = document.getElementById('input-task-due');
+  if (recurChk && dueGroup) {
+    if (recurChk.checked) {
+      dueGroup.classList.add('hidden');
+      if (dueInput) dueInput.value = '';
+    } else {
+      dueGroup.classList.remove('hidden');
+    }
+  }
+}
+
 // ── ADD / EDIT TASK ────────────────────────────────────────
 function openAddTask() {
   const sel = document.getElementById('input-task-student');
@@ -1225,6 +1240,7 @@ function openAddTask() {
   document.getElementById('input-task-due').value = '';
   const recurChk = document.getElementById('input-task-recurring');
   if (recurChk) recurChk.checked = false;
+  handleRecurringToggle();
   openModal('modal-task');
 }
 
@@ -1246,6 +1262,7 @@ function editTask(id) {
   document.getElementById('input-task-id').value = task.id;
   const recurChk = document.getElementById('input-task-recurring');
   if (recurChk) recurChk.checked = !!task.isRecurring;
+  handleRecurringToggle();
   openModal('modal-task');
 }
 
@@ -1253,10 +1270,10 @@ async function saveTask() {
   const title = document.getElementById('input-task-title').value.trim();
   const description = document.getElementById('input-task-desc').value.trim();
   const studentId = document.getElementById('input-task-student').value;
-  const dueDate = document.getElementById('input-task-due').value;
-  const id = document.getElementById('input-task-id').value;
   const recurChk = document.getElementById('input-task-recurring');
   const isRecurring = recurChk ? recurChk.checked : false;
+  const dueDate = isRecurring ? '' : document.getElementById('input-task-due').value;
+  const id = document.getElementById('input-task-id').value;
   if (!title) { toast('Please enter a task title.', 'error'); return; }
   if (!studentId) { toast('Please select a student.', 'error'); return; }
 
@@ -1459,6 +1476,9 @@ function init() {
 
   const taskFilterStatus = document.getElementById('task-filter-status');
   if (taskFilterStatus) taskFilterStatus.addEventListener('change', applyTaskFilters);
+
+  const recurCheckbox = document.getElementById('input-task-recurring');
+  if (recurCheckbox) recurCheckbox.addEventListener('change', handleRecurringToggle);
 
   // Modal saves
   const saveStudentBtn = document.getElementById('btn-save-student');
