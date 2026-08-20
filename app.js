@@ -145,25 +145,25 @@ function renderFeeWidget() {
 
   widget.innerHTML = `
     <div class="fee-widget-header">
-      <span class="fee-widget-title">💵 Tiền Học Phí</span>
-      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Đã nhận tiền — reset về 1,000,000đ">🔄 Nhận tiền</button>
+      <span class="fee-widget-title">💵 Tuition Fee</span>
+      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Received payment — reset to 1,000,000đ">🔄 Receive Payment</button>
     </div>
     <div class="fee-balance" style="color:${balColor};background:${balBg}">
       ${formatVND(bal)}
     </div>
     <div class="fee-rules">
-      <span>📝 Mỗi bài xong: <strong>-2,500đ</strong></span>
-      <span>💔 Mất streak: <strong>+10,000đ</strong></span>
+      <span>📝 Per assignment: <strong>-2,500đ</strong></span>
+      <span>💔 Streak lost: <strong>+10,000đ</strong></span>
     </div>
     <div class="fee-manual-wrap">
-      <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Số tiền…" min="0" />
-      <input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Lý do (tuỳ chọn)" />
+      <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Amount…" min="0" />
+      <input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Reason (optional)" />
       <div class="fee-manual-btns">
-        <button class="fee-manual-btn fee-manual-add" id="btn-fee-add" type="button" title="Cộng tiền">+ Cộng</button>
-        <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Trừ tiền">− Trừ</button>
+        <button class="fee-manual-btn fee-manual-add" id="btn-fee-add" type="button" title="Add amount">+ Add</button>
+        <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Deduct amount">− Deduct</button>
       </div>
     </div>
-    <div class="fee-log-title">Lịch sử gần đây</div>
+    <div class="fee-log-title">Recent History</div>
     <div class="fee-log">${logHtml}</div>
   `;
 
@@ -867,6 +867,11 @@ function getTaskStatus(task) {
       if (task.status !== 'submitted' && task.status !== 'approved') return 'draft';
       return task.status;
     }
+    // No submission today — but if there's a pending 'submitted' status from a prior day,
+    // keep it as 'submitted' so the teacher can still approve it the next day.
+    if (task.status === 'submitted' && task.submissions && task.submissions.length > 0) {
+      return 'submitted';
+    }
     return 'pending';
   }
   if (task.status === 'approved') return 'approved';
@@ -896,8 +901,8 @@ function renderTaskCard(task) {
   const allSubs = task.submissions || [];
 
   // For daily recurring tasks: show today's submissions normally.
-  // But if status is 'submitted' and there are no submissions today,
-  // show the most recent day's submissions so teacher can still review them.
+  // If no submissions today but status is 'submitted' (teacher hasn't approved yet from a prior day),
+  // show the most recent day's submissions so teacher can still review and approve them.
   let subs;
   if (task.isRecurring) {
     const todaySubs = allSubs.filter(sub => {
@@ -907,7 +912,7 @@ function renderTaskCard(task) {
     });
     if (todaySubs.length > 0) {
       subs = todaySubs;
-    } else if (status === 'submitted' && allSubs.length > 0) {
+    } else if ((status === 'submitted' || status === 'draft') && allSubs.length > 0) {
       // Show the most recent submission batch (same day as last submission)
       const lastDate = new Date(allSubs[allSubs.length - 1].date);
       const lastKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,'0')}-${String(lastDate.getDate()).padStart(2,'0')}`;
@@ -1087,7 +1092,7 @@ function openStudentDetail(studentId) {
         });
         if (todaySubs.length > 0) {
           subs = todaySubs;
-        } else if (status === 'submitted' && allSubs.length > 0) {
+        } else if ((status === 'submitted' || status === 'draft') && allSubs.length > 0) {
           const lastDate = new Date(allSubs[allSubs.length - 1].date);
           const lastKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,'0')}-${String(lastDate.getDate()).padStart(2,'0')}`;
           subs = allSubs.filter(sub => {
