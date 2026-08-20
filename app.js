@@ -57,7 +57,8 @@ let pendingUploadTaskId = null; // for upload confirmation dialog
 // ── FEE TRACKER STATE ──────────────────────────────────────
 let feeState = {
   balance: FEE_INITIAL,
-  log: [] // { date, amount, reason }
+  log: [],           // { date, amount, reason }
+  noSubChargeDates: {} // { studentId: 'YYYY-MM-DD' } — tracks when we last charged for missing submission
 };
 
 function loadFeeState() {
@@ -67,8 +68,9 @@ function loadFeeState() {
       const parsed = JSON.parse(raw);
       feeState.balance = typeof parsed.balance === 'number' ? parsed.balance : FEE_INITIAL;
       feeState.log = parsed.log || [];
+      feeState.noSubChargeDates = parsed.noSubChargeDates || {};
     } catch (e) {
-      feeState = { balance: FEE_INITIAL, log: [] };
+      feeState = { balance: FEE_INITIAL, log: [], noSubChargeDates: {} };
     }
   }
 }
@@ -1668,21 +1670,42 @@ function seedDemoData() {
   }
 }
 
-// ── STREAK LOSS DETECTION ─────────────────────────────────
+// ── STREAK LOSS / NO-SUBMISSION DETECTION ──────────────────────
 // Track previous streak values to detect when a streak is broken
 let _prevStreakMap = {};
 
 function checkStreakLosses() {
   // Only run for teacher (who sees all students)
   if (!isTeacher()) return;
+  const today = todayKey();
+
   state.students.forEach(s => {
     const { streak } = getStudentStreak(s.id);
     const prev = _prevStreakMap[s.id];
+
+    // Case 1: streak dropped from >0 to 0 (classic streak loss)
     if (typeof prev === 'number' && prev > 0 && streak === 0) {
-      // Streak was lost!
       adjustFee(FEE_STREAK_LOST, `💔 ${s.name} mất streak (${prev} ngày → 0)`);
       toast(`💔 ${s.name} đã mất streak! +10,000đ hoàn lại`, 'info', '💔');
+      // Mark as charged today so Case 2 doesn't double-charge
+      feeState.noSubChargeDates[s.id] = today;
+      saveFeeState();
     }
+
+    // Case 2: streak is 0 (including already-zero), student has no submission today,
+    // and we haven't already charged for this student today
+    if (streak === 0 && feeState.noSubChargeDates[s.id] !== today) {
+      const hasSubToday = state.tasks.some(t =>
+        t.studentId === s.id && hasSubmissionToday(t)
+      );
+      if (!hasSubToday) {
+        feeState.noSubChargeDates[s.id] = today;
+        adjustFee(FEE_STREAK_LOST, `💔 ${s.name} không nộp bài hôm nay`);
+        saveFeeState();
+        toast(`💔 ${s.name} không làm bài! +10,000đ`, 'info', '💔');
+      }
+    }
+
     _prevStreakMap[s.id] = streak;
   });
 }
