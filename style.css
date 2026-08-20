@@ -921,3 +921,61 @@ html, body {
   padding: 8px;
   font-weight: 600;
 }
+
+/* ── FEE MANUAL ADJUSTMENT ── */
+.fee-manual-wrap {
+  padding: 6px 10px 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fee-manual-input,
+.fee-manual-reason {
+  width: 100%;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+  font-size: 11px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.fee-manual-input:focus,
+.fee-manual-reason:focus {
+  border-color: var(--terracotta);
+  background: var(--bg2);
+}
+.fee-manual-input { font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+
+.fee-manual-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.fee-manual-btn {
+  padding: 5px 0;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all var(--transition);
+}
+.fee-manual-add {
+  background: var(--sage-dim);
+  color: var(--sage);
+  border: 1px solid rgba(74,124,89,0.3);
+}
+.fee-manual-add:hover { background: var(--sage); color: #fff; }
+.fee-manual-sub {
+  background: var(--rose-dim);
+  color: var(--rose);
+  border: 1px solid rgba(201,74,83,0.3);
+}
+.fee-manual-sub:hover { background: var(--rose); color: #fff; }

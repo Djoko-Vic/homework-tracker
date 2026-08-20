@@ -102,6 +102,20 @@ function resetFeeBalance() {
   toast('💰 Đã reset tiền về 1,000,000đ!', 'success', '💰');
 }
 
+function manualAdjustFee(sign) {
+  const input = document.getElementById('fee-manual-input');
+  const reasonInput = document.getElementById('fee-manual-reason');
+  if (!input) return;
+  const raw = parseFloat(input.value.replace(/[^0-9.]/g, ''));
+  if (!raw || raw <= 0) { toast('Nhập số tiền hợp lệ!', 'error'); return; }
+  const amount = sign * Math.round(raw);
+  const reason = (reasonInput && reasonInput.value.trim()) || (sign > 0 ? '✏️ Cộng tay' : '✏️ Trừ tay');
+  adjustFee(amount, reason);
+  input.value = '';
+  if (reasonInput) reasonInput.value = '';
+  toast(`${sign > 0 ? '+' : ''}${formatVND(amount)} đã được ghi nhận`, sign > 0 ? 'success' : 'info');
+}
+
 function formatVND(amount) {
   return amount.toLocaleString('vi-VN') + 'đ';
 }
@@ -139,12 +153,29 @@ function renderFeeWidget() {
       <span>📝 Mỗi bài xong: <strong>-2,500đ</strong></span>
       <span>💔 Mất streak: <strong>+10,000đ</strong></span>
     </div>
+    <div class="fee-manual-wrap">
+      <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Số tiền…" min="0" />
+      <input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Lý do (tuỳ chọn)" />
+      <div class="fee-manual-btns">
+        <button class="fee-manual-btn fee-manual-add" id="btn-fee-add" type="button" title="Cộng tiền">+ Cộng</button>
+        <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Trừ tiền">− Trừ</button>
+      </div>
+    </div>
     <div class="fee-log-title">Lịch sử gần đây</div>
     <div class="fee-log">${logHtml}</div>
   `;
 
   const resetBtn = document.getElementById('btn-fee-reset');
   if (resetBtn) resetBtn.addEventListener('click', resetFeeBalance);
+  const addBtn = document.getElementById('btn-fee-add');
+  if (addBtn) addBtn.addEventListener('click', () => manualAdjustFee(1));
+  const subBtn = document.getElementById('btn-fee-sub');
+  if (subBtn) subBtn.addEventListener('click', () => manualAdjustFee(-1));
+  // Allow Enter key on input
+  const inp = document.getElementById('fee-manual-input');
+  if (inp) inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') manualAdjustFee(-1);
+  });
 }
 
 // ── PERSISTENCE ────────────────────────────────────────────
@@ -860,15 +891,35 @@ function getStatusLabel(task) {
 function renderTaskCard(task) {
   const student = state.students.find(s => s.id === task.studentId);
   const status = getTaskStatus(task);
-  // For daily recurring tasks, only show today's submissions
   const allSubs = task.submissions || [];
-  const subs = task.isRecurring
-    ? allSubs.filter(sub => {
+
+  // For daily recurring tasks: show today's submissions normally.
+  // But if status is 'submitted' and there are no submissions today,
+  // show the most recent day's submissions so teacher can still review them.
+  let subs;
+  if (task.isRecurring) {
+    const todaySubs = allSubs.filter(sub => {
+      const d = new Date(sub.date);
+      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return k === todayKey();
+    });
+    if (todaySubs.length > 0) {
+      subs = todaySubs;
+    } else if (status === 'submitted' && allSubs.length > 0) {
+      // Show the most recent submission batch (same day as last submission)
+      const lastDate = new Date(allSubs[allSubs.length - 1].date);
+      const lastKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,'0')}-${String(lastDate.getDate()).padStart(2,'0')}`;
+      subs = allSubs.filter(sub => {
         const d = new Date(sub.date);
         const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        return k === todayKey();
-      })
-    : allSubs;
+        return k === lastKey;
+      });
+    } else {
+      subs = [];
+    }
+  } else {
+    subs = allSubs;
+  }
   const isT = isTeacher();
   const canUpload = !isT && status !== 'approved' && status !== 'submitted';
   const canSubmit = !isT && status === 'draft' && subs.length > 0;
@@ -1022,15 +1073,32 @@ function openStudentDetail(studentId) {
   } else {
     body.innerHTML = tasks.map(task => {
       const status = getTaskStatus(task);
-      // For daily recurring tasks, only show today's submissions
+      // For daily recurring tasks, apply same logic as renderTaskCard:
+      // show today's subs, or fallback to last submitted day if pending approval
       const allSubs = task.submissions || [];
-      const subs = task.isRecurring
-        ? allSubs.filter(sub => {
+      let subs;
+      if (task.isRecurring) {
+        const todaySubs = allSubs.filter(sub => {
+          const d = new Date(sub.date);
+          const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          return k === todayKey();
+        });
+        if (todaySubs.length > 0) {
+          subs = todaySubs;
+        } else if (status === 'submitted' && allSubs.length > 0) {
+          const lastDate = new Date(allSubs[allSubs.length - 1].date);
+          const lastKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,'0')}-${String(lastDate.getDate()).padStart(2,'0')}`;
+          subs = allSubs.filter(sub => {
             const d = new Date(sub.date);
             const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            return k === todayKey();
-          })
-        : allSubs;
+            return k === lastKey;
+          });
+        } else {
+          subs = [];
+        }
+      } else {
+        subs = allSubs;
+      }
       return `
         <div class="student-task-item">
           <div class="student-task-item-header">
