@@ -855,20 +855,30 @@ function hasSubmissionToday(task) {
   });
 }
 
+// Returns true if teacher already approved this recurring task today
+function hasApprovalToday(task) {
+  if (!task.approvalHistory || !task.approvalHistory.length) return false;
+  const today = todayKey();
+  return task.approvalHistory.some(a => a.date === today);
+}
+
 function getTaskStatus(task) {
-  // Daily recurring: resets each day
+  // Daily recurring: each day is independent
   if (task.isRecurring) {
-    if (task.status === 'approved' && task.approvedAt) {
-      const approvedDay = new Date(task.approvedAt).toDateString();
-      if (approvedDay === new Date().toDateString()) return 'approved';
+    // Check if teacher already approved today's batch
+    if (hasApprovalToday(task)) {
+      // Still show 'approved' unless a NEW submission was uploaded after the approval
+      const lastApproval = task.approvalHistory[task.approvalHistory.length - 1];
+      const hasNewSub = task.submissions && task.submissions.some(
+        sub => new Date(sub.date) > new Date(lastApproval.approvedAt)
+      );
+      if (!hasNewSub) return 'approved';
     }
     if (hasSubmissionToday(task)) {
-      // Has photos today but not yet submitted
-      if (task.status !== 'submitted' && task.status !== 'approved') return 'draft';
-      return task.status;
+      if (task.status === 'submitted') return 'submitted';
+      return 'draft';
     }
-    // No submission today — but if there's a pending 'submitted' status from a prior day,
-    // keep it as 'submitted' so the teacher can still approve it the next day.
+    // No submission today — keep 'submitted' from a prior day so teacher can still approve
     if (task.status === 'submitted' && task.submissions && task.submissions.length > 0) {
       return 'submitted';
     }
@@ -1297,13 +1307,23 @@ function submitHomework(taskId) {
 async function approveTask(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
-  task.status = 'approved';
-  task.approvedAt = new Date().toISOString();
+  const nowIso = new Date().toISOString();
+
+  if (task.isRecurring) {
+    // Record approval in history, then reset to 'pending' so student can submit again
+    if (!task.approvalHistory) task.approvalHistory = [];
+    task.approvalHistory.push({ date: todayKey(), approvedAt: nowIso });
+    if (task.approvalHistory.length > 60) task.approvalHistory = task.approvalHistory.slice(-60);
+    task.status = 'pending';
+  } else {
+    task.status = 'approved';
+  }
+  task.approvedAt = nowIso;
 
   if (isCloudEnabled && supabaseClient) {
     await supabaseClient.from('tasks').update({
-      status: 'approved',
-      approved_at: task.approvedAt
+      status: task.status,
+      approved_at: nowIso
     }).eq('id', task.id);
   }
 
@@ -1314,7 +1334,7 @@ async function approveTask(taskId) {
 
   saveState();
   renderView(currentView);
-  toast('Homework approved! Streak updated 🔥', 'success');
+  toast('Homework approved! Student can now submit new work 🔥', 'success')
 }
 
 // ── IMAGE VIEWER ───────────────────────────────────────────
