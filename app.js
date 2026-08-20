@@ -5,6 +5,10 @@
 'use strict';
 
 const STORAGE_KEY = 'homeworkhub_retro_v7';
+const FEE_STORAGE_KEY = 'homeworkhub_fee_tracker_v1';
+const FEE_INITIAL = 1000000;
+const FEE_PER_ASSIGNMENT = -2500;
+const FEE_STREAK_LOST = 10000;
 const TEACHER_PASSWORD = '2992006bot1';
 
 const AVATAR_COLORS = [
@@ -49,6 +53,99 @@ let selectedColor = AVATAR_COLORS[0];
 let selectedRoleInModal = 'teacher';
 let pendingDeleteFn = null;
 let pendingUploadTaskId = null; // for upload confirmation dialog
+
+// ── FEE TRACKER STATE ──────────────────────────────────────
+let feeState = {
+  balance: FEE_INITIAL,
+  log: [] // { date, amount, reason }
+};
+
+function loadFeeState() {
+  const raw = localStorage.getItem(FEE_STORAGE_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      feeState.balance = typeof parsed.balance === 'number' ? parsed.balance : FEE_INITIAL;
+      feeState.log = parsed.log || [];
+    } catch (e) {
+      feeState = { balance: FEE_INITIAL, log: [] };
+    }
+  }
+}
+
+function saveFeeState() {
+  localStorage.setItem(FEE_STORAGE_KEY, JSON.stringify(feeState));
+}
+
+function adjustFee(amount, reason) {
+  feeState.balance += amount;
+  feeState.log.unshift({
+    date: new Date().toISOString(),
+    amount,
+    reason
+  });
+  // Keep log at most 50 entries
+  if (feeState.log.length > 50) feeState.log = feeState.log.slice(0, 50);
+  saveFeeState();
+  renderFeeWidget();
+}
+
+function resetFeeBalance() {
+  feeState.balance = FEE_INITIAL;
+  feeState.log.unshift({
+    date: new Date().toISOString(),
+    amount: 0,
+    reason: '💳 Đã nhận tiền — reset về 1,000,000đ'
+  });
+  saveFeeState();
+  renderFeeWidget();
+  toast('💰 Đã reset tiền về 1,000,000đ!', 'success', '💰');
+}
+
+function formatVND(amount) {
+  return amount.toLocaleString('vi-VN') + 'đ';
+}
+
+function renderFeeWidget() {
+  const widget = document.getElementById('fee-widget');
+  if (!widget) return;
+
+  const bal = feeState.balance;
+  const balColor = bal >= 800000 ? 'var(--sage)' : bal >= 500000 ? 'var(--mustard)' : 'var(--rose)';
+  const balBg   = bal >= 800000 ? 'var(--sage-dim)' : bal >= 500000 ? 'var(--mustard-dim)' : 'var(--rose-dim)';
+
+  // Last 5 log entries
+  const recentLog = feeState.log.slice(0, 5);
+  const logHtml = recentLog.length ? recentLog.map(entry => {
+    const sign = entry.amount > 0 ? '+' : '';
+    const col  = entry.amount > 0 ? 'var(--sage)' : entry.amount < 0 ? 'var(--rose)' : 'var(--text-3)';
+    const dateStr = new Date(entry.date).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit' });
+    return `<div class="fee-log-item">
+      <span class="fee-log-reason">${entry.reason}</span>
+      <span class="fee-log-amount" style="color:${col}">${sign}${entry.amount !== 0 ? formatVND(entry.amount) : '—'}</span>
+      <span class="fee-log-date">${dateStr}</span>
+    </div>`;
+  }).join('') : `<div class="fee-log-empty">Chưa có giao dịch nào</div>`;
+
+  widget.innerHTML = `
+    <div class="fee-widget-header">
+      <span class="fee-widget-title">💵 Tiền Học Phí</span>
+      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Đã nhận tiền — reset về 1,000,000đ">🔄 Nhận tiền</button>
+    </div>
+    <div class="fee-balance" style="color:${balColor};background:${balBg}">
+      ${formatVND(bal)}
+    </div>
+    <div class="fee-rules">
+      <span>📝 Mỗi bài xong: <strong>-2,500đ</strong></span>
+      <span>💔 Mất streak: <strong>+10,000đ</strong></span>
+    </div>
+    <div class="fee-log-title">Lịch sử gần đây</div>
+    <div class="fee-log">${logHtml}</div>
+  `;
+
+  const resetBtn = document.getElementById('btn-fee-reset');
+  if (resetBtn) resetBtn.addEventListener('click', resetFeeBalance);
+}
 
 // ── PERSISTENCE ────────────────────────────────────────────
 function saveState() {
@@ -1135,6 +1232,11 @@ async function approveTask(taskId) {
     }).eq('id', task.id);
   }
 
+  // Fee tracker: deduct 2,500đ per completed assignment
+  const student = state.students.find(s => s.id === task.studentId);
+  const studentName = student ? student.name : 'Học sinh';
+  adjustFee(FEE_PER_ASSIGNMENT, `📝 ${studentName} nộp xong: ${task.title.slice(0, 28)}`);
+
   saveState();
   renderView(currentView);
   toast('Homework approved! Streak updated 🔥', 'success');
@@ -1498,15 +1600,43 @@ function seedDemoData() {
   }
 }
 
+// ── STREAK LOSS DETECTION ─────────────────────────────────
+// Track previous streak values to detect when a streak is broken
+let _prevStreakMap = {};
+
+function checkStreakLosses() {
+  // Only run for teacher (who sees all students)
+  if (!isTeacher()) return;
+  state.students.forEach(s => {
+    const { streak } = getStudentStreak(s.id);
+    const prev = _prevStreakMap[s.id];
+    if (typeof prev === 'number' && prev > 0 && streak === 0) {
+      // Streak was lost!
+      adjustFee(FEE_STREAK_LOST, `💔 ${s.name} mất streak (${prev} ngày → 0)`);
+      toast(`💔 ${s.name} đã mất streak! +10,000đ hoàn lại`, 'info', '💔');
+    }
+    _prevStreakMap[s.id] = streak;
+  });
+}
+
 // ── INIT ───────────────────────────────────────────────────
 function init() {
   loadState();
+  loadFeeState();
   initSupabase();
   seedDemoData();
 
   if (isCloudEnabled) {
     syncFromCloud();
   }
+
+  // Render fee widget on init
+  renderFeeWidget();
+
+  // Check streaks periodically (every 60s) to detect losses
+  setInterval(() => {
+    if (isTeacher()) checkStreakLosses();
+  }, 60000);
 
   // Sidebar date
   const dateEl = document.getElementById('sidebar-date');
