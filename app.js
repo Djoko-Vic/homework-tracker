@@ -938,8 +938,28 @@ function renderTaskCard(task) {
     subs = allSubs;
   }
   const isT = isTeacher();
-  const canUpload = !isT && status !== 'approved' && status !== 'submitted';
-  const canSubmit = !isT && status === 'draft' && subs.length > 0;
+  // For daily recurring tasks: allow student to upload today even if a prior day's
+  // submission is still pending approval. Only block if TODAY already has a submission
+  // that's been submitted/approved.
+  const submittedToday = task.isRecurring ? hasSubmissionToday(task) : false;
+  const canUpload = !isT && (
+    task.isRecurring
+      ? (status !== 'approved' && !submittedToday)  // daily: block only if today already submitted
+      : (status !== 'approved' && status !== 'submitted')  // regular: original logic
+  );
+  // canSubmit: for daily tasks, show submit button only when today's photos exist but not yet submitted
+  const todaySubsForSubmit = task.isRecurring
+    ? (task.submissions || []).filter(sub => {
+        const d = new Date(sub.date);
+        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return k === todayKey();
+      })
+    : subs;
+  const canSubmit = !isT && (
+    task.isRecurring
+      ? (todaySubsForSubmit.length > 0 && !submittedToday && status !== 'approved')
+      : (status === 'draft' && subs.length > 0)
+  );
 
   return `
     <div class="task-card" id="task-card-${task.id}">
@@ -992,7 +1012,8 @@ function renderTaskCard(task) {
           <div class="submit-homework-hint">📌 Review your photos then click submit</div>
           <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">📨 Submit to Teacher</button>
         </div>` : ''}
-        ${!isT && status === 'submitted' ? `<div class="submitted-notice">📨 Homework submitted — waiting for teacher to approve!</div>` : ''}
+        ${!isT && task.isRecurring && status === 'submitted' && !hasSubmissionToday(task) ? `<div class="submitted-notice">📨 Bài hôm qua đang chờ thầy duyệt — hãy nộp bài hôm nay bên trên!</div>` : ''}
+        ${!isT && status === 'submitted' && (!task.isRecurring || hasSubmissionToday(task)) ? `<div class="submitted-notice">📨 Homework submitted — waiting for teacher to approve!</div>` : ''}
         ${!isT && status === 'approved' ? `<div class="approved-notice">✅ Homework approved! Well done 🎉</div>` : ''}
       </div>
     </div>
@@ -1283,11 +1304,22 @@ function handleDrop(event, taskId) {
 // ── SUBMIT HOMEWORK (Student official submission) ──────────
 function submitHomework(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
-  if (!task || !task.submissions || task.submissions.length === 0) {
+  if (!task) return;
+  if (isTeacher()) return;
+
+  // For daily recurring tasks: only count TODAY's submissions
+  const subsToCheck = task.isRecurring
+    ? (task.submissions || []).filter(sub => {
+        const d = new Date(sub.date);
+        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return k === todayKey();
+      })
+    : (task.submissions || []);
+
+  if (subsToCheck.length === 0) {
     toast('Please upload at least one photo before submitting!', 'error');
     return;
   }
-  if (isTeacher()) return;
 
   task.status = 'submitted';
   task.submittedAt = new Date().toISOString();
