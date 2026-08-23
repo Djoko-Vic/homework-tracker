@@ -979,3 +979,49 @@ html, body {
   border: 1px solid rgba(201,74,83,0.3);
 }
 .fee-manual-sub:hover { background: var(--rose); color: #fff; }
+
+/* ── RECURRING DAY GROUP CARDS ── */
+.recurring-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.recurring-day-card {
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  transition: all var(--transition);
+}
+
+.recurring-day-today {
+  border-color: var(--terracotta);
+  background: rgba(217,107,67,0.04);
+  box-shadow: 0 0 0 2px rgba(217,107,67,0.08);
+}
+
+.recurring-day-past {
+  border-color: var(--border);
+  background: var(--bg3);
+  opacity: 0.9;
+}
+
+.recurring-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.recurring-day-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.01em;
+}
+
+.recurring-day-today .recurring-day-label {
+  color: var(--terracotta);
+}

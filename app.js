@@ -855,43 +855,98 @@ function hasSubmissionToday(task) {
   });
 }
 
-// Returns true if teacher already approved this recurring task today
-function hasApprovalToday(task) {
+// Returns true if a specific date's submission was approved (backward-compat with old 'date' field)
+function isDateApproved(task, dateKey) {
   if (!task.approvalHistory || !task.approvalHistory.length) return false;
+  return task.approvalHistory.some(a => (a.submissionDate || a.date) === dateKey);
+}
+
+// Legacy helper — still used by streak/fee logic
+function hasApprovalToday(task) {
+  return isDateApproved(task, todayKey());
+}
+
+// ── RECURRING DAY GROUPS ────────────────────────────────────
+// Returns an array of day objects for a recurring task, newest first.
+// Each group: { dateKey, label, subs, dayStatus, isToday, submitted }
+// dayStatus: 'approved' | 'submitted' | 'draft' | 'pending'
+function getRecurringDayGroups(task) {
   const today = todayKey();
-  return task.approvalHistory.some(a => a.date === today);
+  const allSubs = task.submissions || [];
+
+  // Group submissions by day
+  const byDay = {}; // dateKey -> [subs]
+  allSubs.forEach(sub => {
+    const d = new Date(sub.date);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (!byDay[k]) byDay[k] = [];
+    byDay[k].push(sub);
+  });
+
+  // Always include today
+  if (!byDay[today]) byDay[today] = [];
+
+  // Sort keys newest-first
+  const keys = Object.keys(byDay).sort().reverse();
+
+  return keys.map(dateKey => {
+    const subs = byDay[dateKey];
+    const isToday = dateKey === today;
+    const approved = isDateApproved(task, dateKey);
+
+    let dayStatus;
+    if (approved) {
+      dayStatus = 'approved';
+    } else if (subs.length === 0) {
+      dayStatus = 'pending';
+    } else {
+      // Check if these subs were officially submitted (task.status = 'submitted' and
+      // the submission happened on this day)
+      const anySubmittedOnThisDay = subs.some(sub => {
+        const d = new Date(sub.date);
+        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return k === dateKey;
+      });
+      if (anySubmittedOnThisDay && task.status === 'submitted' && !isToday) {
+        // Prior day that was submitted and awaiting teacher approval
+        dayStatus = 'submitted';
+      } else if (anySubmittedOnThisDay && task.status === 'submitted' && isToday) {
+        dayStatus = 'submitted';
+      } else {
+        dayStatus = 'draft';
+      }
+    }
+
+    // Format label
+    const [y, m, dd] = dateKey.split('-');
+    const dateObj = new Date(+y, +m - 1, +dd);
+    const label = isToday
+      ? `📅 Hôm nay (${dateObj.toLocaleDateString('vi-VN', { day:'numeric', month:'numeric' })})`
+      : `📅 ${dateObj.toLocaleDateString('vi-VN', { weekday:'short', day:'numeric', month:'numeric' })}`;
+
+    return { dateKey, label, subs, dayStatus, isToday };
+  });
 }
 
 function getTaskStatus(task) {
-  // Daily recurring: each day is independent
+  // For recurring tasks, getTaskStatus returns the overall state
+  // (used for non-rendering purposes like streak counting)
   if (task.isRecurring) {
-    // Check if teacher already approved today's batch
-    if (hasApprovalToday(task)) {
-      // Still show 'approved' unless a NEW submission was uploaded after the approval
-      const lastApproval = task.approvalHistory[task.approvalHistory.length - 1];
-      const hasNewSub = task.submissions && task.submissions.some(
-        sub => new Date(sub.date) > new Date(lastApproval.approvedAt)
-      );
-      if (!hasNewSub) return 'approved';
-    }
     if (hasSubmissionToday(task)) {
       if (task.status === 'submitted') return 'submitted';
       return 'draft';
     }
-    // No submission today — keep 'submitted' from a prior day so teacher can still approve
-    if (task.status === 'submitted' && task.submissions && task.submissions.length > 0) {
-      return 'submitted';
-    }
+    if (task.status === 'submitted' && (task.submissions || []).length > 0) return 'submitted';
+    if (hasApprovalToday(task)) return 'approved';
     return 'pending';
   }
   if (task.status === 'approved') return 'approved';
   if (task.status === 'submitted') return 'submitted';
-  // Has photos but student hasn’t clicked Submit yet
+  // Has photos but student hasn't clicked Submit yet
   if (task.submissions && task.submissions.length > 0) return 'draft';
   if (isOverdue(task.dueDate)) return 'overdue';
   return 'pending';
 }
-
 function getStatusLabel(task) {
   const s = getTaskStatus(task);
   const labels = {
@@ -905,61 +960,109 @@ function getStatusLabel(task) {
   return `${recurBadge}<span class="status-pill status-${s}">${labels[s] || s}</span>`;
 }
 
-function renderTaskCard(task) {
-  const student = state.students.find(s => s.id === task.studentId);
-  const status = getTaskStatus(task);
+// ── RENDER ONE DAY-GROUP CARD for a recurring task ─────────
+function renderRecurringDayCard(task, group, studentName) {
+  const { dateKey, label, subs, dayStatus, isToday } = group;
+  const isT = isTeacher();
   const allSubs = task.submissions || [];
 
-  // For daily recurring tasks: show today's submissions normally.
-  // If no submissions today but status is 'submitted' (teacher hasn't approved yet from a prior day),
-  // show the most recent day's submissions so teacher can still review and approve them.
-  let subs;
-  if (task.isRecurring) {
-    const todaySubs = allSubs.filter(sub => {
-      const d = new Date(sub.date);
-      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      return k === todayKey();
-    });
-    if (todaySubs.length > 0) {
-      subs = todaySubs;
-    } else if ((status === 'submitted' || status === 'draft') && allSubs.length > 0) {
-      // Show the most recent submission batch (same day as last submission)
-      const lastDate = new Date(allSubs[allSubs.length - 1].date);
-      const lastKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,'0')}-${String(lastDate.getDate()).padStart(2,'0')}`;
-      subs = allSubs.filter(sub => {
-        const d = new Date(sub.date);
-        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        return k === lastKey;
-      });
-    } else {
-      subs = [];
-    }
-  } else {
-    subs = allSubs;
-  }
+  const canUpload = !isT && isToday && dayStatus !== 'submitted' && dayStatus !== 'approved';
+  const canSubmit = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
+
+  const statusLabels = {
+    approved: '<span class="status-pill status-approved">✅ Đã duyệt</span>',
+    submitted: '<span class="status-pill status-submitted">📨 Chờ duyệt</span>',
+    draft:    '<span class="status-pill status-draft">📷 Chưa nộp</span>',
+    pending:  '<span class="status-pill status-pending">⏳ Chưa làm</span>',
+  };
+
+  return `
+    <div class="recurring-day-card ${isToday ? 'recurring-day-today' : 'recurring-day-past'}" data-date="${dateKey}">
+      <div class="recurring-day-header">
+        <span class="recurring-day-label">${label}</span>
+        <span>${statusLabels[dayStatus] || dayStatus}</span>
+      </div>
+      ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">✅ Đã được thầy duyệt!</div>` : ''}
+      ${isT && dayStatus === 'submitted' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">📷 Học sinh đã nộp — chờ bạn duyệt</div>` : ''}
+      ${isT && dayStatus === 'pending' ? `<div class="teacher-waiting-note" style="margin:8px 0">⏳ Học sinh chưa làm bài ngày này.</div>` : ''}
+      ${isT && dayStatus === 'draft' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">📷 Học sinh có ảnh nhưng chưa nộp chính thức.</div>` : ''}
+      ${canUpload ? `
+      <div class="upload-zone" id="drop-${task.id}-${dateKey}"
+        onclick="openUploadConfirm('${task.id}')"
+        ondragover="handleDragOver(event,'${task.id}-${dateKey}')"
+        ondragleave="handleDragLeave(event,'${task.id}-${dateKey}')"
+        ondrop="handleDrop(event,'${task.id}')">
+        <div>📸 Chụp ảnh bài tập hôm nay</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Thêm ảnh hoặc nộp bài bên dưới' : 'Click hoặc kéo thả ảnh vào đây'}</div>
+        <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
+      </div>` : ''}
+      ${subs.length > 0 ? `
+      <div class="image-grid" style="margin-top:8px">
+        ${subs.map(sub => `
+          <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)} — ${label}')">
+            <img src="${sub.data}" alt="Submission" />
+            ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)})">✕</button>` : ''}
+          </div>
+        `).join('')}
+      </div>` : ''}
+      ${canSubmit ? `
+      <div class="submit-homework-bar">
+        <div class="submit-homework-hint">📌 Xem lại ảnh rồi bấm nộp bài</div>
+        <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">📨 Nộp bài cho thầy</button>
+      </div>` : ''}
+      ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">📨 Đã nộp — đang chờ thầy duyệt!</div>` : ''}
+      ${isT && dayStatus === 'submitted' ? `
+      <div style="margin-top:10px">
+        <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}')">Approve ngày này ✅</button>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function renderTaskCard(task) {
+  const student = state.students.find(s => s.id === task.studentId);
   const isT = isTeacher();
-  // For daily recurring tasks: allow student to upload today even if a prior day's
-  // submission is still pending approval. Only block if TODAY already has a submission
-  // that's been submitted/approved.
-  const submittedToday = task.isRecurring ? hasSubmissionToday(task) : false;
-  const canUpload = !isT && (
-    task.isRecurring
-      ? (status !== 'approved' && !submittedToday)  // daily: block only if today already submitted
-      : (status !== 'approved' && status !== 'submitted')  // regular: original logic
-  );
-  // canSubmit: for daily tasks, show submit button only when today's photos exist but not yet submitted
-  const todaySubsForSubmit = task.isRecurring
-    ? (task.submissions || []).filter(sub => {
-        const d = new Date(sub.date);
-        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        return k === todayKey();
-      })
-    : subs;
-  const canSubmit = !isT && (
-    task.isRecurring
-      ? (todaySubsForSubmit.length > 0 && !submittedToday && status !== 'approved')
-      : (status === 'draft' && subs.length > 0)
-  );
+
+  // ── DAILY RECURRING: render per-day group cards ──
+  if (task.isRecurring) {
+    const groups = getRecurringDayGroups(task);
+    const dayCardsHtml = groups.map(g => renderRecurringDayCard(task, g, student ? student.name : '')).join('');
+    return `
+      <div class="task-card" id="task-card-${task.id}">
+        <div class="task-card-header">
+          <div>
+            <div class="task-card-title">
+              <span class="badge-recurring">🔁 Daily</span>
+              ${escHtml(task.title)}
+            </div>
+            <div class="task-card-meta">
+              ${student ? `<span>Student: <strong>${escHtml(student.name)}</strong></span>` : ''}
+              <span>Due: <strong>Every Day</strong></span>
+            </div>
+          </div>
+          <div class="task-card-actions">
+            ${isT ? `
+            <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Delete</button>` : ''}
+          </div>
+        </div>
+        <div class="task-card-body">
+          ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
+          <div class="recurring-day-list">
+            ${dayCardsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── REGULAR (non-recurring) task ─────────────────
+  const status = getTaskStatus(task);
+  const allSubs = task.submissions || [];
+  const subs = allSubs;
+
+  const canUpload = !isT && status !== 'approved' && status !== 'submitted';
+  const canSubmit = !isT && status === 'draft' && subs.length > 0;
 
   return `
     <div class="task-card" id="task-card-${task.id}">
@@ -971,7 +1074,7 @@ function renderTaskCard(task) {
           </div>
           <div class="task-card-meta">
             ${student ? `<span>Student: <strong>${escHtml(student.name)}</strong></span>` : ''}
-            ${task.isRecurring ? `<span>Due: <strong>Every Day</strong></span>` : (task.dueDate ? `<span>Due: ${formatDate(task.dueDate)}</span>` : '')}
+            ${task.dueDate ? `<span>Due: ${formatDate(task.dueDate)}</span>` : ''}
             <span>${subs.length} photo${subs.length !== 1 ? 's' : ''} added</span>
           </div>
         </div>
@@ -985,7 +1088,6 @@ function renderTaskCard(task) {
       </div>
       <div class="task-card-body">
         ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
-        ${task.isRecurring ? `<div class="recurring-info">🔁 This task repeats every day — student must submit new photos each day.</div>` : ''}
         ${isT && status === 'pending' ? `<div class="teacher-waiting-note">⏳ Student hasn't uploaded any homework photos yet.</div>` : ''}
         ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">📷 Student has uploaded photos but hasn't officially submitted yet.</div>` : ''}
         ${canUpload ? `
@@ -1012,8 +1114,7 @@ function renderTaskCard(task) {
           <div class="submit-homework-hint">📌 Review your photos then click submit</div>
           <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">📨 Submit to Teacher</button>
         </div>` : ''}
-        ${!isT && task.isRecurring && status === 'submitted' && !hasSubmissionToday(task) ? `<div class="submitted-notice">📨 Bài hôm qua đang chờ thầy duyệt — hãy nộp bài hôm nay bên trên!</div>` : ''}
-        ${!isT && status === 'submitted' && (!task.isRecurring || hasSubmissionToday(task)) ? `<div class="submitted-notice">📨 Homework submitted — waiting for teacher to approve!</div>` : ''}
+        ${!isT && status === 'submitted' ? `<div class="submitted-notice">📨 Homework submitted — waiting for teacher to approve!</div>` : ''}
         ${!isT && status === 'approved' ? `<div class="approved-notice">✅ Homework approved! Well done 🎉</div>` : ''}
       </div>
     </div>
@@ -1110,33 +1211,74 @@ function openStudentDetail(studentId) {
     body.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📝</div><p>No tasks assigned yet.</p>${isT ? `<button class="btn btn-primary mt-2" onclick="closeModal('modal-student-detail');openAddTaskFor('${studentId}')">+ Create Task</button>` : ''}</div>`;
   } else {
     body.innerHTML = tasks.map(task => {
-      const status = getTaskStatus(task);
-      // For daily recurring tasks, apply same logic as renderTaskCard:
-      // show today's subs, or fallback to last submitted day if pending approval
-      const allSubs = task.submissions || [];
-      let subs;
+      // ── Recurring: render per-day sections ──
       if (task.isRecurring) {
-        const todaySubs = allSubs.filter(sub => {
-          const d = new Date(sub.date);
-          const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          return k === todayKey();
-        });
-        if (todaySubs.length > 0) {
-          subs = todaySubs;
-        } else if ((status === 'submitted' || status === 'draft') && allSubs.length > 0) {
-          const lastDate = new Date(allSubs[allSubs.length - 1].date);
-          const lastKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,'0')}-${String(lastDate.getDate()).padStart(2,'0')}`;
-          subs = allSubs.filter(sub => {
-            const d = new Date(sub.date);
-            const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            return k === lastKey;
-          });
-        } else {
-          subs = [];
-        }
-      } else {
-        subs = allSubs;
+        const groups = getRecurringDayGroups(task);
+        const dayHtml = groups.map(group => {
+          const { dateKey, label, subs, dayStatus, isToday } = group;
+          const allSubs = task.submissions || [];
+          const canUploadModal = !isT && isToday && dayStatus !== 'submitted' && dayStatus !== 'approved';
+          const canSubmitModal = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
+          const statusLabels = {
+            approved: '<span class="status-pill status-approved">✅ Đã duyệt</span>',
+            submitted: '<span class="status-pill status-submitted">📨 Chờ duyệt</span>',
+            draft:    '<span class="status-pill status-draft">📷 Chưa nộp</span>',
+            pending:  '<span class="status-pill status-pending">⏳ Chưa làm</span>',
+          };
+          return `
+            <div class="recurring-day-card ${isToday ? 'recurring-day-today' : 'recurring-day-past'}" style="margin-top:10px">
+              <div class="recurring-day-header">
+                <span class="recurring-day-label">${label}</span>
+                <span>${statusLabels[dayStatus] || dayStatus}</span>
+              </div>
+              ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">✅ Đã được thầy duyệt!</div>` : ''}
+              ${canUploadModal ? `
+              <div class="upload-zone" style="padding:12px;margin-top:8px"
+                onclick="openUploadConfirm('${task.id}','${studentId}')"
+                ondragover="handleDragOver(event,'modal-${task.id}')"
+                ondragleave="handleDragLeave(event,'modal-${task.id}')"
+                ondrop="handleDrop(event,'${task.id}')">
+                <div>📸 Click để upload ảnh bài tập hôm nay</div>
+                <input type="file" id="modal-fi-${task.id}" accept="image/*" multiple style="display:none"
+                  onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
+              </div>` : ''}
+              ${subs.length > 0 ? `
+              <div class="image-grid" style="margin-top:8px">
+                ${subs.map(sub => `
+                  <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)}')">
+                    <img src="${sub.data}" alt="Submission" />
+                    ${canUploadModal ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)});refreshStudentDetail('${studentId}')">✕</button>` : ''}
+                  </div>
+                `).join('')}
+              </div>` : ''}
+              ${canSubmitModal ? `
+              <div class="submit-homework-bar">
+                <div class="submit-homework-hint">📌 Xem lại ảnh rồi bấm nộp bài</div>
+                <button class="btn-submit-homework" onclick="submitHomework('${task.id}');refreshStudentDetail('${studentId}')">📨 Nộp bài cho thầy</button>
+              </div>` : ''}
+              ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">📨 Đã nộp — đang chờ thầy duyệt!</div>` : ''}
+              ${isT && dayStatus === 'submitted' ? `
+              <div style="margin-top:8px">
+                <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}');refreshStudentDetail('${studentId}')">Approve ngày này ✅</button>
+              </div>` : ''}
+            </div>
+          `;
+        }).join('');
+        return `
+          <div class="student-task-item">
+            <div class="student-task-item-header">
+              <div class="student-task-item-title"><span class="badge-recurring">🔁 Daily</span> ${escHtml(task.title)}</div>
+            </div>
+            ${task.description ? `<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">${escHtml(task.description)}</div>` : ''}
+            ${dayHtml}
+          </div>
+        `;
       }
+
+      // ── Regular task ──
+      const status = getTaskStatus(task);
+      const allSubs = task.submissions || [];
+      const subs = allSubs;
       return `
         <div class="student-task-item">
           <div class="student-task-item-header">
@@ -1145,7 +1287,7 @@ function openStudentDetail(studentId) {
           </div>
           <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">
             ${task.description ? `<div>${escHtml(task.description)}</div>` : ''}
-            ${task.isRecurring ? `<div>Due: Every day (Daily recurring)</div>` : (task.dueDate ? `<div>Due: ${formatDate(task.dueDate)}</div>` : '')}
+            ${task.dueDate ? `<div>Due: ${formatDate(task.dueDate)}</div>` : ''}
           </div>
           ${status !== 'approved' ? `
           <div class="upload-zone" style="padding:12px"
@@ -1336,17 +1478,28 @@ function submitHomework(taskId) {
 }
 
 // ── APPROVE TASK ───────────────────────────────────────────
-async function approveTask(taskId) {
+// submissionDate: the dateKey (YYYY-MM-DD) of the day being approved.
+// For non-recurring tasks, omit — it defaults to today.
+async function approveTask(taskId, submissionDate) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
   const nowIso = new Date().toISOString();
 
   if (task.isRecurring) {
-    // Record approval in history, then reset to 'pending' so student can submit again
+    const dateKey = submissionDate || todayKey();
     if (!task.approvalHistory) task.approvalHistory = [];
-    task.approvalHistory.push({ date: todayKey(), approvedAt: nowIso });
+    // Avoid duplicate approval for same day
+    if (!isDateApproved(task, dateKey)) {
+      task.approvalHistory.push({ submissionDate: dateKey, approvedAt: nowIso });
+    }
     if (task.approvalHistory.length > 60) task.approvalHistory = task.approvalHistory.slice(-60);
-    task.status = 'pending';
+    // Check if any other days are still pending — if not, reset status to 'pending'
+    const stillPending = (task.submissions || []).some(sub => {
+      const d = new Date(sub.date);
+      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return !isDateApproved(task, k);
+    });
+    task.status = stillPending ? 'submitted' : 'pending';
   } else {
     task.status = 'approved';
   }
@@ -1366,7 +1519,7 @@ async function approveTask(taskId) {
 
   saveState();
   renderView(currentView);
-  toast('Homework approved! Student can now submit new work 🔥', 'success')
+  toast('Bài đã được duyệt! 🔥', 'success');
 }
 
 // ── IMAGE VIEWER ───────────────────────────────────────────
