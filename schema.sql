@@ -5,6 +5,7 @@
 
 -- Quick Migration (Run this if you already have existing tables):
 -- ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;
+-- ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS approval_history JSONB DEFAULT '[]'::jsonb;
 
 
 -- 1. Create Students Table
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     status TEXT NOT NULL DEFAULT 'pending',
     is_recurring BOOLEAN DEFAULT false,
     approved_at TIMESTAMPTZ,
+    approval_history JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

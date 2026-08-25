@@ -243,6 +243,16 @@ async function syncFromCloud() {
           .filter(sub => sub.task_id === t.id)
           .map(sub => ({ data: sub.image_url, date: sub.created_at, id: sub.id }));
 
+        // Parse approvalHistory stored as JSON in the cloud
+        let approvalHistory = [];
+        if (t.approval_history) {
+          try {
+            approvalHistory = typeof t.approval_history === 'string'
+              ? JSON.parse(t.approval_history)
+              : (Array.isArray(t.approval_history) ? t.approval_history : []);
+          } catch (e) { approvalHistory = []; }
+        }
+
         return {
           id: t.id,
           title: t.title,
@@ -252,6 +262,7 @@ async function syncFromCloud() {
           status: t.status,
           isRecurring: !!t.is_recurring,
           approvedAt: t.approved_at,
+          approvalHistory,
           submissions: subs,
           createdAt: t.created_at
         };
@@ -1508,7 +1519,8 @@ async function approveTask(taskId, submissionDate) {
   if (isCloudEnabled && supabaseClient) {
     await supabaseClient.from('tasks').update({
       status: task.status,
-      approved_at: nowIso
+      approved_at: nowIso,
+      approval_history: JSON.stringify(task.approvalHistory || [])
     }).eq('id', task.id);
   }
 
