@@ -9,6 +9,8 @@ const FEE_STORAGE_KEY = 'homeworkhub_fee_tracker_v1';
 const FEE_INITIAL = 1000000;
 const FEE_PER_ASSIGNMENT = -2500;
 const FEE_STREAK_LOST = 10000;
+const FEE_LATE_REGULAR = 10000;   // +10,000đ if regular task is overdue & not submitted
+const FEE_LATE_DAILY   = 5000;    // +5,000đ  if daily task has no submission today
 const TEACHER_PASSWORD = '2992006bot1';
 
 const AVATAR_COLORS = [
@@ -58,7 +60,8 @@ let pendingUploadTaskId = null; // for upload confirmation dialog
 let feeState = {
   balance: FEE_INITIAL,
   log: [],           // { date, amount, reason }
-  noSubChargeDates: {} // { studentId: 'YYYY-MM-DD' } — tracks when we last charged for missing submission
+  noSubChargeDates: {}, // { studentId: 'YYYY-MM-DD' } — tracks when we last charged for missing submission
+  lateCharged: {}    // { taskId: 'YYYY-MM-DD' }  — tracks date a late fee was charged for each task
 };
 
 function loadFeeState() {
@@ -69,8 +72,9 @@ function loadFeeState() {
       feeState.balance = typeof parsed.balance === 'number' ? parsed.balance : FEE_INITIAL;
       feeState.log = parsed.log || [];
       feeState.noSubChargeDates = parsed.noSubChargeDates || {};
+      feeState.lateCharged = parsed.lateCharged || {};
     } catch (e) {
-      feeState = { balance: FEE_INITIAL, log: [], noSubChargeDates: {} };
+      feeState = { balance: FEE_INITIAL, log: [], noSubChargeDates: {}, lateCharged: {} };
     }
   }
 }
@@ -152,8 +156,10 @@ function renderFeeWidget() {
       ${formatVND(bal)}
     </div>
     <div class="fee-rules">
-      <span>📝 Per assignment: <strong>-2,500đ</strong></span>
-      <span>💔 Streak lost: <strong>+10,000đ</strong></span>
+      <span>📝 Nộp bài: <strong>-2,500đ</strong></span>
+      <span>💔 Mất streak: <strong>+10,000đ</strong></span>
+      <span>⏰ Trễ bài thường: <strong>+10,000đ</strong></span>
+      <span>⏰ Trễ bài hằng ngày: <strong>+5,000đ</strong></span>
     </div>
     <div class="fee-manual-wrap">
       <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Amount…" min="0" />
@@ -274,6 +280,10 @@ async function syncFromCloud() {
 
     saveState();
     renderView(currentView);
+    // Run late-fee & streak checks after data is fresh
+    if (isTeacher()) {
+      setTimeout(() => { checkStreakLosses(); checkLateFees(); }, 200);
+    }
   } catch (err) {
     console.error('Cloud Sync Error:', err);
   } finally {
@@ -547,6 +557,8 @@ function handleDoLogin() {
     closeModal('modal-login');
     renderView(currentView);
     toast('Logged in as Teacher Admin!', 'success');
+    // Check late fees immediately on teacher login
+    setTimeout(() => { checkStreakLosses(); checkLateFees(); }, 500);
   } else {
     const select = document.getElementById('login-student-select');
     const studentId = select ? select.value : null;
@@ -1932,6 +1944,46 @@ function checkStreakLosses() {
   });
 }
 
+// ── LATE FEE DETECTION ─────────────────────────────────────────
+// Charges +10,000đ for overdue regular tasks (not submitted/approved)
+// and +5,000đ for daily recurring tasks with no submission today.
+// Each task is charged at most once per day.
+function checkLateFees() {
+  // Only run for teacher
+  if (!isTeacher()) return;
+  const today = todayKey();
+
+  state.tasks.forEach(task => {
+    const student = state.students.find(s => s.id === task.studentId);
+    const studentName = student ? student.name : 'Học sinh';
+    const chargeKey = `${task.id}__${today}`;
+
+    // Already charged today for this task
+    if (feeState.lateCharged[task.id] === today) return;
+
+    if (task.isRecurring) {
+      // Daily task: charge +5,000đ if no submission today
+      const submittedToday = hasSubmissionToday(task);
+      if (!submittedToday) {
+        feeState.lateCharged[task.id] = today;
+        saveFeeState();
+        adjustFee(FEE_LATE_DAILY, `⏰ ${studentName} trễ bài hằng ngày: ${task.title.slice(0, 28)}`);
+        toast(`⏰ ${studentName} chưa nộp bài hằng ngày! +5,000đ`, 'info', '⏰');
+      }
+    } else {
+      // Regular task: charge +10,000đ if overdue and not yet submitted/approved
+      const status = getTaskStatus(task);
+      if ((status === 'overdue' || (isOverdue(task.dueDate) && status === 'pending')) &&
+          status !== 'submitted' && status !== 'approved') {
+        feeState.lateCharged[task.id] = today;
+        saveFeeState();
+        adjustFee(FEE_LATE_REGULAR, `⏰ ${studentName} trễ hạn bài tập: ${task.title.slice(0, 25)}`);
+        toast(`⏰ ${studentName} trễ hạn bài tập! +10,000đ`, 'info', '⏰');
+      }
+    }
+  });
+}
+
 // ── INIT ───────────────────────────────────────────────────
 function init() {
   loadState();
@@ -1946,9 +1998,12 @@ function init() {
   // Render fee widget on init
   renderFeeWidget();
 
-  // Check streaks periodically (every 60s) to detect losses
+  // Check streaks & late fees periodically (every 60s)
   setInterval(() => {
-    if (isTeacher()) checkStreakLosses();
+    if (isTeacher()) {
+      checkStreakLosses();
+      checkLateFees();
+    }
   }, 60000);
 
   // Sidebar date
