@@ -312,20 +312,37 @@ function initials(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
+// Parse a date-only string (YYYY-MM-DD) as local time instead of UTC.
+// new Date("2026-09-05") parses as UTC midnight → Sep 4 evening in +07:00.
+// This helper avoids that off-by-one-day bug.
+function parseDateLocal(iso) {
+  if (!iso) return null;
+  // If it's a date-only string (YYYY-MM-DD), parse as local midnight
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(iso);
+}
+
 function formatDate(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
+  const d = parseDateLocal(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function isOverdue(iso) {
   if (!iso) return false;
-  return new Date(iso) < new Date() && !isToday(iso);
+  const d = parseDateLocal(iso);
+  // A task is overdue only if the due date's local midnight has fully passed (i.e. not today, not future)
+  const now = new Date();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return d < todayMidnight;
 }
 
 function isToday(iso) {
   if (!iso) return false;
-  const d = new Date(iso);
+  const d = parseDateLocal(iso);
   const now = new Date();
   return d.getFullYear() === now.getFullYear() &&
     d.getMonth() === now.getMonth() &&
