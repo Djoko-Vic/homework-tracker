@@ -91,7 +91,7 @@ function adjustFee(amount, reason) {
     reason
   });
   // Keep log at most 50 entries
-  if (feeState.log.length > 50) feeState.log = feeState.log.slice(0, 50);
+  if (feeState.log.length > 100) feeState.log = feeState.log.slice(0, 100);
   saveFeeState();
   renderFeeWidget();
 }
@@ -134,18 +134,25 @@ function renderFeeWidget() {
   const balColor = bal >= 800000 ? 'var(--sage)' : bal >= 500000 ? 'var(--mustard)' : 'var(--rose)';
   const balBg   = bal >= 800000 ? 'var(--sage-dim)' : bal >= 500000 ? 'var(--mustard-dim)' : 'var(--rose-dim)';
 
-  // Last 5 log entries
-  const recentLog = feeState.log.slice(0, 5);
-  const logHtml = recentLog.length ? recentLog.map(entry => {
-    const sign = entry.amount > 0 ? '+' : '';
-    const col  = entry.amount > 0 ? 'var(--sage)' : entry.amount < 0 ? 'var(--rose)' : 'var(--text-3)';
-    const dateStr = new Date(entry.date).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit' });
-    return `<div class="fee-log-item">
-      <span class="fee-log-reason">${entry.reason}</span>
-      <span class="fee-log-amount" style="color:${col}">${sign}${entry.amount !== 0 ? formatVND(entry.amount) : '—'}</span>
-      <span class="fee-log-date">${dateStr}</span>
-    </div>`;
-  }).join('') : `<div class="fee-log-empty">Chưa có giao dịch nào</div>`;
+  const PREVIEW_COUNT = 5;
+  const totalLog = feeState.log.length;
+
+  function buildLogHtml(entries) {
+    if (!entries.length) return `<div class="fee-log-empty">Chưa có giao dịch nào</div>`;
+    return entries.map(entry => {
+      const sign = entry.amount > 0 ? '+' : '';
+      const col  = entry.amount > 0 ? 'var(--sage)' : entry.amount < 0 ? 'var(--rose)' : 'var(--text-3)';
+      const dateStr = new Date(entry.date).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit' });
+      return `<div class="fee-log-item">
+        <span class="fee-log-reason">${entry.reason}</span>
+        <span class="fee-log-amount" style="color:${col}">${sign}${entry.amount !== 0 ? formatVND(entry.amount) : '—'}</span>
+        <span class="fee-log-date">${dateStr}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const previewHtml = buildLogHtml(feeState.log.slice(0, PREVIEW_COUNT));
+  const hasMore = totalLog > PREVIEW_COUNT;
 
   widget.innerHTML = `
     <div class="fee-widget-header">
@@ -169,8 +176,12 @@ function renderFeeWidget() {
         <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Deduct amount">− Deduct</button>
       </div>
     </div>
-    <div class="fee-log-title">Recent History</div>
-    <div class="fee-log">${logHtml}</div>
+    <div class="fee-log-title-row">
+      <span class="fee-log-title-text">Recent History</span>
+      ${hasMore ? `<button class="fee-log-expand-btn" id="btn-fee-log-expand" type="button">Xem thêm (${totalLog - PREVIEW_COUNT})</button>` : ''}
+    </div>
+    <div class="fee-log" id="fee-log-body">${previewHtml}</div>
+    ${hasMore ? `<div class="fee-log-more-wrap" id="fee-log-more" style="display:none">${buildLogHtml(feeState.log.slice(PREVIEW_COUNT))}</div>` : ''}
   `;
 
   const resetBtn = document.getElementById('btn-fee-reset');
@@ -184,6 +195,18 @@ function renderFeeWidget() {
   if (inp) inp.addEventListener('keydown', e => {
     if (e.key === 'Enter') manualAdjustFee(-1);
   });
+  // Expand/collapse older history
+  const expandBtn = document.getElementById('btn-fee-log-expand');
+  const moreWrap = document.getElementById('fee-log-more');
+  if (expandBtn && moreWrap) {
+    expandBtn.addEventListener('click', () => {
+      const isExpanded = moreWrap.style.display !== 'none';
+      moreWrap.style.display = isExpanded ? 'none' : 'block';
+      expandBtn.textContent = isExpanded
+        ? `Xem thêm (${totalLog - PREVIEW_COUNT})`
+        : 'Thu gọn ▲';
+    });
+  }
 }
 
 // ── PERSISTENCE ────────────────────────────────────────────
@@ -1979,9 +2002,14 @@ function checkLateFees() {
     if (feeState.lateCharged[task.id] === today) return;
 
     if (task.isRecurring) {
-      // Daily task: charge +5,000đ if no submission today
+      // Daily task: charge +5,000đ only if:
+      //   - no submission photo uploaded today, AND
+      //   - student has NOT already submitted for teacher review (status !== 'submitted'), AND
+      //   - today is NOT already approved in approvalHistory
       const submittedToday = hasSubmissionToday(task);
-      if (!submittedToday) {
+      const awaitingApproval = task.status === 'submitted';
+      const alreadyApprovedToday = isDateApproved(task, today);
+      if (!submittedToday && !awaitingApproval && !alreadyApprovedToday) {
         feeState.lateCharged[task.id] = today;
         saveFeeState();
         adjustFee(FEE_LATE_DAILY, `⏰ ${studentName} trễ bài hằng ngày: ${task.title.slice(0, 28)}`);

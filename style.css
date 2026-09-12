@@ -1610,14 +1610,48 @@ body {
   color: var(--text-2);
 }
 
-.fee-log-title {
+.fee-log-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 4px 12px 4px;
+  border-top: 1px solid var(--border);
+}
+
+.fee-log-title-text {
   font-size: 9px;
   font-weight: 700;
   color: var(--text-3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-top: 1px solid var(--border);
+}
+
+.fee-log-expand-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--terracotta);
+  cursor: pointer;
+  padding: 2px 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all var(--transition);
+}
+
+.fee-log-expand-btn:hover {
+  background: var(--terracotta-dim);
+  border-color: var(--terracotta);
+}
+
+.fee-log-more-wrap {
+  border-top: 1px dashed var(--border);
+  animation: fadeInDown 0.18s ease;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .fee-log {
