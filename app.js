@@ -211,7 +211,27 @@ function renderFeeWidget() {
 
 // ── PERSISTENCE ────────────────────────────────────────────
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Strip base64 image data before saving to localStorage to prevent quota errors.
+  // Images are already stored on Supabase — only URLs (http/https) are kept locally.
+  const stateToSave = {
+    students: state.students,
+    tasks: state.tasks.map(t => ({
+      ...t,
+      submissions: (t.submissions || []).map(sub => ({
+        ...sub,
+        // Drop base64 data blobs; keep only remote URLs
+        data: (sub.data && sub.data.startsWith('http')) ? sub.data : null
+      })).filter(sub => sub.data)
+    }))
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+  } catch (e) {
+    // If still over quota, clear and retry
+    console.warn('localStorage quota exceeded, clearing old data and retrying...', e);
+    localStorage.removeItem(STORAGE_KEY);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave)); } catch (_) {}
+  }
   if (isCloudEnabled) syncToCloud();
 }
 
@@ -593,7 +613,7 @@ function handleDoLogin() {
         return;
       }
       state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
-      saveState();
+      // Note: don't saveState() here — currentUser is session-only & saving risks quota errors
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
@@ -614,7 +634,7 @@ function handleDoLogin() {
       }
 
       state.currentUser = { role: 'student', studentId: studentId, name: student ? student.name : 'Student' };
-      saveState();
+      // Note: don't saveState() here — currentUser is session-only & saving risks quota errors
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
