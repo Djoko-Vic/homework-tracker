@@ -545,16 +545,16 @@ function updateRoleUI() {
   const bannerStreak = document.getElementById('banner-streak-val');
 
   if (isT) {
-    heading.textContent = 'Welcome back, Teacher!';
-    subtext.textContent = 'Overview of all student assignments, homework uploads, and streaks.';
+    if (heading) heading.textContent = 'Welcome back, Teacher!';
+    if (subtext) subtext.textContent = 'Overview of all student assignments, homework uploads, and streaks.';
     const maxStreak = Math.max(0, ...state.students.map(s => getStudentStreak(s.id).streak));
-    bannerStreak.textContent = maxStreak;
+    if (bannerStreak) bannerStreak.textContent = maxStreak;
   } else {
     const s = state.students.find(st => st.id === user.studentId);
-    heading.textContent = `Welcome back, ${s ? s.name : 'Student'}!`;
-    subtext.textContent = 'Here are your homework assignments to complete and upload images for.';
+    if (heading) heading.textContent = `Welcome back, ${s ? s.name : 'Student'}!`;
+    if (subtext) subtext.textContent = 'Here are your homework assignments to complete and upload images for.';
     const streak = s ? getStudentStreak(s.id).streak : 0;
-    bannerStreak.textContent = streak;
+    if (bannerStreak) bannerStreak.textContent = streak;
   }
 }
 
@@ -585,39 +585,44 @@ function openLoginDialog() {
 }
 
 function handleDoLogin() {
-  if (selectedRoleInModal === 'teacher') {
-    const pass = document.getElementById('input-teacher-pass').value.trim();
-    if (pass !== TEACHER_PASSWORD) {
-      toast('Incorrect Teacher Password! (Required: 2992006bot1)', 'error');
-      return;
+  try {
+    if (selectedRoleInModal === 'teacher') {
+      const pass = document.getElementById('input-teacher-pass').value.trim();
+      if (pass !== TEACHER_PASSWORD) {
+        toast('Incorrect Teacher Password!', 'error');
+        return;
+      }
+      state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
+      saveState();
+      updateRoleUI();
+      closeModal('modal-login');
+      renderView(currentView);
+      toast('Logged in as Teacher Admin!', 'success');
+      // Check late fees immediately on teacher login
+      setTimeout(() => { checkStreakLosses(); checkLateFees(); }, 500);
+    } else {
+      const select = document.getElementById('login-student-select');
+      const studentId = select ? select.value : null;
+      if (!studentId) { toast('Please select a student account.', 'error'); return; }
+
+      const student = state.students.find(s => s.id === studentId);
+      const pin = document.getElementById('input-student-pin').value.trim();
+
+      if (!student || (student.pin && pin !== student.pin)) {
+        toast('Incorrect PIN passcode! (Default: 0000)', 'error');
+        return;
+      }
+
+      state.currentUser = { role: 'student', studentId: studentId, name: student ? student.name : 'Student' };
+      saveState();
+      updateRoleUI();
+      closeModal('modal-login');
+      renderView(currentView);
+      toast(`Welcome, ${student ? student.name : 'Student'}!`, 'success');
     }
-    state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
-    saveState();
-    updateRoleUI();
-    closeModal('modal-login');
-    renderView(currentView);
-    toast('Logged in as Teacher Admin!', 'success');
-    // Check late fees immediately on teacher login
-    setTimeout(() => { checkStreakLosses(); checkLateFees(); }, 500);
-  } else {
-    const select = document.getElementById('login-student-select');
-    const studentId = select ? select.value : null;
-    if (!studentId) { toast('Please select a student account.', 'error'); return; }
-
-    const student = state.students.find(s => s.id === studentId);
-    const pin = document.getElementById('input-student-pin').value.trim();
-
-    if (!student || (student.pin && pin !== student.pin)) {
-      toast('Incorrect PIN passcode! (Default: 0000)', 'error');
-      return;
-    }
-
-    state.currentUser = { role: 'student', studentId: studentId, name: student ? student.name : 'Student' };
-    saveState();
-    updateRoleUI();
-    closeModal('modal-login');
-    renderView(currentView);
-    toast(`Welcome, ${student ? student.name : 'Student'}!`, 'success');
+  } catch (err) {
+    console.error('Login error:', err);
+    toast('Login error: ' + err.message, 'error');
   }
 }
 
