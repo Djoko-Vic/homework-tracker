@@ -181,6 +181,9 @@ function renderFeeWidget() {
   const widget = document.getElementById('fee-widget');
   if (!widget) return;
 
+  const isT = isTeacher();
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
+
   const bal = feeState.balance;
   const tuitionBadge = document.getElementById('badge-nav-tuition');
   if (tuitionBadge) tuitionBadge.textContent = formatVND(bal);
@@ -188,8 +191,13 @@ function renderFeeWidget() {
   const balColor = bal >= 800000 ? 'var(--sage)' : bal >= 500000 ? 'var(--mustard)' : 'var(--rose)';
   const balBg   = bal >= 800000 ? 'var(--sage-dim)' : bal >= 500000 ? 'var(--mustard-dim)' : 'var(--rose-dim)';
 
+  // If student is logged in, show transactions relevant to them or general resets
+  const displayLogs = (!isT && currentStudentId)
+    ? feeState.log.filter(l => !l.student_id || l.student_id === currentStudentId)
+    : feeState.log;
+
   const PREVIEW_COUNT = 6;
-  const totalLog = feeState.log.length;
+  const totalLog = displayLogs.length;
 
   const TYPE_BADGES = {
     reward: '<span class="fee-badge fee-badge-reward">Thưởng nộp bài</span>',
@@ -226,13 +234,15 @@ function renderFeeWidget() {
     }).join('');
   }
 
-  const previewHtml = buildLogHtml(feeState.log.slice(0, PREVIEW_COUNT));
+  const previewHtml = buildLogHtml(displayLogs.slice(0, PREVIEW_COUNT));
   const hasMore = totalLog > PREVIEW_COUNT;
 
   widget.innerHTML = `
     <div class="fee-widget-header">
       <span class="fee-widget-title">${UI_ICONS.wallet} Học phí & Quỹ học bổng</span>
-      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Đã nhận tiền — đặt lại số dư về 1,000,000đ">Nhận thanh toán / Reset</button>
+      ${isT 
+        ? `<button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Đã nhận tiền — đặt lại số dư về 1,000,000đ">Nhận thanh toán / Reset</button>`
+        : `<span class="fee-read-only-pill">${UI_ICONS.info} Chế độ xem học sinh (Chỉ đọc)</span>`}
     </div>
     <div class="fee-balance" style="color:${balColor};background:${balBg}">
       ${formatVND(bal)}
@@ -243,6 +253,7 @@ function renderFeeWidget() {
       <span>Trễ bài thường: <strong>+10,000đ</strong></span>
       <span>Trễ hằng ngày: <strong>+5,000đ</strong></span>
     </div>
+    ${isT ? `
     <div class="fee-manual-wrap">
       <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Số tiền (đ)…" min="0" />
       <input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Lý do cộng/trừ (không bắt buộc)" />
@@ -251,25 +262,29 @@ function renderFeeWidget() {
         <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Trừ tiền thưởng / thanh toán">− Trừ</button>
       </div>
     </div>
+    ` : ''}
     <div class="fee-log-title-row">
-      <span class="fee-log-title-text">Lịch sử giao dịch học phí</span>
+      <span class="fee-log-title-text">${!isT ? `Lịch sử giao dịch của bạn (${totalLog})` : 'Lịch sử giao dịch học phí'}</span>
       ${hasMore ? `<button class="fee-log-expand-btn" id="btn-fee-log-expand" type="button">Xem thêm (${totalLog - PREVIEW_COUNT})</button>` : ''}
     </div>
     <div class="fee-log" id="fee-log-body">${previewHtml}</div>
-    ${hasMore ? `<div class="fee-log-more-wrap" id="fee-log-more" style="display:none">${buildLogHtml(feeState.log.slice(PREVIEW_COUNT))}</div>` : ''}
+    ${hasMore ? `<div class="fee-log-more-wrap" id="fee-log-more" style="display:none">${buildLogHtml(displayLogs.slice(PREVIEW_COUNT))}</div>` : ''}
   `;
 
-  const resetBtn = document.getElementById('btn-fee-reset');
-  if (resetBtn) resetBtn.addEventListener('click', resetFeeBalance);
-  const addBtn = document.getElementById('btn-fee-add');
-  if (addBtn) addBtn.addEventListener('click', () => manualAdjustFee(1));
-  const subBtn = document.getElementById('btn-fee-sub');
-  if (subBtn) subBtn.addEventListener('click', () => manualAdjustFee(-1));
-  // Allow Enter key on input
-  const inp = document.getElementById('fee-manual-input');
-  if (inp) inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') manualAdjustFee(-1);
-  });
+  if (isT) {
+    const resetBtn = document.getElementById('btn-fee-reset');
+    if (resetBtn) resetBtn.addEventListener('click', resetFeeBalance);
+    const addBtn = document.getElementById('btn-fee-add');
+    if (addBtn) addBtn.addEventListener('click', () => manualAdjustFee(1));
+    const subBtn = document.getElementById('btn-fee-sub');
+    if (subBtn) subBtn.addEventListener('click', () => manualAdjustFee(-1));
+    // Allow Enter key on input
+    const inp = document.getElementById('fee-manual-input');
+    if (inp) inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') manualAdjustFee(-1);
+    });
+  }
+
   // Expand/collapse older history
   const expandBtn = document.getElementById('btn-fee-log-expand');
   const moreWrap = document.getElementById('fee-log-more');
@@ -805,8 +820,8 @@ function navigateTo(view) {
     openLoginDialog();
     return;
   }
-  if (!isTeacher() && (view === 'students' || view === 'tuition')) {
-    toast('Student accounts can only view tasks and streaks.', 'info');
+  if (!isTeacher() && view === 'students') {
+    toast('Chỉ giáo viên mới có quyền xem danh sách quản lý học sinh.', 'info');
     return;
   }
   currentView = view;
@@ -822,9 +837,9 @@ function navigateTo(view) {
   if (titleEl) {
     titleEl.textContent = {
       dashboard: 'Dashboard',
-      students: 'Manage Students',
-      tasks: isTeacher() ? 'Assignments' : 'My Tasks',
-      streaks: 'Streak Tracker',
+      students: 'Quản lý học sinh',
+      tasks: isTeacher() ? 'Danh sách bài tập' : 'Bài tập của tôi',
+      streaks: 'Bảng xếp hạng Streak',
       tuition: 'Học phí & Quỹ học bổng'
     }[view] || 'HomeworkHub';
   }

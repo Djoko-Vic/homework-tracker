@@ -3068,6 +3068,19 @@ body {
   color: #fff;
 }
 
+.fee-read-only-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg3);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .fee-balance {
   font-family: 'Space Grotesk', 'Outfit', sans-serif;
   font-size: 21px;
