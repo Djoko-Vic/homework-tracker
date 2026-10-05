@@ -4,15 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HomeworkHub — Homework Tracker</title>
-  <meta name="description" content="Retro white themed student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
+  <meta name="description" content="Minimalist student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+  <!-- Keyboard Accessible Skip Link -->
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Mobile Backdrop Overlay -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+
   <!-- ===== APP SHELL ===== -->
   <div id="app">
 
@@ -31,12 +37,12 @@
           <div class="user-name" id="sidebar-user-name">Not Logged In</div>
           <div class="user-role-badge" id="sidebar-user-role">Please Login</div>
         </div>
-        <button class="btn-switch-theme" id="btn-switch-user" type="button">
-          Login / Switch
+        <button class="btn-switch-theme" id="btn-switch-user" type="button" aria-label="Switch account or login">
+          Switch
         </button>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="Main Navigation">
         <button class="nav-item active" data-view="dashboard" id="nav-dashboard" type="button">
           <span>Dashboard</span>
         </button>
@@ -67,11 +73,15 @@
       <!-- TOP BAR -->
       <header id="topbar">
         <div class="topbar-left">
+          <button class="mobile-nav-toggle" id="btn-mobile-nav" aria-label="Toggle navigation menu" aria-expanded="false" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
           <h1 id="page-title">Dashboard</h1>
         </div>
         <div class="topbar-right">
           <div class="search-wrap" id="search-wrap">
-            <input type="text" id="global-search" placeholder="Search tasks or students…" />
+            <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="global-search" placeholder="Search tasks or students…" autocomplete="off" spellcheck="false" />
           </div>
           <button class="btn btn-secondary" id="btn-login-modal" type="button">
             Switch Account
@@ -93,7 +103,9 @@
               <p id="welcome-subtext">Please log in to view assignments and streak progress.</p>
             </div>
             <div class="welcome-badge" id="welcome-streak-badge">
-              <span class="fire-icon">🔥</span>
+              <span class="fire-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 23c-4.97 0-9-3.8-9-8.5 0-3.32 2.05-6.52 4.45-8.86.64-.62 1.66-.46 2.08.31.78 1.43 1.95 2.65 3.32 3.4 1.25-2.58 1.13-5.26.15-7.53-.29-.68.21-1.44.92-1.49.52-.04 1.05.02 1.58.17 3.5 1.02 6.5 4.54 6.5 8.5 0 7.9-5.02 14-10 14zm-1.5-3.5c3.04 0 5.5-2.24 5.5-5 0-1.8-1.05-3.6-2.5-4.73-.42-.33-1.02-.17-1.22.33-.4 1.01-1.08 1.9-1.98 2.55-.45.32-1.07.13-1.26-.39-.42-1.14-.54-2.18-.4-3.11-1.46 1.4-2.64 3.23-2.64 5.35 0 2.76 2.46 5 4.5 5z"/></svg>
+              </span>
               <div>
                 <strong id="banner-streak-val">0</strong>
                 <small>Day Streak</small>
@@ -129,7 +141,7 @@
         <!-- STUDENTS VIEW (TEACHER ONLY) -->
         <section id="view-students" class="view">
           <div class="student-toolbar">
-            <input type="text" id="student-search" class="text-input" placeholder="Search students by name or grade…" />
+            <input type="text" id="student-search" class="text-input" placeholder="Search students by name or grade…" autocomplete="off" spellcheck="false" />
             <button class="btn btn-primary" id="btn-add-student" type="button">+ Add New Student</button>
           </div>
           <div class="student-grid" id="student-grid"></div>
@@ -138,10 +150,10 @@
         <!-- TASKS VIEW -->
         <section id="view-tasks" class="view">
           <div class="tasks-toolbar">
-            <select id="task-filter-student" class="select-input teacher-only">
+            <select id="task-filter-student" class="select-input teacher-only" aria-label="Filter assignments by student">
               <option value="all">All Students</option>
             </select>
-            <select id="task-filter-status" class="select-input">
+            <select id="task-filter-status" class="select-input" aria-label="Filter assignments by status">
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="submitted">Submitted</option>
@@ -168,7 +180,7 @@
     <div class="modal modal-md">
       <div class="modal-header">
         <h3>Login to HomeworkHub</h3>
-        <button class="modal-close hidden-if-unauth" data-modal="modal-login" type="button">✕</button>
+        <button class="modal-close hidden-if-unauth" data-modal="modal-login" type="button" aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
         <p class="modal-intro-text">Select your role to log in:</p>
@@ -186,18 +198,18 @@
         </div>
 
         <div id="student-login-select-wrap" class="form-group hidden" style="margin-top: 16px;">
-          <label>Select Student Name:</label>
+          <label for="login-student-select">Select Student Name:</label>
           <select id="login-student-select" class="select-input" style="width: 100%; margin-top: 6px;"></select>
           
           <div class="form-group" style="margin-top: 12px;">
-            <label>Student PIN:</label>
-            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN (e.g. 0000)" />
+            <label for="input-student-pin">Student PIN:</label>
+            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN (e.g. 0000)…" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" spellcheck="false" />
           </div>
         </div>
 
         <div id="teacher-login-pass-wrap" class="form-group" style="margin-top: 16px;">
-          <label>Teacher Password:</label>
-          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password" />
+          <label for="input-teacher-pass">Teacher Password:</label>
+          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password…" autocomplete="current-password" spellcheck="false" />
         </div>
       </div>
       <div class="modal-footer">
@@ -211,19 +223,20 @@
   <div class="modal-overlay" id="modal-supabase-config">
     <div class="modal modal-md">
       <div class="modal-header">
-        <h3>⚡ Connect Supabase Cloud Sync</h3>
+        <h3>Connect Supabase Cloud Sync</h3>
+        <button class="modal-close" data-modal="modal-supabase-config" type="button" aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
         <p style="font-size: 13px; color: var(--text-2); margin-bottom: 14px;">
           Enter your Supabase <strong>Project URL</strong> and <strong>Anon Key</strong> to enable real-time online synchronization between Teacher and Students:
         </p>
         <div class="form-group">
-          <label>Supabase Project URL</label>
-          <input type="text" id="input-supabase-url" class="text-input" placeholder="https://your-project.supabase.co" />
+          <label for="input-supabase-url">Supabase Project URL</label>
+          <input type="url" id="input-supabase-url" class="text-input" placeholder="https://your-project.supabase.co" autocomplete="off" spellcheck="false" />
         </div>
         <div class="form-group">
-          <label>Supabase Anon Key</label>
-          <input type="password" id="input-supabase-key" class="text-input" placeholder="eyJhbGciOi..." />
+          <label for="input-supabase-key">Supabase Anon Key</label>
+          <input type="password" id="input-supabase-key" class="text-input" placeholder="eyJhbGciOi…" autocomplete="off" spellcheck="false" />
         </div>
       </div>
       <div class="modal-footer">
@@ -238,24 +251,24 @@
     <div class="modal">
       <div class="modal-header">
         <h3 id="modal-student-title">Add Student</h3>
-        <button class="modal-close" data-modal="modal-student" type="button">✕</button>
+        <button class="modal-close" data-modal="modal-student" type="button" aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>Student Name</label>
-          <input type="text" id="input-student-name" class="text-input" placeholder="e.g. Khải" />
+          <label for="input-student-name">Student Name</label>
+          <input type="text" id="input-student-name" class="text-input" placeholder="e.g. Khải…" autocomplete="off" />
         </div>
         <div class="form-group">
-          <label>Grade / Level</label>
-          <input type="text" id="input-student-grade" class="text-input" placeholder="e.g. English Student" />
+          <label for="input-student-grade">Grade / Level</label>
+          <input type="text" id="input-student-grade" class="text-input" placeholder="e.g. English Student…" autocomplete="off" />
         </div>
         <div class="form-group">
-          <label>Student Login PIN</label>
-          <input type="text" id="input-student-passcode" class="text-input" placeholder="4-digit PIN (e.g. 0000)" value="0000" />
+          <label for="input-student-passcode">Student Login PIN</label>
+          <input type="text" id="input-student-passcode" class="text-input" placeholder="4-digit PIN (e.g. 0000)…" value="0000" inputmode="numeric" pattern="[0-9]*" autocomplete="off" spellcheck="false" />
         </div>
         <div class="form-group">
-          <label>Avatar Color</label>
-          <div class="color-picker" id="color-picker"></div>
+          <label id="label-avatar-color">Avatar Color</label>
+          <div class="color-picker" id="color-picker" role="radiogroup" aria-labelledby="label-avatar-color"></div>
         </div>
         <input type="hidden" id="input-student-id" />
       </div>
@@ -271,29 +284,29 @@
     <div class="modal">
       <div class="modal-header">
         <h3 id="modal-task-title">Add Task</h3>
-        <button class="modal-close" data-modal="modal-task" type="button">✕</button>
+        <button class="modal-close" data-modal="modal-task" type="button" aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>Task Title</label>
-          <input type="text" id="input-task-title" class="text-input" placeholder="e.g. Grammar Unit 4 Exercises" />
+          <label for="input-task-title">Task Title</label>
+          <input type="text" id="input-task-title" class="text-input" placeholder="e.g. Grammar Unit 4 Exercises…" autocomplete="off" />
         </div>
         <div class="form-group">
-          <label>Description & Instructions</label>
-          <textarea id="input-task-desc" class="text-input textarea" placeholder="Instructions for student..."></textarea>
+          <label for="input-task-desc">Description & Instructions</label>
+          <textarea id="input-task-desc" class="text-input textarea" placeholder="Instructions for student…"></textarea>
         </div>
         <div class="form-group">
-          <label>Assign To</label>
+          <label for="input-task-student">Assign To</label>
           <select id="input-task-student" class="select-input"></select>
         </div>
         <div class="form-group">
           <label class="toggle-row" for="input-task-recurring">
             <input type="checkbox" id="input-task-recurring" class="toggle-checkbox" />
-            <span class="toggle-text">🔁 Repeat Daily <span class="toggle-desc">(Auto-resets due date every day)</span></span>
+            <span class="toggle-text">Repeat Daily <span class="toggle-desc">(Auto-resets due date every day)</span></span>
           </label>
         </div>
         <div class="form-group" id="form-group-task-due">
-          <label>Due Date</label>
+          <label for="input-task-due">Due Date</label>
           <input type="date" id="input-task-due" class="text-input" />
         </div>
         <input type="hidden" id="input-task-id" />
@@ -310,7 +323,7 @@
     <div class="modal modal-lg">
       <div class="modal-header">
         <div class="modal-student-info" id="modal-student-info"></div>
-        <button class="modal-close" data-modal="modal-student-detail" type="button">✕</button>
+        <button class="modal-close" data-modal="modal-student-detail" type="button" aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body" id="modal-student-tasks"></div>
     </div>
@@ -323,29 +336,39 @@
       <div class="viewer-toolbar">
         <div class="viewer-caption" id="viewer-caption"></div>
         <div class="viewer-actions">
-          <button class="viewer-btn" onclick="viewerZoomOut()" title="Zoom Out">🔍−</button>
-          <button class="viewer-btn" onclick="viewerZoomIn()" title="Zoom In">🔍+</button>
-          <button class="viewer-btn" onclick="viewerRotateCCW()" title="Rotate Counter-Clockwise">↺</button>
-          <button class="viewer-btn" onclick="viewerRotateCW()" title="Rotate Clockwise">↻</button>
-          <button class="viewer-btn" onclick="viewerDownload()" title="Download">⬇</button>
-          <button class="viewer-btn viewer-btn-close" onclick="closeModal('modal-image-viewer')" title="Close">✕</button>
+          <button class="viewer-btn" onclick="viewerZoomOut()" title="Zoom Out" aria-label="Zoom Out">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="viewer-btn" onclick="viewerZoomIn()" title="Zoom In" aria-label="Zoom In">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="viewer-btn" onclick="viewerRotateCCW()" title="Rotate Counter-Clockwise" aria-label="Rotate Counter-Clockwise">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+          <button class="viewer-btn" onclick="viewerRotateCW()" title="Rotate Clockwise" aria-label="Rotate Clockwise">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="viewer-btn" onclick="viewerDownload()" title="Download" aria-label="Download Image">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <button class="viewer-btn viewer-btn-close" onclick="closeModal('modal-image-viewer')" title="Close" aria-label="Close Image Viewer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
       </div>
       <!-- Image -->
       <div class="viewer-img-wrap" id="viewer-img-wrap">
-        <img id="viewer-img" src="" alt="Submission" />
+        <img id="viewer-img" src="" alt="Homework submission full view" />
       </div>
     </div>
   </div>
-
-
 
   <!-- Confirm Delete Modal -->
   <div class="modal-overlay" id="modal-confirm">
     <div class="modal modal-sm">
       <div class="modal-header">
         <h3>Confirm Delete</h3>
-        <button class="modal-close" data-modal="modal-confirm" type="button">✕</button>
+        <button class="modal-close" data-modal="modal-confirm" type="button" aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
         <p id="confirm-message">Are you sure you want to delete this item?</p>
@@ -358,7 +381,7 @@
   </div>
 
   <!-- Toast Notifications -->
-  <div id="toast-container"></div>
+  <div id="toast-container" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

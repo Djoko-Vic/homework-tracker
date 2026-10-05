@@ -31,7 +31,7 @@ function initSupabase() {
     try {
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       isCloudEnabled = true;
-      console.log('⚡ Supabase Cloud Connected!');
+      console.log('Supabase Cloud Connected!');
     } catch (e) {
       console.warn('Failed to init Supabase:', e);
       isCloudEnabled = false;
@@ -42,6 +42,22 @@ function initSupabase() {
 // These functions kept for compatibility with any remaining HTML references
 function saveSupabaseConfig() { closeModal('modal-supabase-config'); }
 function useOfflineLocalStorage() { closeModal('modal-supabase-config'); }
+
+// ── SVG ICONS SYSTEM (DESIGN.md Rule #9: Clean, Crisp, Zero-Dependency) ──
+const UI_ICONS = {
+  check: `<svg class="ui-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>`,
+  error: `<svg class="ui-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+  info: `<svg class="ui-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+  fire: `<svg class="ui-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 23c-4.97 0-9-3.8-9-8.5 0-3.32 2.05-6.52 4.45-8.86.64-.62 1.66-.46 2.08.31.78 1.43 1.95 2.65 3.32 3.4 1.25-2.58 1.13-5.26.15-7.53-.29-.68.21-1.44.92-1.49.52-.04 1.05.02 1.58.17 3.5 1.02 6.5 4.54 6.5 8.5 0 7.9-5.02 14-10 14zm-1.5-3.5c3.04 0 5.5-2.24 5.5-5 0-1.8-1.05-3.6-2.5-4.73-.42-.33-1.02-.17-1.22.33-.4 1.01-1.08 1.9-1.98 2.55-.45.32-1.07.13-1.26-.39-.42-1.14-.54-2.18-.4-3.11-1.46 1.4-2.64 3.23-2.64 5.35 0 2.76 2.46 5 4.5 5z"/></svg>`,
+  camera: `<svg class="ui-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  clock: `<svg class="ui-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  repeat: `<svg class="ui-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>`,
+  users: `<svg class="ui-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  book: `<svg class="ui-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
+  wallet: `<svg class="ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+  inbox: `<svg class="ui-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
+  sparkle: `<svg class="ui-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+};
 
 // ── STATE ──────────────────────────────────────────────────
 let state = {
@@ -101,11 +117,11 @@ function resetFeeBalance() {
   feeState.log.unshift({
     date: new Date().toISOString(),
     amount: 0,
-    reason: '💳 Đã nhận tiền — reset về 1,000,000đ'
+    reason: 'Đã nhận tiền — reset về 1,000,000đ'
   });
   saveFeeState();
   renderFeeWidget();
-  toast('💰 Đã reset tiền về 1,000,000đ!', 'success', '💰');
+  toast('Đã reset tiền về 1,000,000đ!', 'success');
 }
 
 function manualAdjustFee(sign) {
@@ -115,7 +131,7 @@ function manualAdjustFee(sign) {
   const raw = parseFloat(input.value.replace(/[^0-9.]/g, ''));
   if (!raw || raw <= 0) { toast('Nhập số tiền hợp lệ!', 'error'); return; }
   const amount = sign * Math.round(raw);
-  const reason = (reasonInput && reasonInput.value.trim()) || (sign > 0 ? '✏️ Cộng tay' : '✏️ Trừ tay');
+  const reason = (reasonInput && reasonInput.value.trim()) || (sign > 0 ? 'Cộng tay' : 'Trừ tay');
   adjustFee(amount, reason);
   input.value = '';
   if (reasonInput) reasonInput.value = '';
@@ -156,17 +172,17 @@ function renderFeeWidget() {
 
   widget.innerHTML = `
     <div class="fee-widget-header">
-      <span class="fee-widget-title">💵 Tuition Fee</span>
-      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Received payment — reset to 1,000,000đ">🔄 Receive Payment</button>
+      <span class="fee-widget-title">${UI_ICONS.wallet} Tuition Fee</span>
+      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Received payment — reset to 1,000,000đ">Reset / Receive</button>
     </div>
     <div class="fee-balance" style="color:${balColor};background:${balBg}">
       ${formatVND(bal)}
     </div>
     <div class="fee-rules">
-      <span>📝 Nộp bài: <strong>-2,500đ</strong></span>
-      <span>💔 Mất streak: <strong>+10,000đ</strong></span>
-      <span>⏰ Trễ bài thường: <strong>+10,000đ</strong></span>
-      <span>⏰ Trễ bài hằng ngày: <strong>+5,000đ</strong></span>
+      <span>Nộp bài: <strong>-2,500đ</strong></span>
+      <span>Mất streak: <strong>+10,000đ</strong></span>
+      <span>Trễ bài thường: <strong>+10,000đ</strong></span>
+      <span>Trễ hằng ngày: <strong>+5,000đ</strong></span>
     </div>
     <div class="fee-manual-wrap">
       <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Amount…" min="0" />
@@ -405,7 +421,7 @@ function relativeTime(isoStr) {
 }
 
 function toast(message, type = 'info', icon = null) {
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const icons = { success: UI_ICONS.check, error: UI_ICONS.error, info: UI_ICONS.info };
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
   el.innerHTML = `<span class="toast-icon">${icon || icons[type]}</span><span>${message}</span>`;
@@ -696,10 +712,10 @@ function renderStats() {
     const approved = state.tasks.filter(t => t.status === 'approved').length;
 
     const stats = [
-      { icon: '👥', label: 'Total Students', value: totalStudents, color: 'var(--violet)', bg: 'var(--violet-dim)' },
-      { icon: '📖', label: 'Assigned Tasks', value: totalTasks, color: 'var(--denim)', bg: 'var(--denim-dim)' },
-      { icon: '📸', label: 'Submissions', value: submitted, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
-      { icon: '✅', label: 'Approved', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
+      { icon: UI_ICONS.users, label: 'Total Students', value: totalStudents, color: 'var(--violet)', bg: 'var(--violet-dim)' },
+      { icon: UI_ICONS.book, label: 'Assigned Tasks', value: totalTasks, color: 'var(--denim)', bg: 'var(--denim-dim)' },
+      { icon: UI_ICONS.camera, label: 'Submissions', value: submitted, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
+      { icon: UI_ICONS.check, label: 'Approved', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
     ];
     document.getElementById('stats-row').innerHTML = stats.map(s => `
       <div class="stat-card">
@@ -718,10 +734,10 @@ function renderStats() {
     const { streak } = getStudentStreak(currentStudentId);
 
     const stats = [
-      { icon: '🔥', label: 'My Current Streak', value: `${streak} Days`, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
-      { icon: '📖', label: 'My Total Tasks', value: totalTasks, color: 'var(--denim)', bg: 'var(--denim-dim)' },
-      { icon: '📸', label: 'Submitted', value: submitted, color: 'var(--mustard)', bg: 'var(--mustard-dim)' },
-      { icon: '✅', label: 'Approved', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
+      { icon: UI_ICONS.fire, label: 'My Current Streak', value: `${streak} Days`, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
+      { icon: UI_ICONS.book, label: 'My Total Tasks', value: totalTasks, color: 'var(--denim)', bg: 'var(--denim-dim)' },
+      { icon: UI_ICONS.camera, label: 'Submitted', value: submitted, color: 'var(--mustard)', bg: 'var(--mustard-dim)' },
+      { icon: UI_ICONS.check, label: 'Approved', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
     ];
     document.getElementById('stats-row').innerHTML = stats.map(s => `
       <div class="stat-card">
@@ -753,7 +769,7 @@ function renderRecentSubmissions() {
 
   const el = document.getElementById('recent-submissions-list');
   if (!recent.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><p>No uploaded homework photos yet</p></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.inbox}</div><p>No uploaded homework photos yet</p></div>`;
     return;
   }
   el.innerHTML = recent.map(({ task, student, sub }) => `
@@ -781,7 +797,7 @@ function renderTopStreaks() {
 
   const el = document.getElementById('top-streaks-list');
   if (!studentStreaks.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔥</div><p>No student streaks recorded yet</p></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.fire}</div><p>No student streaks recorded yet</p></div>`;
     return;
   }
   el.innerHTML = studentStreaks.map((item, i) => `
@@ -789,7 +805,7 @@ function renderTopStreaks() {
       <div class="streak-rank">#${i + 1}</div>
       <div class="streak-avatar" style="background:${item.student.color}">${initials(item.student.name)}</div>
       <div class="streak-name">${escHtml(item.student.name)} ${item.student.id === currentStudentId ? ' (You)' : ''}</div>
-      <div class="streak-flame">🔥 ${item.streak} days</div>
+      <div class="streak-flame">${UI_ICONS.fire} ${item.streak} days</div>
     </div>
   `).join('');
 }
@@ -809,7 +825,7 @@ function renderPendingTasks() {
 
   const el = document.getElementById('pending-tasks-list');
   if (!pending.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><p>All assigned homework tasks have been submitted!</p></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.sparkle}</div><p>All assigned homework tasks have been submitted!</p></div>`;
     return;
   }
   el.innerHTML = pending.slice(0, 10).map(task => {
@@ -837,7 +853,7 @@ function renderStudents(filter = '') {
     grid.innerHTML = `
       <div style="grid-column:1/-1">
         <div class="empty-state">
-          <div class="empty-state-icon">👤</div>
+          <div class="empty-state-icon">${UI_ICONS.users}</div>
           <p>${state.students.length ? 'No students match your search.' : 'Add your first student to get started!'}</p>
         </div>
       </div>`;
@@ -869,7 +885,7 @@ function renderStudents(filter = '') {
             <div class="student-stat-lbl">Done</div>
           </div>
           <div class="student-stat">
-            <div class="student-stat-val" style="color:var(--terracotta)">🔥 ${stats.streak}</div>
+            <div class="student-stat-val" style="color:var(--terracotta)">${UI_ICONS.fire} ${stats.streak}</div>
             <div class="student-stat-lbl">Streak</div>
           </div>
         </div>
@@ -915,7 +931,7 @@ function applyTaskFilters() {
   if (!filtered.length) {
     list.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">📝</div>
+        <div class="empty-state-icon">${UI_ICONS.book}</div>
         <p>${state.tasks.length ? 'No tasks match your filter.' : 'No tasks assigned yet!'}</p>
       </div>`;
     return;
@@ -1009,8 +1025,8 @@ function getRecurringDayGroups(task) {
     const [y, m, dd] = dateKey.split('-');
     const dateObj = new Date(+y, +m - 1, +dd);
     const label = isToday
-      ? `📅 Hôm nay (${dateObj.toLocaleDateString('vi-VN', { day:'numeric', month:'numeric' })})`
-      : `📅 ${dateObj.toLocaleDateString('vi-VN', { weekday:'short', day:'numeric', month:'numeric' })}`;
+      ? `Hôm nay (${dateObj.toLocaleDateString('vi-VN', { day:'numeric', month:'numeric' })})`
+      : `${dateObj.toLocaleDateString('vi-VN', { weekday:'short', day:'numeric', month:'numeric' })}`;
 
     return { dateKey, label, subs, dayStatus, isToday };
   });
@@ -1038,13 +1054,13 @@ function getTaskStatus(task) {
 function getStatusLabel(task) {
   const s = getTaskStatus(task);
   const labels = {
-    approved: '✅ Approved',
-    submitted: '📨 Submitted',
-    draft:    '📷 Photos Added',
-    pending:  '⏳ Not Done',
-    overdue:  '⚠️ Overdue',
+    approved: `${UI_ICONS.check} Approved`,
+    submitted: `${UI_ICONS.inbox} Submitted`,
+    draft:    `${UI_ICONS.camera} Photos Added`,
+    pending:  `${UI_ICONS.clock} Not Done`,
+    overdue:  `Overdue`,
   };
-  const recurBadge = task.isRecurring ? '<span class="badge-recurring">🔁 Daily</span> ' : '';
+  const recurBadge = task.isRecurring ? `<span class="badge-recurring">${UI_ICONS.repeat} Daily</span> ` : '';
   return `${recurBadge}<span class="status-pill status-${s}">${labels[s] || s}</span>`;
 }
 
@@ -1058,10 +1074,10 @@ function renderRecurringDayCard(task, group, studentName) {
   const canSubmit = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
 
   const statusLabels = {
-    approved: '<span class="status-pill status-approved">✅ Đã duyệt</span>',
-    submitted: '<span class="status-pill status-submitted">📨 Chờ duyệt</span>',
-    draft:    '<span class="status-pill status-draft">📷 Chưa nộp</span>',
-    pending:  '<span class="status-pill status-pending">⏳ Chưa làm</span>',
+    approved: `<span class="status-pill status-approved">${UI_ICONS.check} Đã duyệt</span>`,
+    submitted: `<span class="status-pill status-submitted">${UI_ICONS.clock} Chờ duyệt</span>`,
+    draft:    `<span class="status-pill status-draft">${UI_ICONS.camera} Chưa nộp</span>`,
+    pending:  `<span class="status-pill status-pending">${UI_ICONS.clock} Chưa làm</span>`,
   };
 
   return `
@@ -1070,17 +1086,17 @@ function renderRecurringDayCard(task, group, studentName) {
         <span class="recurring-day-label">${label}</span>
         <span>${statusLabels[dayStatus] || dayStatus}</span>
       </div>
-      ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">✅ Đã được thầy duyệt!</div>` : ''}
-      ${isT && dayStatus === 'submitted' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">📷 Học sinh đã nộp — chờ bạn duyệt</div>` : ''}
-      ${isT && dayStatus === 'pending' ? `<div class="teacher-waiting-note" style="margin:8px 0">⏳ Học sinh chưa làm bài ngày này.</div>` : ''}
-      ${isT && dayStatus === 'draft' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">📷 Học sinh có ảnh nhưng chưa nộp chính thức.</div>` : ''}
+      ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">${UI_ICONS.check} Đã được thầy duyệt!</div>` : ''}
+      ${isT && dayStatus === 'submitted' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">${UI_ICONS.camera} Học sinh đã nộp — chờ bạn duyệt</div>` : ''}
+      ${isT && dayStatus === 'pending' ? `<div class="teacher-waiting-note" style="margin:8px 0">${UI_ICONS.clock} Học sinh chưa làm bài ngày này.</div>` : ''}
+      ${isT && dayStatus === 'draft' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">${UI_ICONS.camera} Học sinh có ảnh nhưng chưa nộp chính thức.</div>` : ''}
       ${canUpload ? `
       <div class="upload-zone" id="drop-${task.id}-${dateKey}"
         onclick="openUploadConfirm('${task.id}')"
         ondragover="handleDragOver(event,'${task.id}-${dateKey}')"
         ondragleave="handleDragLeave(event,'${task.id}-${dateKey}')"
         ondrop="handleDrop(event,'${task.id}')">
-        <div>📸 Chụp ảnh bài tập hôm nay</div>
+        <div>${UI_ICONS.camera} Chụp ảnh bài tập hôm nay</div>
         <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Thêm ảnh hoặc nộp bài bên dưới' : 'Click hoặc kéo thả ảnh vào đây'}</div>
         <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
       </div>` : ''}
@@ -1095,13 +1111,13 @@ function renderRecurringDayCard(task, group, studentName) {
       </div>` : ''}
       ${canSubmit ? `
       <div class="submit-homework-bar">
-        <div class="submit-homework-hint">📌 Xem lại ảnh rồi bấm nộp bài</div>
-        <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">📨 Nộp bài cho thầy</button>
+        <div class="submit-homework-hint">Xem lại ảnh rồi bấm nộp bài</div>
+        <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">Nộp bài cho thầy</button>
       </div>` : ''}
-      ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">📨 Đã nộp — đang chờ thầy duyệt!</div>` : ''}
+      ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp — đang chờ thầy duyệt!</div>` : ''}
       ${isT && dayStatus === 'submitted' ? `
       <div style="margin-top:10px">
-        <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}')">Approve ngày này ✅</button>
+        <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}')">${UI_ICONS.check} Approve ngày này</button>
       </div>` : ''}
     </div>
   `;
@@ -1120,7 +1136,7 @@ function renderTaskCard(task) {
         <div class="task-card-header">
           <div>
             <div class="task-card-title">
-              <span class="badge-recurring">🔁 Daily</span>
+              <span class="badge-recurring">${UI_ICONS.repeat} Daily</span>
               ${escHtml(task.title)}
             </div>
             <div class="task-card-meta">
@@ -1167,8 +1183,8 @@ function renderTaskCard(task) {
           </div>
         </div>
         <div class="task-card-actions">
-          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">Approve</button>` : ''}
-          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>Approved ✅</button>` : ''}
+          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">${UI_ICONS.check} Approve</button>` : ''}
+          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>${UI_ICONS.check} Approved</button>` : ''}
           ${isT ? `
           <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Delete</button>` : ''}
@@ -1176,15 +1192,15 @@ function renderTaskCard(task) {
       </div>
       <div class="task-card-body">
         ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
-        ${isT && status === 'pending' ? `<div class="teacher-waiting-note">⏳ Student hasn't uploaded any homework photos yet.</div>` : ''}
-        ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">📷 Student has uploaded photos but hasn't officially submitted yet.</div>` : ''}
+        ${isT && status === 'pending' ? `<div class="teacher-waiting-note">${UI_ICONS.clock} Student hasn't uploaded any homework photos yet.</div>` : ''}
+        ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">${UI_ICONS.camera} Student has uploaded photos but hasn't officially submitted yet.</div>` : ''}
         ${canUpload ? `
         <div class="upload-zone" id="drop-${task.id}"
           onclick="openUploadConfirm('${task.id}')"
           ondragover="handleDragOver(event,'${task.id}')"
           ondragleave="handleDragLeave(event,'${task.id}')"
           ondrop="handleDrop(event,'${task.id}')">
-          <div>📸 Take a photo of your homework</div>
+          <div>${UI_ICONS.camera} Take a photo of your homework</div>
           <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Add more photos or submit below' : 'Click or drag & drop photos here'}</div>
           <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
         </div>` : ''}
@@ -1199,11 +1215,11 @@ function renderTaskCard(task) {
         </div>` : ''}
         ${canSubmit ? `
         <div class="submit-homework-bar">
-          <div class="submit-homework-hint">📌 Review your photos then click submit</div>
-          <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">📨 Submit to Teacher</button>
+          <div class="submit-homework-hint">Review your photos then click submit</div>
+          <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">Submit to Teacher</button>
         </div>` : ''}
-        ${!isT && status === 'submitted' ? `<div class="submitted-notice">📨 Homework submitted — waiting for teacher to approve!</div>` : ''}
-        ${!isT && status === 'approved' ? `<div class="approved-notice">✅ Homework approved! Well done 🎉</div>` : ''}
+        ${!isT && status === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Homework submitted — waiting for teacher to approve!</div>` : ''}
+        ${!isT && status === 'approved' ? `<div class="approved-notice">${UI_ICONS.check} Homework approved! Well done</div>` : ''}
       </div>
     </div>
   `;
@@ -1221,7 +1237,7 @@ function renderStreaks() {
   }
 
   if (!list.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🔥</div><p>No student streaks recorded yet!</p></div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">${UI_ICONS.fire}</div><p>No student streaks recorded yet!</p></div>`;
     return;
   }
 
@@ -1245,7 +1261,7 @@ function renderStreaks() {
         </div>
 
         <div class="streak-big">
-          <div class="streak-fire">🔥</div>
+          <div class="streak-fire">${UI_ICONS.fire}</div>
           <div>
             <div class="streak-count">${item.streak}</div>
             <div class="streak-count-label">Day Streak</div>
@@ -1289,14 +1305,16 @@ function openStudentDetail(studentId) {
     <div class="student-avatar" style="background:${student.color}">${initials(student.name)}</div>
     <div>
       <strong>${escHtml(student.name)}</strong>
-      <div style="color:var(--text-2);font-size:12px">${escHtml(student.grade || '')} • 🔥 ${streak} Day Streak</div>
+      <div style="color:var(--text-2);font-size:12px;display:flex;align-items:center;gap:4px;margin-top:2px;">
+        ${escHtml(student.grade || '')} • <span style="display:inline-flex;align-items:center;gap:3px;color:var(--terracotta);font-weight:700;">${UI_ICONS.fire} ${streak} Day Streak</span>
+      </div>
     </div>
   `;
 
   const body = document.getElementById('modal-student-tasks');
 
   if (!tasks.length) {
-    body.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📝</div><p>No tasks assigned yet.</p>${isT ? `<button class="btn btn-primary mt-2" onclick="closeModal('modal-student-detail');openAddTaskFor('${studentId}')">+ Create Task</button>` : ''}</div>`;
+    body.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.task}</div><p>No tasks assigned yet.</p>${isT ? `<button class="btn btn-primary mt-2" onclick="closeModal('modal-student-detail');openAddTaskFor('${studentId}')">+ Create Task</button>` : ''}</div>`;
   } else {
     body.innerHTML = tasks.map(task => {
       // ── Recurring: render per-day sections ──
@@ -1308,10 +1326,10 @@ function openStudentDetail(studentId) {
           const canUploadModal = !isT && isToday && dayStatus !== 'submitted' && dayStatus !== 'approved';
           const canSubmitModal = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
           const statusLabels = {
-            approved: '<span class="status-pill status-approved">✅ Đã duyệt</span>',
-            submitted: '<span class="status-pill status-submitted">📨 Chờ duyệt</span>',
-            draft:    '<span class="status-pill status-draft">📷 Chưa nộp</span>',
-            pending:  '<span class="status-pill status-pending">⏳ Chưa làm</span>',
+            approved: `<span class="status-pill status-approved">${UI_ICONS.check} Đã duyệt</span>`,
+            submitted: `<span class="status-pill status-submitted">${UI_ICONS.clock} Chờ duyệt</span>`,
+            draft:    `<span class="status-pill status-draft">${UI_ICONS.camera} Chưa nộp</span>`,
+            pending:  `<span class="status-pill status-pending">${UI_ICONS.clock} Chưa làm</span>`,
           };
           return `
             <div class="recurring-day-card ${isToday ? 'recurring-day-today' : 'recurring-day-past'}" style="margin-top:10px">
@@ -1319,14 +1337,14 @@ function openStudentDetail(studentId) {
                 <span class="recurring-day-label">${label}</span>
                 <span>${statusLabels[dayStatus] || dayStatus}</span>
               </div>
-              ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">✅ Đã được thầy duyệt!</div>` : ''}
+              ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">${UI_ICONS.check} Đã được thầy duyệt!</div>` : ''}
               ${canUploadModal ? `
               <div class="upload-zone" style="padding:12px;margin-top:8px"
                 onclick="openUploadConfirm('${task.id}','${studentId}')"
                 ondragover="handleDragOver(event,'modal-${task.id}')"
                 ondragleave="handleDragLeave(event,'modal-${task.id}')"
                 ondrop="handleDrop(event,'${task.id}')">
-                <div>📸 Click để upload ảnh bài tập hôm nay</div>
+                <div>${UI_ICONS.camera} Click để upload ảnh bài tập hôm nay</div>
                 <input type="file" id="modal-fi-${task.id}" accept="image/*" multiple style="display:none"
                   onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
               </div>` : ''}
@@ -1341,13 +1359,13 @@ function openStudentDetail(studentId) {
               </div>` : ''}
               ${canSubmitModal ? `
               <div class="submit-homework-bar">
-                <div class="submit-homework-hint">📌 Xem lại ảnh rồi bấm nộp bài</div>
-                <button class="btn-submit-homework" onclick="submitHomework('${task.id}');refreshStudentDetail('${studentId}')">📨 Nộp bài cho thầy</button>
+                <div class="submit-homework-hint">Xem lại ảnh rồi bấm nộp bài</div>
+                <button class="btn-submit-homework" onclick="submitHomework('${task.id}');refreshStudentDetail('${studentId}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
               </div>` : ''}
-              ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">📨 Đã nộp — đang chờ thầy duyệt!</div>` : ''}
+              ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp — đang chờ thầy duyệt!</div>` : ''}
               ${isT && dayStatus === 'submitted' ? `
               <div style="margin-top:8px">
-                <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}');refreshStudentDetail('${studentId}')">Approve ngày này ✅</button>
+                <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}');refreshStudentDetail('${studentId}')">${UI_ICONS.check} Approve ngày này</button>
               </div>` : ''}
             </div>
           `;
@@ -1355,7 +1373,7 @@ function openStudentDetail(studentId) {
         return `
           <div class="student-task-item">
             <div class="student-task-item-header">
-              <div class="student-task-item-title"><span class="badge-recurring">🔁 Daily</span> ${escHtml(task.title)}</div>
+              <div class="student-task-item-title"><span class="badge-recurring">${UI_ICONS.recurring} Daily</span> ${escHtml(task.title)}</div>
             </div>
             ${task.description ? `<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">${escHtml(task.description)}</div>` : ''}
             ${dayHtml}
@@ -1383,7 +1401,7 @@ function openStudentDetail(studentId) {
             ondragover="handleDragOver(event,'modal-${task.id}')"
             ondragleave="handleDragLeave(event,'modal-${task.id}')"
             ondrop="handleDrop(event,'${task.id}')">
-            <div>📸 Click to upload homework photo</div>
+            <div>${UI_ICONS.camera} Click to upload homework photo</div>
             <input type="file" id="modal-fi-${task.id}" accept="image/*" multiple style="display:none"
               onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
           </div>` : ''}
@@ -1398,9 +1416,9 @@ function openStudentDetail(studentId) {
           </div>` : ''}
           ${isT && status === 'submitted' ? `
           <div style="margin-top:8px">
-            <button class="btn-approve" onclick="approveTask('${task.id}');refreshStudentDetail('${studentId}')">Approve Homework</button>
+            <button class="btn-approve" onclick="approveTask('${task.id}');refreshStudentDetail('${studentId}')">${UI_ICONS.check} Approve Homework</button>
           </div>` : ''}
-          ${isT && status === 'approved' ? `<div style="margin-top:8px"><button class="btn-approve approved" disabled>Approved</button></div>` : ''}
+          ${isT && status === 'approved' ? `<div style="margin-top:8px"><button class="btn-approve approved" disabled>${UI_ICONS.check} Approved</button></div>` : ''}
         </div>
       `;
     }).join('');
@@ -1562,7 +1580,7 @@ function submitHomework(taskId) {
   saveState();
   closeModal('modal-student-detail');
   renderView(currentView);
-  toast('📨 Homework submitted! Waiting for teacher review.', 'success');
+  toast('Homework submitted! Waiting for teacher review.', 'success');
 }
 
 // ── APPROVE TASK ───────────────────────────────────────────
@@ -1604,11 +1622,11 @@ async function approveTask(taskId, submissionDate) {
   // Fee tracker: deduct 2,500đ per completed assignment
   const student = state.students.find(s => s.id === task.studentId);
   const studentName = student ? student.name : 'Học sinh';
-  adjustFee(FEE_PER_ASSIGNMENT, `📝 ${studentName} nộp xong: ${task.title.slice(0, 28)}`);
+  adjustFee(FEE_PER_ASSIGNMENT, `${studentName} nộp xong: ${task.title.slice(0, 28)}`);
 
   saveState();
   renderView(currentView);
-  toast('Bài đã được duyệt! 🔥', 'success');
+  toast('Bài đã được duyệt!', 'success');
 }
 
 // ── IMAGE VIEWER ───────────────────────────────────────────
@@ -1884,7 +1902,7 @@ async function saveTask() {
         newTask.id = data[0].id;
       }
     }
-    toast(isRecurring ? 'Daily recurring task created! 🔁' : 'Assignment created!', 'success');
+    toast(isRecurring ? 'Daily recurring task created!' : 'Assignment created!', 'success');
   }
   saveState();
   closeModal('modal-task');
@@ -1984,8 +2002,8 @@ function checkStreakLosses() {
 
     // Case 1: streak dropped from >0 to 0 (classic streak loss)
     if (typeof prev === 'number' && prev > 0 && streak === 0) {
-      adjustFee(FEE_STREAK_LOST, `💔 ${s.name} mất streak (${prev} ngày → 0)`);
-      toast(`💔 ${s.name} đã mất streak! +10,000đ hoàn lại`, 'info', '💔');
+      adjustFee(FEE_STREAK_LOST, `${s.name} mất streak (${prev} ngày → 0)`);
+      toast(`${s.name} đã mất streak! +10,000đ hoàn lại`, 'info');
       // Mark as charged today so Case 2 doesn't double-charge
       feeState.noSubChargeDates[s.id] = today;
       saveFeeState();
@@ -1999,9 +2017,9 @@ function checkStreakLosses() {
       );
       if (!hasSubToday) {
         feeState.noSubChargeDates[s.id] = today;
-        adjustFee(FEE_STREAK_LOST, `💔 ${s.name} không nộp bài hôm nay`);
+        adjustFee(FEE_STREAK_LOST, `${s.name} không nộp bài hôm nay`);
         saveFeeState();
-        toast(`💔 ${s.name} không làm bài! +10,000đ`, 'info', '💔');
+        toast(`${s.name} không làm bài! +10,000đ`, 'info');
       }
     }
 
@@ -2037,8 +2055,8 @@ function checkLateFees() {
       if (!submittedToday && !awaitingApproval && !alreadyApprovedToday) {
         feeState.lateCharged[task.id] = today;
         saveFeeState();
-        adjustFee(FEE_LATE_DAILY, `⏰ ${studentName} trễ bài hằng ngày: ${task.title.slice(0, 28)}`);
-        toast(`⏰ ${studentName} chưa nộp bài hằng ngày! +5,000đ`, 'info', '⏰');
+        adjustFee(FEE_LATE_DAILY, `${studentName} trễ bài hằng ngày: ${task.title.slice(0, 28)}`);
+        toast(`${studentName} chưa nộp bài hằng ngày! +5,000đ`, 'info');
       }
     } else {
       // Regular task: charge +10,000đ if overdue and not yet submitted/approved
@@ -2047,8 +2065,8 @@ function checkLateFees() {
           status !== 'submitted' && status !== 'approved') {
         feeState.lateCharged[task.id] = today;
         saveFeeState();
-        adjustFee(FEE_LATE_REGULAR, `⏰ ${studentName} trễ hạn bài tập: ${task.title.slice(0, 25)}`);
-        toast(`⏰ ${studentName} trễ hạn bài tập! +10,000đ`, 'info', '⏰');
+        adjustFee(FEE_LATE_REGULAR, `${studentName} trễ hạn bài tập: ${task.title.slice(0, 25)}`);
+        toast(`${studentName} trễ hạn bài tập! +10,000đ`, 'info');
       }
     }
   });
@@ -2082,9 +2100,33 @@ function init() {
     dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   }
 
-  // Nav items
+  // Mobile drawer navigation toggle
+  const mobileNavBtn = document.getElementById('btn-mobile-nav');
+  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+  const sidebar = document.getElementById('sidebar');
+
+  function toggleMobileNav(force) {
+    if (!sidebar) return;
+    const shouldOpen = force !== undefined ? force : !sidebar.classList.contains('mobile-open');
+    sidebar.classList.toggle('mobile-open', shouldOpen);
+    if (sidebarBackdrop) sidebarBackdrop.classList.toggle('active', shouldOpen);
+    if (mobileNavBtn) mobileNavBtn.setAttribute('aria-expanded', String(shouldOpen));
+  }
+
+  if (mobileNavBtn) {
+    mobileNavBtn.addEventListener('click', () => toggleMobileNav());
+  }
+
+  if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener('click', () => toggleMobileNav(false));
+  }
+
+  // Nav items (close drawer when clicked on mobile)
   document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.addEventListener('click', () => navigateTo(btn.dataset.view));
+    btn.addEventListener('click', () => {
+      toggleMobileNav(false);
+      navigateTo(btn.dataset.view);
+    });
   });
 
   // User switch buttons
