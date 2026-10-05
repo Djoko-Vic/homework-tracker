@@ -75,9 +75,11 @@ let pendingUploadTaskId = null; // for upload confirmation dialog
 // ── FEE TRACKER STATE ──────────────────────────────────────
 let feeState = {
   balance: FEE_INITIAL,
-  log: [],           // { date, amount, reason }
-  noSubChargeDates: {}, // { studentId: 'YYYY-MM-DD' } — tracks when we last charged for missing submission
-  lateCharged: {}    // { taskId: 'YYYY-MM-DD' }  — tracks date a late fee was charged for each task
+  log: [],               // Array of { id, student_id, amount, balance_after, type, reason, created_at, date }
+  studentStreaks: {},    // { [studentId]: lastStreak } — tracks active streaks to detect true drops to 0
+  lateCharged: {},       // { [taskId]: ISOString } — marks that a regular task was penalized for being overdue
+  dailyCharged: {},      // { [`${taskId}__${dateKey}`]: ISOString } — marks that a daily task was penalized for dateKey
+  rewardedApprovals: {}  // { [`${taskId}__${dateKey}`]: ISOString } — marks that an approval was rewarded
 };
 
 function loadFeeState() {
@@ -86,11 +88,20 @@ function loadFeeState() {
     try {
       const parsed = JSON.parse(raw);
       feeState.balance = typeof parsed.balance === 'number' ? parsed.balance : FEE_INITIAL;
-      feeState.log = parsed.log || [];
-      feeState.noSubChargeDates = parsed.noSubChargeDates || {};
+      feeState.log = Array.isArray(parsed.log) ? parsed.log : [];
+      feeState.studentStreaks = parsed.studentStreaks || {};
       feeState.lateCharged = parsed.lateCharged || {};
+      feeState.dailyCharged = parsed.dailyCharged || {};
+      feeState.rewardedApprovals = parsed.rewardedApprovals || {};
     } catch (e) {
-      feeState = { balance: FEE_INITIAL, log: [], noSubChargeDates: {}, lateCharged: {} };
+      feeState = {
+        balance: FEE_INITIAL,
+        log: [],
+        studentStreaks: {},
+        lateCharged: {},
+        dailyCharged: {},
+        rewardedApprovals: {}
+      };
     }
   }
 }
@@ -99,29 +110,53 @@ function saveFeeState() {
   localStorage.setItem(FEE_STORAGE_KEY, JSON.stringify(feeState));
 }
 
-function adjustFee(amount, reason) {
-  feeState.balance += amount;
-  feeState.log.unshift({
-    date: new Date().toISOString(),
+function adjustFee(amount, reason, type = 'manual', studentId = null) {
+  const newBalance = feeState.balance + amount;
+  feeState.balance = newBalance;
+  const nowIso = new Date().toISOString();
+  const entry = {
+    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('fee-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
+    student_id: studentId,
     amount,
-    reason
-  });
-  // Keep log at most 50 entries
+    balance_after: newBalance,
+    type,
+    reason,
+    created_at: nowIso,
+    date: nowIso
+  };
+
+  feeState.log.unshift(entry);
   if (feeState.log.length > 100) feeState.log = feeState.log.slice(0, 100);
   saveFeeState();
   renderFeeWidget();
+
+  // Async sync to Supabase fee_logs table
+  if (isCloudEnabled && supabaseClient) {
+    supabaseClient.from('fee_logs').insert([{
+      id: entry.id,
+      student_id: entry.student_id,
+      amount: entry.amount,
+      balance_after: entry.balance_after,
+      type: entry.type,
+      reason: entry.reason,
+      created_at: entry.created_at
+    }]).then(({ error }) => {
+      if (error && error.code !== 'PGRST205') {
+        console.warn('Supabase fee_logs insert notice:', error.message);
+      }
+    }).catch(err => console.warn('Supabase fee_logs network notice:', err));
+  }
 }
 
 function resetFeeBalance() {
+  const defaultNote = `Thanh toán học phí & reset về 1,000,000đ (Dư trước: ${formatVND(feeState.balance)})`;
+  const note = prompt('Ghi chú thanh toán / nhận tiền học phí (hoặc nhấn OK để dùng mặc định):', defaultNote);
+  if (note === null) return; // Người dùng nhấn Huỷ
+  const prevBal = feeState.balance;
   feeState.balance = FEE_INITIAL;
-  feeState.log.unshift({
-    date: new Date().toISOString(),
-    amount: 0,
-    reason: 'Đã nhận tiền — reset về 1,000,000đ'
-  });
-  saveFeeState();
-  renderFeeWidget();
-  toast('Đã reset tiền về 1,000,000đ!', 'success');
+  const reason = note.trim() || defaultNote;
+  adjustFee(0, reason, 'payment');
+  toast('Đã ghi nhận thanh toán & đặt lại về 1,000,000đ!', 'success');
 }
 
 function manualAdjustFee(sign) {
@@ -132,7 +167,7 @@ function manualAdjustFee(sign) {
   if (!raw || raw <= 0) { toast('Nhập số tiền hợp lệ!', 'error'); return; }
   const amount = sign * Math.round(raw);
   const reason = (reasonInput && reasonInput.value.trim()) || (sign > 0 ? 'Cộng tay' : 'Trừ tay');
-  adjustFee(amount, reason);
+  adjustFee(amount, reason, 'manual');
   input.value = '';
   if (reasonInput) reasonInput.value = '';
   toast(`${sign > 0 ? '+' : ''}${formatVND(amount)} đã được ghi nhận`, sign > 0 ? 'success' : 'info');
@@ -153,19 +188,40 @@ function renderFeeWidget() {
   const balColor = bal >= 800000 ? 'var(--sage)' : bal >= 500000 ? 'var(--mustard)' : 'var(--rose)';
   const balBg   = bal >= 800000 ? 'var(--sage-dim)' : bal >= 500000 ? 'var(--mustard-dim)' : 'var(--rose-dim)';
 
-  const PREVIEW_COUNT = 5;
+  const PREVIEW_COUNT = 6;
   const totalLog = feeState.log.length;
 
+  const TYPE_BADGES = {
+    reward: '<span class="fee-badge fee-badge-reward">Thưởng nộp bài</span>',
+    penalty_streak: '<span class="fee-badge fee-badge-streak">Mất streak</span>',
+    penalty_late: '<span class="fee-badge fee-badge-late">Trễ hạn</span>',
+    payment: '<span class="fee-badge fee-badge-pay">Thanh toán</span>',
+    reset: '<span class="fee-badge fee-badge-reset">Reset</span>',
+    manual: '<span class="fee-badge fee-badge-manual">Điều chỉnh</span>'
+  };
+
   function buildLogHtml(entries) {
-    if (!entries.length) return `<div class="fee-log-empty">Chưa có giao dịch nào</div>`;
+    if (!entries.length) return `<div class="fee-log-empty">Chưa có giao dịch nào được ghi nhận</div>`;
     return entries.map(entry => {
       const sign = entry.amount > 0 ? '+' : '';
-      const col  = entry.amount > 0 ? 'var(--sage)' : entry.amount < 0 ? 'var(--rose)' : 'var(--text-3)';
-      const dateStr = new Date(entry.date).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit' });
+      const col = entry.amount > 0 ? 'var(--rose)' : entry.amount < 0 ? 'var(--sage)' : 'var(--text)';
+      const d = new Date(entry.created_at || entry.date);
+      const timeStr = !isNaN(d) ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+      const dateStr = !isNaN(d) ? d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '';
+      const badge = TYPE_BADGES[entry.type] || TYPE_BADGES.manual;
+
       return `<div class="fee-log-item">
-        <span class="fee-log-reason">${entry.reason}</span>
-        <span class="fee-log-amount" style="color:${col}">${sign}${entry.amount !== 0 ? formatVND(entry.amount) : '—'}</span>
-        <span class="fee-log-date">${dateStr}</span>
+        <div class="fee-log-item-left">
+          <div class="fee-log-meta">
+            ${badge}
+            <span class="fee-log-date">${timeStr ? timeStr + ' ' : ''}${dateStr}</span>
+          </div>
+          <span class="fee-log-reason">${escHtml(entry.reason)}</span>
+        </div>
+        <div class="fee-log-item-right">
+          <span class="fee-log-amount" style="color:${col}">${sign}${entry.amount !== 0 ? formatVND(entry.amount) : '0đ'}</span>
+          ${typeof entry.balance_after === 'number' ? `<span class="fee-log-bal-after">Số dư: ${formatVND(entry.balance_after)}</span>` : ''}
+        </div>
       </div>`;
     }).join('');
   }
@@ -175,8 +231,8 @@ function renderFeeWidget() {
 
   widget.innerHTML = `
     <div class="fee-widget-header">
-      <span class="fee-widget-title">${UI_ICONS.wallet} Tuition Fee</span>
-      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Received payment — reset to 1,000,000đ">Reset / Receive</button>
+      <span class="fee-widget-title">${UI_ICONS.wallet} Học phí & Quỹ học bổng</span>
+      <button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Đã nhận tiền — đặt lại số dư về 1,000,000đ">Nhận thanh toán / Reset</button>
     </div>
     <div class="fee-balance" style="color:${balColor};background:${balBg}">
       ${formatVND(bal)}
@@ -188,15 +244,15 @@ function renderFeeWidget() {
       <span>Trễ hằng ngày: <strong>+5,000đ</strong></span>
     </div>
     <div class="fee-manual-wrap">
-      <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Amount…" min="0" />
-      <input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Reason (optional)" />
+      <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Số tiền (đ)…" min="0" />
+      <input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Lý do cộng/trừ (không bắt buộc)" />
       <div class="fee-manual-btns">
-        <button class="fee-manual-btn fee-manual-add" id="btn-fee-add" type="button" title="Add amount">+ Add</button>
-        <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Deduct amount">− Deduct</button>
+        <button class="fee-manual-btn fee-manual-add" id="btn-fee-add" type="button" title="Cộng tiền phạt / phát sinh">+ Cộng</button>
+        <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Trừ tiền thưởng / thanh toán">− Trừ</button>
       </div>
     </div>
     <div class="fee-log-title-row">
-      <span class="fee-log-title-text">Recent History</span>
+      <span class="fee-log-title-text">Lịch sử giao dịch học phí</span>
       ${hasMore ? `<button class="fee-log-expand-btn" id="btn-fee-log-expand" type="button">Xem thêm (${totalLog - PREVIEW_COUNT})</button>` : ''}
     </div>
     <div class="fee-log" id="fee-log-body">${previewHtml}</div>
@@ -338,6 +394,37 @@ async function syncFromCloud() {
     } else if (dbTasks && !errT && dbTasks.length === 0 && state.tasks.length > 0) {
       // Supabase returned empty but we have local tasks — keep local, don't overwrite
       console.warn('Supabase returned 0 tasks but local state has tasks — keeping local data.');
+    }
+
+    // 4. Fetch Fee Logs from Supabase
+    try {
+      const { data: dbFeeLogs, error: errFee } = await supabaseClient
+        .from('fee_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (!errFee && dbFeeLogs && dbFeeLogs.length > 0) {
+        feeState.log = dbFeeLogs.map(l => ({
+          id: l.id,
+          student_id: l.student_id,
+          amount: l.amount,
+          balance_after: l.balance_after,
+          type: l.type || 'manual',
+          reason: l.reason,
+          created_at: l.created_at,
+          date: l.created_at
+        }));
+        if (typeof dbFeeLogs[0].balance_after === 'number') {
+          feeState.balance = dbFeeLogs[0].balance_after;
+        }
+        saveFeeState();
+        renderFeeWidget();
+      } else if (errFee && errFee.code !== 'PGRST205') {
+        console.warn('Supabase fee_logs fetch notice:', errFee.message);
+      }
+    } catch (feeErr) {
+      console.warn('Supabase fee_logs sync notice:', feeErr);
     }
 
     saveState();
@@ -1537,6 +1624,21 @@ function hasSubmissionToday(task) {
   });
 }
 
+function getPastDateKey(daysAgo = 1) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function hasSubmissionOnDate(task, dateKey) {
+  if (!task.submissions || task.submissions.length === 0) return false;
+  return task.submissions.some(sub => {
+    const d = new Date(sub.date);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return k === dateKey;
+  });
+}
+
 // Returns true if a specific date's submission was approved (backward-compat with old 'date' field)
 function isDateApproved(task, dateKey) {
   if (!task.approvalHistory || !task.approvalHistory.length) return false;
@@ -2197,10 +2299,16 @@ async function approveTask(taskId, submissionDate) {
     }).eq('id', task.id);
   }
 
-  // Fee tracker: deduct 2,500đ per completed assignment
-  const student = state.students.find(s => s.id === task.studentId);
-  const studentName = student ? student.name : 'Học sinh';
-  adjustFee(FEE_PER_ASSIGNMENT, `${studentName} nộp xong: ${task.title.slice(0, 28)}`);
+  // Fee tracker: deduct 2,500đ per completed assignment (reward at most once per task/date)
+  feeState.rewardedApprovals = feeState.rewardedApprovals || {};
+  const rewardKey = `${task.id}__${submissionDate || 'single'}`;
+  if (!feeState.rewardedApprovals[rewardKey]) {
+    feeState.rewardedApprovals[rewardKey] = new Date().toISOString();
+    const student = state.students.find(s => s.id === task.studentId);
+    const studentName = student ? student.name : 'Học sinh';
+    const subLabel = submissionDate ? ` (${submissionDate})` : '';
+    adjustFee(FEE_PER_ASSIGNMENT, `${studentName} hoàn thành bài: ${task.title.slice(0, 24)}${subLabel}`, 'reward', task.studentId);
+  }
 
   saveState();
   renderView(currentView);
@@ -2569,85 +2677,75 @@ function seedDemoData() {
   }
 }
 
-// ── STREAK LOSS / NO-SUBMISSION DETECTION ──────────────────────
-// Track previous streak values to detect when a streak is broken
-let _prevStreakMap = {};
-
+// ── STREAK LOSS DETECTION (ACCURATE ALGORITHM) ─────────────────
+// Only charges when an ACTIVE streak (>= 1 day) drops to 0.
+// Never repeatedly charges students who are already at streak 0.
 function checkStreakLosses() {
-  // Only run for teacher (who sees all students)
   if (!isTeacher()) return;
-  const today = todayKey();
+  if (!state.students || !state.students.length) return;
+
+  feeState.studentStreaks = feeState.studentStreaks || {};
 
   state.students.forEach(s => {
     const { streak } = getStudentStreak(s.id);
-    const prev = _prevStreakMap[s.id];
+    const prev = feeState.studentStreaks[s.id];
 
-    // Case 1: streak dropped from >0 to 0 (classic streak loss)
-    if (typeof prev === 'number' && prev > 0 && streak === 0) {
-      adjustFee(FEE_STREAK_LOST, `${s.name} mất streak (${prev} ngày → 0)`);
-      toast(`${s.name} đã mất streak! +10,000đ hoàn lại`, 'info');
-      // Mark as charged today so Case 2 doesn't double-charge
-      feeState.noSubChargeDates[s.id] = today;
-      saveFeeState();
+    // Case: student previously had an active streak (>= 1) and now streak is 0
+    if (typeof prev === 'number' && prev >= 1 && streak === 0) {
+      adjustFee(FEE_STREAK_LOST, `${s.name} mất chuỗi streak (${prev} ngày → 0)`, 'penalty_streak', s.id);
+      toast(`${s.name} đã mất streak (${prev} ngày)! +10,000đ`, 'info');
     }
 
-    // Case 2: streak is 0 (including already-zero), student has no submission today,
-    // and we haven't already charged for this student today
-    if (streak === 0 && feeState.noSubChargeDates[s.id] !== today) {
-      const hasSubToday = state.tasks.some(t =>
-        t.studentId === s.id && hasSubmissionToday(t)
-      );
-      if (!hasSubToday) {
-        feeState.noSubChargeDates[s.id] = today;
-        adjustFee(FEE_STREAK_LOST, `${s.name} không nộp bài hôm nay`);
-        saveFeeState();
-        toast(`${s.name} không làm bài! +10,000đ`, 'info');
-      }
-    }
-
-    _prevStreakMap[s.id] = streak;
+    // Always update stored streak
+    feeState.studentStreaks[s.id] = streak;
   });
+  saveFeeState();
 }
 
-// ── LATE FEE DETECTION ─────────────────────────────────────────
-// Charges +10,000đ for overdue regular tasks (not submitted/approved)
-// and +5,000đ for daily recurring tasks with no submission today.
-// Each task is charged at most once per day.
+// ── LATE FEE DETECTION (ACCURATE ALGORITHM) ────────────────────
+// Charges +10,000đ ONCE per overdue regular task (past due date, not submitted/approved).
+// Charges +5,000đ ONCE for missed daily tasks of YESTERDAY (never penalizes current day in progress).
 function checkLateFees() {
-  // Only run for teacher
   if (!isTeacher()) return;
-  const today = todayKey();
+  if (!state.tasks || !state.tasks.length) return;
+
+  feeState.lateCharged = feeState.lateCharged || {};
+  feeState.dailyCharged = feeState.dailyCharged || {};
+
+  const yesterday = getPastDateKey(1);
 
   state.tasks.forEach(task => {
     const student = state.students.find(s => s.id === task.studentId);
     const studentName = student ? student.name : 'Học sinh';
-    const chargeKey = `${task.id}__${today}`;
-
-    // Already charged today for this task
-    if (feeState.lateCharged[task.id] === today) return;
 
     if (task.isRecurring) {
-      // Daily task: charge +5,000đ only if:
-      //   - no submission photo uploaded today, AND
-      //   - student has NOT already submitted for teacher review (status !== 'submitted'), AND
-      //   - today is NOT already approved in approvalHistory
-      const submittedToday = hasSubmissionToday(task);
-      const awaitingApproval = task.status === 'submitted';
-      const alreadyApprovedToday = isDateApproved(task, today);
-      if (!submittedToday && !awaitingApproval && !alreadyApprovedToday) {
-        feeState.lateCharged[task.id] = today;
-        saveFeeState();
-        adjustFee(FEE_LATE_DAILY, `${studentName} trễ bài hằng ngày: ${task.title.slice(0, 28)}`);
-        toast(`${studentName} chưa nộp bài hằng ngày! +5,000đ`, 'info');
+      // DAILY RECURRING TASK:
+      // Only evaluate completed past days (yesterday). NEVER penalize for today while today is in progress!
+      const dailyChargeKey = `${task.id}__${yesterday}`;
+      if (!feeState.dailyCharged[dailyChargeKey]) {
+        const hadSubmissionYesterday = hasSubmissionOnDate(task, yesterday);
+        const wasApprovedYesterday = isDateApproved(task, yesterday);
+        const taskCreatedDate = task.createdAt ? task.createdAt.slice(0, 10) : '';
+
+        // Only penalize if the task was active on/before yesterday, and yesterday had no submission
+        if (taskCreatedDate && taskCreatedDate <= yesterday && !hadSubmissionYesterday && !wasApprovedYesterday) {
+          feeState.dailyCharged[dailyChargeKey] = new Date().toISOString();
+          saveFeeState();
+          adjustFee(FEE_LATE_DAILY, `${studentName} chưa làm bài hằng ngày (${yesterday}): ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId);
+          toast(`${studentName} trễ bài hằng ngày hôm qua! +5,000đ`, 'info');
+        }
       }
     } else {
-      // Regular task: charge +10,000đ if overdue and not yet submitted/approved
+      // REGULAR TASK:
+      // Charge +10,000đ ONCE when overdue and neither submitted nor approved.
+      if (feeState.lateCharged[task.id]) return; // Already charged once for this task
+
       const status = getTaskStatus(task);
       if ((status === 'overdue' || (isOverdue(task.dueDate) && status === 'pending')) &&
           status !== 'submitted' && status !== 'approved') {
-        feeState.lateCharged[task.id] = today;
+        feeState.lateCharged[task.id] = new Date().toISOString();
         saveFeeState();
-        adjustFee(FEE_LATE_REGULAR, `${studentName} trễ hạn bài tập: ${task.title.slice(0, 25)}`);
+        adjustFee(FEE_LATE_REGULAR, `${studentName} trễ hạn bài tập: ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId);
         toast(`${studentName} trễ hạn bài tập! +10,000đ`, 'info');
       }
     }
