@@ -147,6 +147,9 @@ function renderFeeWidget() {
   if (!widget) return;
 
   const bal = feeState.balance;
+  const tuitionBadge = document.getElementById('badge-nav-tuition');
+  if (tuitionBadge) tuitionBadge.textContent = formatVND(bal);
+
   const balColor = bal >= 800000 ? 'var(--sage)' : bal >= 500000 ? 'var(--mustard)' : 'var(--rose)';
   const balBg   = bal >= 800000 ? 'var(--sage-dim)' : bal >= 500000 ? 'var(--mustard-dim)' : 'var(--rose-dim)';
 
@@ -534,10 +537,15 @@ function isTeacher() {
 function updateRoleUI() {
   if (!isLoggedIn()) {
     document.body.classList.add('unauthenticated');
-    document.getElementById('sidebar-user-avatar').textContent = '?';
-    document.getElementById('sidebar-user-avatar').style.background = 'var(--bg3)';
-    document.getElementById('sidebar-user-name').textContent = 'Not Logged In';
-    document.getElementById('sidebar-user-role').textContent = 'Please Login';
+    const avatarEl = document.getElementById('sidebar-user-avatar');
+    if (avatarEl) {
+      avatarEl.textContent = '?';
+      avatarEl.style.background = 'var(--bg3)';
+    }
+    const nameEl = document.getElementById('sidebar-user-name');
+    if (nameEl) nameEl.textContent = 'Not Logged In';
+    const roleEl = document.getElementById('sidebar-user-role');
+    if (roleEl) roleEl.textContent = 'Please Login';
     return;
   }
 
@@ -545,22 +553,26 @@ function updateRoleUI() {
   const user = state.currentUser;
   const isT = isTeacher();
 
-  // Sidebar profile card
+  // Profile chip in Top Navigation
   const avatarEl = document.getElementById('sidebar-user-avatar');
   const nameEl = document.getElementById('sidebar-user-name');
   const roleEl = document.getElementById('sidebar-user-role');
 
   if (isT) {
-    avatarEl.textContent = 'T';
-    avatarEl.style.background = 'var(--terracotta-dim)';
-    nameEl.textContent = 'Teacher View';
-    roleEl.textContent = 'Teacher Admin';
+    if (avatarEl) {
+      avatarEl.textContent = 'T';
+      avatarEl.style.background = 'var(--terracotta-dim)';
+    }
+    if (nameEl) nameEl.textContent = 'Giáo viên';
+    if (roleEl) roleEl.textContent = 'Admin';
   } else {
     const s = state.students.find(st => st.id === user.studentId);
-    avatarEl.textContent = s ? initials(s.name) : 'S';
-    if (s) avatarEl.style.background = s.color || 'var(--denim)';
-    nameEl.textContent = s ? s.name : 'Student View';
-    roleEl.textContent = s ? (s.grade || 'Student') : 'Student Portal';
+    if (avatarEl) {
+      avatarEl.textContent = s ? initials(s.name) : 'S';
+      avatarEl.style.background = s && s.color ? s.color : 'var(--denim)';
+    }
+    if (nameEl) nameEl.textContent = s ? s.name : 'Học sinh';
+    if (roleEl) roleEl.textContent = s ? (s.grade || 'Học sinh') : 'Học sinh';
   }
 
   // Teacher-only elements
@@ -572,7 +584,48 @@ function updateRoleUI() {
   // Nav tasks label
   const navTasksLabel = document.getElementById('nav-tasks-label');
   if (navTasksLabel) {
-    navTasksLabel.textContent = isT ? 'Assignments' : 'My Homework';
+    navTasksLabel.textContent = isT ? 'Bài tập' : 'Bài tập của tôi';
+  }
+  const mobNavTasksLabel = document.getElementById('mob-nav-tasks-label');
+  if (mobNavTasksLabel) {
+    mobNavTasksLabel.textContent = isT ? 'Bài tập' : 'Bài của tôi';
+  }
+
+  // Update Top Navigation Badges
+  const badgePending = document.getElementById('badge-nav-pending');
+  if (badgePending) {
+    const submitted = state.tasks.filter(t => t.submissions && t.submissions.length > 0).length;
+    const approved = state.tasks.filter(t => t.status === 'approved').length;
+    const pendingCount = Math.max(0, submitted - approved);
+    badgePending.textContent = pendingCount > 0 ? `${pendingCount} chờ` : '0 chờ';
+  }
+
+  const badgeStudents = document.getElementById('badge-nav-students');
+  if (badgeStudents) {
+    badgeStudents.textContent = state.students.length;
+  }
+
+  const badgeTasks = document.getElementById('badge-nav-tasks');
+  if (badgeTasks) {
+    const taskCount = isT ? state.tasks.length : state.tasks.filter(t => t.studentId === user.studentId).length;
+    badgeTasks.textContent = taskCount;
+  }
+
+  const badgeStreak = document.getElementById('badge-nav-streak');
+  if (badgeStreak) {
+    if (isT) {
+      const maxStreak = Math.max(0, ...state.students.map(s => getStudentStreak(s.id).streak));
+      badgeStreak.textContent = `${maxStreak}🔥`;
+    } else {
+      const s = state.students.find(st => st.id === user.studentId);
+      const streak = s ? getStudentStreak(s.id).streak : 0;
+      badgeStreak.textContent = `${streak}🔥`;
+    }
+  }
+
+  const badgeTuition = document.getElementById('badge-nav-tuition');
+  if (badgeTuition) {
+    badgeTuition.textContent = formatVND(feeState.balance);
   }
 
   // Welcome banner
@@ -629,12 +682,10 @@ function handleDoLogin() {
         return;
       }
       state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
-      // Note: don't saveState() here — currentUser is session-only & saving risks quota errors
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
       toast('Logged in as Teacher Admin!', 'success');
-      // Check late fees immediately on teacher login
       setTimeout(() => { checkStreakLosses(); checkLateFees(); }, 500);
     } else {
       const select = document.getElementById('login-student-select');
@@ -650,7 +701,6 @@ function handleDoLogin() {
       }
 
       state.currentUser = { role: 'student', studentId: studentId, name: student ? student.name : 'Student' };
-      // Note: don't saveState() here — currentUser is session-only & saving risks quota errors
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
@@ -662,25 +712,36 @@ function handleDoLogin() {
   }
 }
 
-// ── NAVIGATION ─────────────────────────────────────────────
+// ── NAVIGATION (Layout B) ──────────────────────────────────
 function navigateTo(view) {
   if (!isLoggedIn()) {
     openLoginDialog();
     return;
   }
-  if (!isTeacher() && view === 'students') {
+  if (!isTeacher() && (view === 'students' || view === 'tuition')) {
     toast('Student accounts can only view tasks and streaks.', 'info');
     return;
   }
   currentView = view;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById(`view-${view}`).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const activeNavBtn = document.querySelector(`.nav-item[data-view="${view}"]`);
-  if (activeNavBtn) activeNavBtn.classList.add('active');
+  const viewEl = document.getElementById(`view-${view}`);
+  if (viewEl) viewEl.classList.add('active');
 
-  document.getElementById('page-title').textContent =
-    { dashboard: 'Dashboard', students: 'Manage Students', tasks: isTeacher() ? 'Assignments' : 'My Tasks', streaks: 'Streak Tracker' }[view];
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.view === view);
+  });
+
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) {
+    titleEl.textContent = {
+      dashboard: 'Dashboard',
+      students: 'Manage Students',
+      tasks: isTeacher() ? 'Assignments' : 'My Tasks',
+      streaks: 'Streak Tracker',
+      tuition: 'Học phí & Quỹ học bổng'
+    }[view] || 'HomeworkHub';
+  }
+
   renderView(view);
 }
 
@@ -691,41 +752,373 @@ function renderView(view) {
   if (view === 'students') renderStudents();
   if (view === 'tasks') renderTasks();
   if (view === 'streaks') renderStreaks();
+  if (view === 'tuition') renderTuition();
 }
 
-// ── DASHBOARD ──────────────────────────────────────────────
+function renderTuition() {
+  renderFeeWidget();
+}
+
+// ── GLOBAL COMMAND PALETTE (Ctrl+K) ─────────────────────────
+let cmdSelectedIndex = 0;
+let cmdCurrentItems = [];
+
+function openCmd() {
+  const overlay = document.getElementById('cmd-overlay');
+  const input = document.getElementById('cmd-input');
+  if (!overlay || !input) return;
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  input.value = '';
+  cmdSelectedIndex = 0;
+  renderCmdResults('');
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeCmd() {
+  const overlay = document.getElementById('cmd-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+}
+
+function renderCmdResults(query) {
+  const container = document.getElementById('cmd-results');
+  if (!container) return;
+  const q = (query || '').trim().toLowerCase();
+  const isT = isTeacher();
+  const items = [];
+
+  // 1. Quick Actions
+  const actions = [
+    { type: 'action', title: 'Tới Dashboard', desc: 'Xem tổng quan và bài nộp gần đây', icon: '📊', run: () => navigateTo('dashboard') },
+    { type: 'action', title: 'Tới Bài tập / Assignments', desc: 'Xem toàn bộ danh sách bài tập', icon: '📝', run: () => navigateTo('tasks') },
+    { type: 'action', title: 'Tới Streak Tracker', desc: 'Xem chuỗi học tập của học sinh', icon: '🔥', run: () => navigateTo('streaks') },
+    { type: 'action', title: 'Tới Quản lý Học phí', desc: 'Kiểm tra số dư và lịch sử giao dịch', icon: '💳', run: () => navigateTo('tuition') },
+    { type: 'action', title: 'Đổi tài khoản / Switch Role', desc: 'Chuyển đổi vai trò Giáo viên / Học sinh', icon: '🔄', run: () => openLoginDialog() },
+  ];
+  if (isT) {
+    actions.unshift(
+      { type: 'action', title: '+ Thêm bài tập mới', desc: 'Giao bài tập cho học sinh', icon: '➕', run: () => openAddTask() },
+      { type: 'action', title: '+ Thêm học sinh mới', desc: 'Đăng ký hồ sơ học sinh mới', icon: '👤', run: () => openAddStudent() }
+    );
+  }
+
+  const matchedActions = actions.filter(a => !q || a.title.toLowerCase().includes(q) || a.desc.toLowerCase().includes(q));
+  if (matchedActions.length) {
+    items.push({ isHeader: true, label: 'Hành động nhanh' });
+    matchedActions.forEach(a => items.push(a));
+  }
+
+  // 2. Students
+  if (state.students && state.students.length) {
+    const matchedStudents = state.students.filter(s => !q || s.name.toLowerCase().includes(q) || (s.grade && s.grade.toLowerCase().includes(q)));
+    if (matchedStudents.length) {
+      items.push({ isHeader: true, label: 'Học sinh' });
+      matchedStudents.forEach(s => {
+        items.push({
+          type: 'student',
+          title: s.name,
+          desc: `${s.grade || 'Học sinh'} • PIN: ${s.pin || '0000'}`,
+          icon: '🎓',
+          run: () => {
+            if (isT) {
+              navigateTo('students');
+              openStudentDetail(s.id);
+            } else {
+              navigateTo('students');
+            }
+          }
+        });
+      });
+    }
+  }
+
+  // 3. Tasks
+  if (state.tasks && state.tasks.length) {
+    const matchedTasks = state.tasks.filter(t => !q || t.title.toLowerCase().includes(q) || (t.desc && t.desc.toLowerCase().includes(q)));
+    if (matchedTasks.length) {
+      items.push({ isHeader: true, label: 'Bài tập' });
+      matchedTasks.slice(0, 8).forEach(t => {
+        const student = state.students.find(s => s.id === t.studentId);
+        items.push({
+          type: 'task',
+          title: t.title,
+          desc: `${student ? student.name : 'Chưa giao'} • Trạng thái: ${t.status || 'pending'}`,
+          icon: t.status === 'approved' ? '✅' : '📌',
+          run: () => {
+            navigateTo('tasks');
+          }
+        });
+      });
+    }
+  }
+
+  cmdCurrentItems = items.filter(it => !it.isHeader);
+  if (cmdSelectedIndex >= cmdCurrentItems.length) cmdSelectedIndex = 0;
+
+  if (!cmdCurrentItems.length) {
+    container.innerHTML = `<div class="cmd-empty">Không tìm thấy kết quả nào phù hợp với "<strong>${escHtml(query)}</strong>"</div>`;
+    return;
+  }
+
+  let itemCounter = 0;
+  container.innerHTML = items.map(item => {
+    if (item.isHeader) {
+      return `<div class="cmd-section-label">${item.label}</div>`;
+    }
+    const idx = itemCounter++;
+    const isSelected = idx === cmdSelectedIndex;
+    return `
+      <div class="cmd-item ${isSelected ? 'selected' : ''}" data-cmd-idx="${idx}">
+        <div class="cmd-item-icon">${item.icon}</div>
+        <div class="cmd-item-info">
+          <div class="cmd-item-title">${escHtml(item.title)}</div>
+          <div class="cmd-item-desc">${escHtml(item.desc)}</div>
+        </div>
+        <div class="cmd-item-shortcut"><kbd>↵</kbd></div>
+      </div>
+    `;
+  }).join('');
+
+  // Wire item clicks
+  container.querySelectorAll('.cmd-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.getAttribute('data-cmd-idx'), 10);
+      executeCmdItem(idx);
+    });
+  });
+}
+
+function executeCmdItem(idx) {
+  if (cmdCurrentItems[idx] && typeof cmdCurrentItems[idx].run === 'function') {
+    closeCmd();
+    cmdCurrentItems[idx].run();
+  }
+}
+
+// ── DASHBOARD: TWO-COLUMN MASTER-DETAIL (Layout B) ──────────
+let dashActiveFilter = 'all';
+let dashSearchQuery = '';
+let selectedDashTaskId = null;
+
 function renderDashboard() {
-  renderStats();
-  renderRecentSubmissions();
-  renderTopStreaks();
-  renderPendingTasks();
-}
-
-function renderStats() {
   const isT = isTeacher();
   const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
+
+  // 1. Setup Master Filter Tabs
+  const filterTabsContainer = document.getElementById('dash-filter-tabs');
+  if (filterTabsContainer) {
+    const tabs = filterTabsContainer.querySelectorAll('.filter-tab');
+    tabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.filter === dashActiveFilter);
+      tab.onclick = () => {
+        dashActiveFilter = tab.dataset.filter;
+        tabs.forEach(t => t.classList.toggle('active', t === tab));
+        renderDashTable();
+      };
+    });
+  }
+
+  // 2. Setup Quick Search input
+  const searchInput = document.getElementById('dash-quick-search');
+  if (searchInput) {
+    searchInput.value = dashSearchQuery;
+    searchInput.oninput = (e) => {
+      dashSearchQuery = e.target.value.trim().toLowerCase();
+      renderDashTable();
+    };
+  }
+
+  // 3. Setup Close Detail Button (for mobile drawer mode)
+  const closeDetailBtn = document.getElementById('btn-close-detail');
+  if (closeDetailBtn) {
+    closeDetailBtn.onclick = () => {
+      const detailEl = document.getElementById('dashboard-detail');
+      if (detailEl) detailEl.classList.remove('open');
+    };
+  }
+
+  // 4. Render Sections
+  renderDashHero();
+  renderDashMetrics();
+  renderDashTable();
+}
+
+function renderDashHero() {
+  const isT = isTeacher();
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
+  const cardsContainer = document.getElementById('dash-action-cards');
+  const countBadge = document.getElementById('dash-urgent-badge');
+  const heroTitle = document.getElementById('dash-hero-title');
+  if (!cardsContainer) return;
+
+  // Filter urgent items
+  let urgentItems = [];
+
+  if (isT) {
+    if (heroTitle) heroTitle.textContent = 'Bài tập cần chấm điểm & Hạn chót';
+    // 1. Tasks that have submissions waiting for approval
+    state.tasks.forEach(task => {
+      const student = state.students.find(s => s.id === task.studentId);
+      if (!student || !task.submissions || !task.submissions.length) return;
+      const isApproved = task.isRecurring ? isDateApproved(task, todayKey()) : task.status === 'approved';
+      if (!isApproved) {
+        const lastSub = task.submissions[task.submissions.length - 1];
+        urgentItems.push({
+          type: 'submission',
+          task,
+          student,
+          sub: lastSub,
+          badge: 'Chờ duyệt',
+          badgeClass: 'chip-pending-review',
+          timeStr: lastSub ? relativeTime(lastSub.date) : 'Vừa xong'
+        });
+      }
+    });
+
+    // 2. Regular tasks that are overdue
+    state.tasks.forEach(task => {
+      if (task.isRecurring) return;
+      const status = getTaskStatus(task);
+      if ((status === 'overdue' || (isOverdue(task.dueDate) && status === 'pending')) && status !== 'approved' && status !== 'submitted') {
+        const student = state.students.find(s => s.id === task.studentId);
+        if (student) {
+          urgentItems.push({
+            type: 'overdue',
+            task,
+            student,
+            badge: 'Trễ hạn',
+            badgeClass: 'chip-overdue',
+            timeStr: `Hạn: ${formatDate(task.dueDate)}`
+          });
+        }
+      }
+    });
+  } else {
+    // Student portal hero: tasks due today or needing upload
+    if (heroTitle) heroTitle.textContent = 'Bài tập cần hoàn thành hôm nay';
+    state.tasks.filter(t => t.studentId === currentStudentId).forEach(task => {
+      const isDone = task.isRecurring ? hasSubmissionToday(task) : (task.status === 'submitted' || task.status === 'approved');
+      if (!isDone) {
+        const student = state.students.find(s => s.id === task.studentId);
+        urgentItems.push({
+          type: 'todo',
+          task,
+          student,
+          badge: task.isRecurring ? 'Hôm nay' : (isOverdue(task.dueDate) ? 'Quá hạn' : 'Đến hạn'),
+          badgeClass: isOverdue(task.dueDate) && !task.isRecurring ? 'chip-overdue' : 'chip-pending',
+          timeStr: task.isRecurring ? 'Lặp lại hằng ngày' : (task.dueDate ? formatDate(task.dueDate) : 'Chưa có hạn')
+        });
+      }
+    });
+  }
+
+  // Update badge count
+  if (countBadge) {
+    countBadge.textContent = `${urgentItems.length} mục cần xử lý`;
+  }
+  const filterPendingTabCount = document.getElementById('dash-count-pending');
+  if (filterPendingTabCount) {
+    const pendingReviewCount = state.tasks.filter(t => t.submissions && t.submissions.length > 0 && t.status !== 'approved').length;
+    filterPendingTabCount.textContent = pendingReviewCount;
+  }
+
+  if (!urgentItems.length) {
+    cardsContainer.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 22px; text-align: center; color: var(--text-2); background: var(--bg); border-radius: var(--radius-sm); border: 1px dashed var(--border);">
+        <div style="font-size: 22px; margin-bottom: 6px;">🎉</div>
+        <strong style="font-size: 13px; color: var(--text);">Tất cả bài tập đã được xử lý hoàn tất!</strong>
+        <p style="font-size: 12px; color: var(--text-3); margin-top: 2px;">Không có bài nộp nào đang chờ duyệt hoặc bị trễ hạn.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Render cards
+  cardsContainer.innerHTML = urgentItems.slice(0, 4).map(item => {
+    const { task, student, badge, badgeClass, timeStr, sub } = item;
+    const isSelected = selectedDashTaskId === task.id;
+    const thumbImg = sub ? sub.data : '';
+    return `
+      <div class="action-card ${isSelected ? 'selected' : ''}" data-task-id="${task.id}" onclick="selectDashboardTask('${task.id}')">
+        <div class="action-card-top">
+          <div class="action-card-student">
+            <div class="action-card-av" style="background: ${student.color || 'var(--terracotta)'}">
+              ${initials(student.name)}
+            </div>
+            <span>${escHtml(student.name)}</span>
+          </div>
+          <span class="status-chip ${badgeClass}">${badge}</span>
+        </div>
+        <div class="action-card-body">
+          ${thumbImg ? `
+            <div class="action-card-thumb" onclick="event.stopPropagation(); openImageViewer('${thumbImg}', '${escHtml(task.title)} — ${escHtml(student.name)}')">
+              <img src="${thumbImg}" alt="Submission thumbnail" />
+            </div>
+          ` : `
+            <div class="action-card-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-3);">
+              ${UI_ICONS.book}
+            </div>
+          `}
+          <div class="action-card-meta">
+            <div class="action-card-task-title">${escHtml(task.title)}</div>
+            <div class="action-card-time">${timeStr}</div>
+          </div>
+        </div>
+        <div class="action-card-foot">
+          <span style="font-size: 11px; color: var(--text-3);">${task.isRecurring ? 'Bài hằng ngày' : 'Bài thường'}</span>
+          <button class="action-btn-pill" type="button">
+            ${isT && sub ? 'Chấm bài →' : 'Xem chi tiết →'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDashMetrics() {
+  const isT = isTeacher();
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
+  const container = document.getElementById('dash-metrics-strip');
+  if (!container) return;
 
   if (isT) {
     const totalStudents = state.students.length;
     const totalTasks = state.tasks.length;
     const submitted = state.tasks.filter(t => t.submissions && t.submissions.length > 0).length;
     const approved = state.tasks.filter(t => t.status === 'approved').length;
+    const pendingReview = Math.max(0, submitted - approved);
+    const maxStreak = Math.max(0, ...state.students.map(s => getStudentStreak(s.id).streak));
 
-    const stats = [
-      { icon: UI_ICONS.users, label: 'Total Students', value: totalStudents, color: 'var(--violet)', bg: 'var(--violet-dim)' },
-      { icon: UI_ICONS.book, label: 'Assigned Tasks', value: totalTasks, color: 'var(--denim)', bg: 'var(--denim-dim)' },
-      { icon: UI_ICONS.camera, label: 'Submissions', value: submitted, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
-      { icon: UI_ICONS.check, label: 'Approved', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
-    ];
-    document.getElementById('stats-row').innerHTML = stats.map(s => `
-      <div class="stat-card">
-        <div class="stat-icon" style="background:${s.bg}; color:${s.color}">${s.icon}</div>
-        <div>
-          <div class="stat-value" style="color:${s.color}">${s.value}</div>
-          <div class="stat-label">${s.label}</div>
-        </div>
+    container.innerHTML = `
+      <div class="metric-pill">
+        <div class="metric-val" style="color: var(--violet);">${totalStudents}</div>
+        <div class="metric-label">Học sinh</div>
       </div>
-    `).join('');
+      <div class="metric-pill">
+        <div class="metric-val" style="color: var(--denim);">${totalTasks}</div>
+        <div class="metric-label">Tổng bài tập</div>
+      </div>
+      <div class="metric-pill">
+        <div class="metric-val" style="color: #b45309;">${pendingReview}</div>
+        <div class="metric-label">Chờ chấm điểm</div>
+      </div>
+      <div class="metric-pill">
+        <div class="metric-val" style="color: var(--sage);">${approved}</div>
+        <div class="metric-label">Đã duyệt</div>
+      </div>
+      <div class="metric-pill clickable" onclick="navigateTo('streaks')">
+        <div class="metric-val" style="color: var(--terracotta);">${maxStreak} ngày 🔥</div>
+        <div class="metric-label">Top Streak</div>
+      </div>
+      <div class="metric-pill clickable" onclick="navigateTo('tuition')">
+        <div class="metric-val" style="color: ${feeState.balance >= 800000 ? 'var(--sage)' : 'var(--terracotta)'}; font-size: 15px;">
+          ${formatVND(feeState.balance)}
+        </div>
+        <div class="metric-label">Học phí & Quỹ →</div>
+      </div>
+    `;
   } else {
     const myTasks = state.tasks.filter(t => t.studentId === currentStudentId);
     const totalTasks = myTasks.length;
@@ -733,114 +1126,304 @@ function renderStats() {
     const approved = myTasks.filter(t => t.status === 'approved').length;
     const { streak } = getStudentStreak(currentStudentId);
 
-    const stats = [
-      { icon: UI_ICONS.fire, label: 'My Current Streak', value: `${streak} Days`, color: 'var(--terracotta)', bg: 'var(--terracotta-dim)' },
-      { icon: UI_ICONS.book, label: 'My Total Tasks', value: totalTasks, color: 'var(--denim)', bg: 'var(--denim-dim)' },
-      { icon: UI_ICONS.camera, label: 'Submitted', value: submitted, color: 'var(--mustard)', bg: 'var(--mustard-dim)' },
-      { icon: UI_ICONS.check, label: 'Approved', value: approved, color: 'var(--sage)', bg: 'var(--sage-dim)' },
-    ];
-    document.getElementById('stats-row').innerHTML = stats.map(s => `
-      <div class="stat-card">
-        <div class="stat-icon" style="background:${s.bg}; color:${s.color}">${s.icon}</div>
-        <div>
-          <div class="stat-value" style="color:${s.color}">${s.value}</div>
-          <div class="stat-label">${s.label}</div>
-        </div>
+    container.innerHTML = `
+      <div class="metric-pill clickable" onclick="navigateTo('streaks')">
+        <div class="metric-val" style="color: var(--terracotta);">${streak} ngày 🔥</div>
+        <div class="metric-label">Chuỗi học tập</div>
       </div>
-    `).join('');
+      <div class="metric-pill">
+        <div class="metric-val" style="color: var(--denim);">${totalTasks}</div>
+        <div class="metric-label">Bài được giao</div>
+      </div>
+      <div class="metric-pill">
+        <div class="metric-val" style="color: #b45309;">${submitted}</div>
+        <div class="metric-label">Đã gửi bài</div>
+      </div>
+      <div class="metric-pill">
+        <div class="metric-val" style="color: var(--sage);">${approved}</div>
+        <div class="metric-label">Đã được duyệt</div>
+      </div>
+    `;
   }
 }
 
-function renderRecentSubmissions() {
-  const allSubs = [];
+function renderDashTable() {
   const isT = isTeacher();
   const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
+  const body = document.getElementById('dash-table-body');
+  if (!body) return;
 
-  state.tasks.forEach(task => {
-    if (!isT && task.studentId !== currentStudentId) return;
-    const student = state.students.find(s => s.id === task.studentId);
-    if (!student || !task.submissions) return;
-    task.submissions.forEach(sub => {
-      allSubs.push({ task, student, sub });
-    });
-  });
-  allSubs.sort((a, b) => new Date(b.sub.date) - new Date(a.sub.date));
-  const recent = allSubs.slice(0, 6);
-
-  const el = document.getElementById('recent-submissions-list');
-  if (!recent.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.inbox}</div><p>No uploaded homework photos yet</p></div>`;
-    return;
-  }
-  el.innerHTML = recent.map(({ task, student, sub }) => `
-    <div class="submission-item" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)} — ${escHtml(student.name)}')">
-      <div class="submission-thumb">
-        <img src="${sub.data}" alt="submission" />
-      </div>
-      <div class="submission-info">
-        <strong>${escHtml(student.name)}</strong>
-        <span>${escHtml(task.title)}</span>
-      </div>
-      <div class="submission-time">${relativeTime(sub.date)}</div>
-    </div>
-  `).join('');
-}
-
-function renderTopStreaks() {
-  const isT = isTeacher();
-  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
-
-  let studentStreaks = state.students.map(s => ({
-    student: s,
-    ...getStudentStreak(s.id),
-  })).sort((a, b) => b.streak - a.streak).slice(0, 5);
-
-  const el = document.getElementById('top-streaks-list');
-  if (!studentStreaks.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.fire}</div><p>No student streaks recorded yet</p></div>`;
-    return;
-  }
-  el.innerHTML = studentStreaks.map((item, i) => `
-    <div class="streak-item" style="${item.student.id === currentStudentId ? 'background:var(--terracotta-dim);border-radius:var(--radius-sm)' : ''}">
-      <div class="streak-rank">#${i + 1}</div>
-      <div class="streak-avatar" style="background:${item.student.color}">${initials(item.student.name)}</div>
-      <div class="streak-name">${escHtml(item.student.name)} ${item.student.id === currentStudentId ? ' (You)' : ''}</div>
-      <div class="streak-flame">${UI_ICONS.fire} ${item.streak} days</div>
-    </div>
-  `).join('');
-}
-
-function renderPendingTasks() {
-  const isT = isTeacher();
-  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
-
-  let pending = state.tasks.filter(t => {
+  // Filter tasks based on role, activeFilter, and search query
+  let tasks = state.tasks.filter(t => {
     if (!isT && t.studentId !== currentStudentId) return false;
-    // Use getTaskStatus so recurring tasks reset each day
-    const s = getTaskStatus(t);
-    return s === 'pending' || s === 'overdue';
+    const student = state.students.find(s => s.id === t.studentId);
+    const studentName = student ? student.name.toLowerCase() : '';
+    const taskTitle = (t.title || '').toLowerCase();
+    const taskDesc = (t.desc || '').toLowerCase();
+
+    // Search query filter
+    if (dashSearchQuery) {
+      if (!taskTitle.includes(dashSearchQuery) && !taskDesc.includes(dashSearchQuery) && !studentName.includes(dashSearchQuery)) {
+        return false;
+      }
+    }
+
+    // Tab filter
+    const status = getTaskStatus(t);
+    const hasSubs = t.submissions && t.submissions.length > 0;
+    const isApproved = t.isRecurring ? hasApprovalToday(t) : t.status === 'approved';
+
+    if (dashActiveFilter === 'pending-review') {
+      return hasSubs && !isApproved;
+    }
+    if (dashActiveFilter === 'pending') {
+      return !hasSubs && !isApproved && status !== 'overdue';
+    }
+    if (dashActiveFilter === 'approved') {
+      return isApproved;
+    }
+    if (dashActiveFilter === 'overdue') {
+      return (status === 'overdue' || (isOverdue(t.dueDate) && !t.isRecurring)) && !isApproved && !hasSubs;
+    }
+    return true; // 'all'
   });
 
-  document.getElementById('pending-count-badge').textContent = pending.length;
+  // Sort tasks: pending-review first, then due today, then rest
+  tasks.sort((a, b) => {
+    const aPendingReview = a.submissions && a.submissions.length && a.status !== 'approved';
+    const bPendingReview = b.submissions && b.submissions.length && b.status !== 'approved';
+    if (aPendingReview && !bPendingReview) return -1;
+    if (!aPendingReview && bPendingReview) return 1;
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
 
-  const el = document.getElementById('pending-tasks-list');
-  if (!pending.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.sparkle}</div><p>All assigned homework tasks have been submitted!</p></div>`;
+  if (!tasks.length) {
+    body.innerHTML = `
+      <div style="padding: 32px 16px; text-align: center; color: var(--text-3); font-size: 13px;">
+        Không tìm thấy bài tập nào theo bộ lọc hiện tại.
+      </div>
+    `;
+    if (!selectedDashTaskId) renderDashDetail(null);
     return;
   }
-  el.innerHTML = pending.slice(0, 10).map(task => {
+
+  // Auto-select first item if none is selected or selected item is no longer in list
+  if (!selectedDashTaskId || !tasks.some(t => t.id === selectedDashTaskId)) {
+    selectedDashTaskId = tasks[0].id;
+  }
+
+  body.innerHTML = tasks.map(task => {
     const student = state.students.find(s => s.id === task.studentId);
-    const overdue = task.isRecurring ? false : isOverdue(task.dueDate);
-    const dueDisplay = task.isRecurring ? 'Today' : (task.dueDate ? formatDate(task.dueDate) : '—');
+    const isSelected = task.id === selectedDashTaskId;
+    const isRecurring = task.isRecurring;
+    const hasSubs = task.submissions && task.submissions.length > 0;
+    const isApproved = isRecurring ? hasApprovalToday(task) : task.status === 'approved';
+    const overdue = !isRecurring && isOverdue(task.dueDate) && !isApproved && !hasSubs;
+
+    let chipClass = 'chip-pending';
+    let chipText = 'Đang làm';
+    if (hasSubs && !isApproved) {
+      chipClass = 'chip-pending-review';
+      chipText = `${task.submissions.length} ảnh chờ duyệt`;
+    } else if (isApproved) {
+      chipClass = 'chip-approved';
+      chipText = 'Đã duyệt';
+    } else if (overdue) {
+      chipClass = 'chip-overdue';
+      chipText = 'Trễ hạn';
+    }
+
+    const dueStr = isRecurring ? 'Hôm nay' : (task.dueDate ? formatDate(task.dueDate) : '—');
+
     return `
-      <div class="pending-item" onclick="openStudentDetailForTask('${task.studentId}')">
-        <div class="pending-dot" style="${overdue ? 'background:var(--rose)' : ''}"></div>
-        <div class="pending-task-name">${escHtml(task.title)}</div>
-        <div class="pending-student">${student ? escHtml(student.name) : '—'}</div>
-        <div class="pending-due ${overdue ? 'overdue' : ''}">${dueDisplay}</div>
+      <div class="master-row ${isSelected ? 'selected' : ''}" data-task-id="${task.id}" onclick="selectDashboardTask('${task.id}')">
+        <div class="col-task-title">
+          <span class="col-task-name">${escHtml(task.title)}</span>
+          <span class="col-task-sub">${task.desc ? escHtml(task.desc.slice(0, 48)) : (isRecurring ? 'Lặp lại hằng ngày' : 'Bài tập thông thường')}</span>
+        </div>
+        <div class="col-student">
+          <div class="col-student-av" style="background:${student ? (student.color || 'var(--terracotta)') : 'var(--text-3)'}">
+            ${student ? initials(student.name) : '?'}
+          </div>
+          <span>${student ? escHtml(student.name) : '—'}</span>
+        </div>
+        <div class="col-due ${overdue ? 'overdue' : ''}">
+          ${dueStr}
+        </div>
+        <div class="col-status-wrap">
+          <span class="status-chip ${chipClass}">${chipText}</span>
+        </div>
       </div>
     `;
   }).join('');
+
+  // Render detail for selected task
+  renderDashDetail(selectedDashTaskId);
+}
+
+function selectDashboardTask(taskId) {
+  selectedDashTaskId = taskId;
+  document.querySelectorAll('.action-card').forEach(c => {
+    c.classList.toggle('selected', c.getAttribute('data-task-id') === taskId);
+  });
+  document.querySelectorAll('.master-row').forEach(r => {
+    r.classList.toggle('selected', r.getAttribute('data-task-id') === taskId);
+  });
+
+  renderDashDetail(taskId);
+
+  const detailEl = document.getElementById('dashboard-detail');
+  if (detailEl && window.innerWidth <= 1024) {
+    detailEl.classList.add('open');
+  }
+}
+
+function renderDashDetail(taskId) {
+  const container = document.getElementById('dash-detail-body');
+  const titleEl = document.getElementById('detail-task-title');
+  const eyebrowEl = document.getElementById('detail-eyebrow');
+  if (!container) return;
+
+  if (!taskId) {
+    if (titleEl) titleEl.textContent = 'Chọn một bài tập';
+    container.innerHTML = `
+      <div class="detail-empty-state">
+        <div style="font-size: 28px;">📋</div>
+        <strong style="font-size: 13px; color: var(--text);">Chưa chọn bài tập</strong>
+        <p style="font-size: 12px; color: var(--text-3); max-width: 220px;">
+          Bấm vào bất kỳ bài tập nào ở danh sách bên trái để xem ảnh nộp, hướng dẫn và chấm điểm.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const student = state.students.find(s => s.id === task.studentId);
+  const isT = isTeacher();
+  const isRecurring = task.isRecurring;
+  const hasSubs = task.submissions && task.submissions.length > 0;
+  const isApproved = isRecurring ? hasApprovalToday(task) : task.status === 'approved';
+  const overdue = !isRecurring && isOverdue(task.dueDate) && !isApproved && !hasSubs;
+
+  if (titleEl) titleEl.textContent = task.title;
+  if (eyebrowEl) eyebrowEl.textContent = isRecurring ? 'Bài tập lặp lại hằng ngày' : 'Bài tập thông thường';
+
+  let statusBadge = ``;
+  if (hasSubs && !isApproved) {
+    statusBadge = `<span class="status-chip chip-pending-review">Chờ thầy chấm điểm</span>`;
+  } else if (isApproved) {
+    statusBadge = `<span class="status-chip chip-approved">Đã phê duyệt</span>`;
+  } else if (overdue) {
+    statusBadge = `<span class="status-chip chip-overdue">Quá hạn</span>`;
+  } else {
+    statusBadge = `<span class="status-chip chip-pending">Đang thực hiện</span>`;
+  }
+
+  const photosHtml = hasSubs ? task.submissions.map((sub, i) => `
+    <div class="detail-gallery-thumb" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)} — ${student ? escHtml(student.name) : ''} (Ảnh ${i + 1})')">
+      <img src="${sub.data}" alt="Submission image ${i + 1}" />
+    </div>
+  `).join('') : '';
+
+  const { streak } = student ? getStudentStreak(student.id) : { streak: 0 };
+
+  container.innerHTML = `
+    <!-- Status & Student Info -->
+    <div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 10px;">
+        <span class="detail-section-label">Học sinh</span>
+        ${statusBadge}
+      </div>
+      <div class="detail-student-card">
+        <div class="detail-student-av" style="background:${student ? (student.color || 'var(--terracotta)') : 'var(--text-3)'}">
+          ${student ? initials(student.name) : '?'}
+        </div>
+        <div class="detail-student-info" style="flex:1;">
+          <strong>${student ? escHtml(student.name) : 'Chưa gán'}</strong>
+          <span>${student ? escHtml(student.grade || 'Học sinh') : ''} • Streak: ${streak} ngày 🔥</span>
+        </div>
+        ${isT && student ? `
+          <button class="btn btn-secondary btn-sm" onclick="navigateTo('students'); openStudentDetail('${student.id}');" type="button" style="font-size:11px; padding: 4px 8px;">
+            Hồ sơ →
+          </button>
+        ` : ''}
+      </div>
+    </div>
+
+    <!-- Due date & info pills -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div style="padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <div class="detail-section-label">Hạn nộp</div>
+        <strong style="font-size: 13px; color: ${overdue ? 'var(--rose)' : 'var(--text)'};">
+          ${isRecurring ? 'Hôm nay (hằng ngày)' : (task.dueDate ? formatDate(task.dueDate) : 'Không có')}
+        </strong>
+      </div>
+      <div style="padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <div class="detail-section-label">Số ảnh đã nộp</div>
+        <strong style="font-size: 13px; color: var(--text);">
+          ${task.submissions ? task.submissions.length : 0} ảnh
+        </strong>
+      </div>
+    </div>
+
+    <!-- Instructions / Description -->
+    <div>
+      <div class="detail-section-label">Nội dung & Yêu cầu</div>
+      <div class="detail-desc-box">
+        ${task.desc ? escHtml(task.desc) : '<em style="color:var(--text-3)">Không có ghi chú thêm.</em>'}
+      </div>
+    </div>
+
+    <!-- Uploaded Photos Gallery -->
+    <div>
+      <div class="detail-photos-header">
+        <span class="detail-section-label">Ảnh bài nộp (${task.submissions ? task.submissions.length : 0})</span>
+        ${hasSubs ? `<span style="font-size: 11px; color: var(--text-3);">Bấm vào ảnh để phóng to</span>` : ''}
+      </div>
+      ${hasSubs ? `
+        <div class="detail-gallery">
+          ${photosHtml}
+        </div>
+      ` : `
+        <div style="padding: 18px 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 12px;">
+          Chưa có ảnh nào được tải lên cho bài tập này.
+        </div>
+      `}
+    </div>
+
+    <!-- Actions / Grading Area -->
+    <div class="detail-actions">
+      ${isT ? `
+        ${hasSubs && !isApproved ? `
+          <button class="btn-approve-lg" type="button" onclick="approveTask('${task.id}');">
+            ${UI_ICONS.check} Phê duyệt bài nộp (+ Thưởng nộp bài)
+          </button>
+        ` : isApproved ? `
+          <button class="btn-approve-lg disabled" type="button" disabled>
+            ${UI_ICONS.check} Đã được phê duyệt
+          </button>
+        ` : `
+          <button class="btn btn-secondary" type="button" onclick="openEditTask('${task.id}');" style="width: 100%; justify-content: center;">
+            Chỉnh sửa nội dung bài tập
+          </button>
+        `}
+      ` : `
+        <!-- Student Upload Actions -->
+        ${!isApproved ? `
+          <label class="btn-approve-lg" style="cursor: pointer; width: 100%;">
+            <span>📷 Chụp ảnh / Tải ảnh bài làm lên</span>
+            <input type="file" accept="image/*" multiple style="display:none;" onchange="handleFileUpload(event, '${task.id}');" />
+          </label>
+        ` : `
+          <div style="padding: 10px; background: var(--sage-dim); color: #047857; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; text-align: center;">
+            ${UI_ICONS.check} Bài tập này đã được thầy giáo chấm điểm và duyệt!
+          </div>
+        `}
+      `}
+    </div>
+  `;
 }
 
 // ── STUDENTS VIEW ──────────────────────────────────────────
@@ -854,7 +1437,7 @@ function renderStudents(filter = '') {
       <div style="grid-column:1/-1">
         <div class="empty-state">
           <div class="empty-state-icon">${UI_ICONS.users}</div>
-          <p>${state.students.length ? 'No students match your search.' : 'Add your first student to get started!'}</p>
+          <p>${state.students.length ? 'Không tìm thấy học sinh nào phù hợp.' : 'Chưa có học sinh nào. Hãy thêm học sinh đầu tiên!'}</p>
         </div>
       </div>`;
     return;
@@ -866,33 +1449,28 @@ function renderStudents(filter = '') {
     return `
       <div class="student-card" onclick="openStudentDetail('${student.id}')">
         <div class="student-card-header">
-          <div class="student-avatar" style="background:${student.color}">${initials(student.name)}</div>
-          <div>
+          <div class="student-avatar" style="background:${student.color || 'var(--terracotta)'}">${initials(student.name)}</div>
+          <div class="student-info-main">
             <div class="student-card-name">${escHtml(student.name)}</div>
-            <div class="student-card-grade">${escHtml(student.grade || 'No grade')}</div>
+            <div class="student-card-grade">${escHtml(student.grade || 'Học sinh')} • PIN: <code>${escHtml(student.pin || '0000')}</code></div>
+          </div>
+          <div class="student-streak-pill">${UI_ICONS.fire} ${stats.streak} ngày</div>
+        </div>
+
+        <div class="student-progress-section">
+          <div class="student-progress-labels">
+            <span>Tiến độ hoàn thành</span>
+            <strong>${stats.submitted}/${stats.total} bài (${progress}%)</strong>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" style="width:${progress}%;background:${student.color || 'var(--terracotta)'};"></div>
           </div>
         </div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar" style="width:${progress}%;background:${student.color};"></div>
-        </div>
-        <div class="student-card-stats">
-          <div class="student-stat">
-            <div class="student-stat-val" style="color:var(--denim)">${stats.total}</div>
-            <div class="student-stat-lbl">Tasks</div>
-          </div>
-          <div class="student-stat">
-            <div class="student-stat-val" style="color:var(--mustard)">${stats.submitted}</div>
-            <div class="student-stat-lbl">Done</div>
-          </div>
-          <div class="student-stat">
-            <div class="student-stat-val" style="color:var(--terracotta)">${UI_ICONS.fire} ${stats.streak}</div>
-            <div class="student-stat-lbl">Streak</div>
-          </div>
-        </div>
+
         <div class="student-card-actions" onclick="event.stopPropagation()">
-          <button class="btn btn-ghost btn-sm" onclick="openStudentDetail('${student.id}')">Tasks</button>
-          <button class="btn btn-ghost btn-sm" onclick="editStudent('${student.id}')">Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteStudent('${student.id}')">Delete</button>
+          <button class="btn btn-primary btn-sm" onclick="openStudentDetail('${student.id}')">Xem bài tập →</button>
+          <button class="btn btn-secondary btn-sm" onclick="editStudent('${student.id}')">Sửa</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteStudent('${student.id}')" title="Xóa học sinh">Xóa</button>
         </div>
       </div>
     `;
@@ -903,7 +1481,7 @@ function renderStudents(filter = '') {
 function renderTasks() {
   const sel = document.getElementById('task-filter-student');
   const prevVal = sel.value;
-  sel.innerHTML = '<option value="all">All Students</option>' +
+  sel.innerHTML = '<option value="all">Tất cả học sinh</option>' +
     state.students.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   sel.value = prevVal || 'all';
 
@@ -932,7 +1510,7 @@ function applyTaskFilters() {
     list.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">${UI_ICONS.book}</div>
-        <p>${state.tasks.length ? 'No tasks match your filter.' : 'No tasks assigned yet!'}</p>
+        <p>${state.tasks.length ? 'Không có bài tập nào phù hợp bộ lọc.' : 'Chưa có bài tập nào được giao!'}</p>
       </div>`;
     return;
   }
@@ -1136,18 +1714,18 @@ function renderTaskCard(task) {
         <div class="task-card-header">
           <div>
             <div class="task-card-title">
-              <span class="badge-recurring">${UI_ICONS.repeat} Daily</span>
+              <span class="badge-recurring">${UI_ICONS.repeat} Hằng ngày</span>
               ${escHtml(task.title)}
             </div>
             <div class="task-card-meta">
-              ${student ? `<span>Student: <strong>${escHtml(student.name)}</strong></span>` : ''}
-              <span>Due: <strong>Every Day</strong></span>
+              ${student ? `<span>Học sinh: <strong>${escHtml(student.name)}</strong></span>` : ''}
+              <span>Hạn: <strong>Hằng ngày</strong></span>
             </div>
           </div>
           <div class="task-card-actions">
             ${isT ? `
-            <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Delete</button>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Sửa</button>
+            <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Xóa</button>` : ''}
           </div>
         </div>
         <div class="task-card-body">
@@ -1177,49 +1755,49 @@ function renderTaskCard(task) {
             ${escHtml(task.title)}
           </div>
           <div class="task-card-meta">
-            ${student ? `<span>Student: <strong>${escHtml(student.name)}</strong></span>` : ''}
-            ${task.dueDate ? `<span>Due: ${formatDate(task.dueDate)}</span>` : ''}
-            <span>${subs.length} photo${subs.length !== 1 ? 's' : ''} added</span>
+            ${student ? `<span>Học sinh: <strong>${escHtml(student.name)}</strong></span>` : ''}
+            ${task.dueDate ? `<span>Hạn nộp: ${formatDate(task.dueDate)}</span>` : ''}
+            <span>${subs.length} ảnh bài làm</span>
           </div>
         </div>
         <div class="task-card-actions">
-          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">${UI_ICONS.check} Approve</button>` : ''}
-          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>${UI_ICONS.check} Approved</button>` : ''}
+          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">${UI_ICONS.check} Duyệt bài</button>` : ''}
+          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>${UI_ICONS.check} Đã duyệt</button>` : ''}
           ${isT ? `
-          <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Delete</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Sửa</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Xóa</button>` : ''}
         </div>
       </div>
       <div class="task-card-body">
         ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
-        ${isT && status === 'pending' ? `<div class="teacher-waiting-note">${UI_ICONS.clock} Student hasn't uploaded any homework photos yet.</div>` : ''}
-        ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">${UI_ICONS.camera} Student has uploaded photos but hasn't officially submitted yet.</div>` : ''}
+        ${isT && status === 'pending' ? `<div class="teacher-waiting-note">${UI_ICONS.clock} Học sinh chưa tải ảnh bài tập nào lên.</div>` : ''}
+        ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">${UI_ICONS.camera} Học sinh đã tải ảnh nhưng chưa nộp chính thức.</div>` : ''}
         ${canUpload ? `
         <div class="upload-zone" id="drop-${task.id}"
           onclick="openUploadConfirm('${task.id}')"
           ondragover="handleDragOver(event,'${task.id}')"
           ondragleave="handleDragLeave(event,'${task.id}')"
           ondrop="handleDrop(event,'${task.id}')">
-          <div>${UI_ICONS.camera} Take a photo of your homework</div>
-          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Add more photos or submit below' : 'Click or drag & drop photos here'}</div>
+          <div>${UI_ICONS.camera} Chụp ảnh bài tập của bạn</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Thêm ảnh hoặc nộp bài bên dưới' : 'Click hoặc kéo thả ảnh vào đây'}</div>
           <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
         </div>` : ''}
         ${subs.length > 0 ? `
         <div class="image-grid">
           ${subs.map((sub) => `
             <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)}')">
-              <img src="${sub.data}" alt="Submission" />
+              <img src="${sub.data}" alt="Bài làm" />
               ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)})">✕</button>` : ''}
             </div>
           `).join('')}
         </div>` : ''}
         ${canSubmit ? `
         <div class="submit-homework-bar">
-          <div class="submit-homework-hint">Review your photos then click submit</div>
-          <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">Submit to Teacher</button>
+          <div class="submit-homework-hint">Xem lại ảnh rồi bấm nộp bài</div>
+          <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">Nộp bài cho thầy</button>
         </div>` : ''}
-        ${!isT && status === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Homework submitted — waiting for teacher to approve!</div>` : ''}
-        ${!isT && status === 'approved' ? `<div class="approved-notice">${UI_ICONS.check} Homework approved! Well done</div>` : ''}
+        ${!isT && status === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp bài — đang chờ thầy duyệt!</div>` : ''}
+        ${!isT && status === 'approved' ? `<div class="approved-notice">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt 🎉</div>` : ''}
       </div>
     </div>
   `;
@@ -1237,7 +1815,7 @@ function renderStreaks() {
   }
 
   if (!list.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">${UI_ICONS.fire}</div><p>No student streaks recorded yet!</p></div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">${UI_ICONS.fire}</div><p>Chưa có chuỗi học tập nào được ghi nhận!</p></div>`;
     return;
   }
 
@@ -1247,7 +1825,7 @@ function renderStreaks() {
 
   grid.innerHTML = sorted.map(item => {
     const calHtml = item.activity.map(day => `
-      <div class="cal-day ${day.active ? 'active' : ''} ${day.isToday ? 'today' : ''}" title="${day.date.toLocaleDateString()}"></div>
+      <div class="cal-day ${day.active ? 'active' : ''} ${day.isToday ? 'today' : ''}" title="${day.date.toLocaleDateString('vi-VN')}"></div>
     `).join('');
 
     return `
@@ -1256,7 +1834,7 @@ function renderStreaks() {
           <div class="student-avatar" style="background:${item.student.color}">${initials(item.student.name)}</div>
           <div>
             <div class="student-card-name">${escHtml(item.student.name)}</div>
-            <div class="student-card-grade">${escHtml(item.student.grade || 'No grade')}</div>
+            <div class="student-card-grade">${escHtml(item.student.grade || 'Học sinh')}</div>
           </div>
         </div>
 
@@ -1264,27 +1842,27 @@ function renderStreaks() {
           <div class="streak-fire">${UI_ICONS.fire}</div>
           <div>
             <div class="streak-count">${item.streak}</div>
-            <div class="streak-count-label">Day Streak</div>
+            <div class="streak-count-label">Ngày liên tục</div>
           </div>
         </div>
 
         <div class="streak-mini-stats">
           <div class="streak-mini-stat">
             <div class="streak-mini-stat-val" style="color:var(--denim)">${item.stats.total}</div>
-            <div class="streak-mini-stat-lbl">Tasks</div>
+            <div class="streak-mini-stat-lbl">Bài tập</div>
           </div>
           <div class="streak-mini-stat">
             <div class="streak-mini-stat-val" style="color:var(--mustard)">${item.stats.submitted}</div>
-            <div class="streak-mini-stat-lbl">Done</div>
+            <div class="streak-mini-stat-lbl">Đã nộp</div>
           </div>
           <div class="streak-mini-stat">
             <div class="streak-mini-stat-val" style="color:var(--sage)">${item.stats.approved}</div>
-            <div class="streak-mini-stat-lbl">Approved</div>
+            <div class="streak-mini-stat-lbl">Đã duyệt</div>
           </div>
         </div>
 
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;">Last 30 Days</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;">30 ngày gần nhất</div>
           <div class="calendar-grid">${calHtml}</div>
         </div>
       </div>
@@ -1828,7 +2406,7 @@ function editTask(id) {
   sel.innerHTML = state.students.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   document.getElementById('modal-task-title').textContent = 'Edit Assignment';
   document.getElementById('input-task-title').value = task.title;
-  document.getElementById('input-task-desc').value = task.description || '';
+  document.getElementById('input-task-desc').value = task.desc || task.description || '';
   document.getElementById('input-task-student').value = task.studentId;
   document.getElementById('input-task-due').value = task.dueDate || '';
   document.getElementById('input-task-id').value = task.id;
@@ -1836,6 +2414,10 @@ function editTask(id) {
   if (recurChk) recurChk.checked = !!task.isRecurring;
   handleRecurringToggle();
   openModal('modal-task');
+}
+
+function openEditTask(id) {
+  editTask(id);
 }
 
 async function saveTask() {
@@ -2121,12 +2703,63 @@ function init() {
     sidebarBackdrop.addEventListener('click', () => toggleMobileNav(false));
   }
 
-  // Nav items (close drawer when clicked on mobile)
+  // Nav items (both Top Navigation and Mobile Bottom Tabs)
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
-      toggleMobileNav(false);
       navigateTo(btn.dataset.view);
     });
+  });
+
+  // Command Palette trigger & keyboard shortcuts
+  const cmdTriggerBtn = document.getElementById('cmd-trigger-btn');
+  if (cmdTriggerBtn) cmdTriggerBtn.addEventListener('click', openCmd);
+
+  const cmdEscBtn = document.getElementById('cmd-esc-btn');
+  if (cmdEscBtn) cmdEscBtn.addEventListener('click', closeCmd);
+
+  const cmdInput = document.getElementById('cmd-input');
+  if (cmdInput) {
+    cmdInput.addEventListener('input', e => {
+      cmdSelectedIndex = 0;
+      renderCmdResults(e.target.value);
+    });
+    cmdInput.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (cmdCurrentItems.length > 0) {
+          cmdSelectedIndex = (cmdSelectedIndex + 1) % cmdCurrentItems.length;
+          renderCmdResults(cmdInput.value);
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (cmdCurrentItems.length > 0) {
+          cmdSelectedIndex = (cmdSelectedIndex - 1 + cmdCurrentItems.length) % cmdCurrentItems.length;
+          renderCmdResults(cmdInput.value);
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        executeCmdItem(cmdSelectedIndex);
+      } else if (e.key === 'Escape') {
+        closeCmd();
+      }
+    });
+  }
+
+  const cmdOverlay = document.getElementById('cmd-overlay');
+  if (cmdOverlay) {
+    cmdOverlay.addEventListener('click', e => {
+      if (e.target === cmdOverlay) closeCmd();
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      openCmd();
+    }
+    if (e.key === 'Escape') {
+      closeCmd();
+    }
   });
 
   // User switch buttons
