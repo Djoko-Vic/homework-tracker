@@ -2403,23 +2403,272 @@ body {
   background: var(--danger);
 }
 
+.viewer-zoom-val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 0 8px;
+  height: 36px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
 .viewer-img-wrap {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 200px;
   padding: 16px;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.viewer-img-wrap.panning {
+  cursor: grabbing;
 }
 
 #viewer-img {
   max-width: 100%;
   max-height: calc(95vh - 80px);
   border-radius: var(--radius-sm);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: center center;
   display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: auto;
+}
+
+#viewer-img.animating {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── TASK ATTACHMENTS & STUDENT SUBMISSIONS ── */
+.file-drop-zone {
+  border: 2px dashed var(--border-h);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+.file-drop-zone:hover,
+.file-drop-zone.drag-over {
+  border-color: var(--ink);
+  background: var(--bg2);
+}
+
+.file-drop-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.file-drop-hint {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--info);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.file-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.file-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  background: var(--bg3);
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.file-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.file-item-name {
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-item-size {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.file-item-remove {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition);
+}
+
+.file-item-remove:hover {
+  color: var(--danger);
+}
+
+/* Downloadable chips on task cards / detail panel */
+.task-attachments-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color var(--transition), border-color var(--transition);
+}
+
+.attachment-chip:hover {
+  background: var(--bg2);
+  border-color: var(--border-h);
+}
+
+.attachment-chip-icon {
+  color: var(--info);
+  display: inline-flex;
+  align-items: center;
+}
+
+.attachment-chip-size {
+  color: var(--text-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Submitted non-image files */
+.submitted-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.submitted-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+/* Dash table more & Action cards view all */
+.dash-table-more-wrap {
+  padding: 12px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.action-card-view-all {
+  border-style: dashed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 90px;
+}
+
+.action-card-view-all-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+}
+
+.action-card-view-all-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+
+.action-card-view-all-text strong {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.older-days-toggle-wrap {
+  padding: 10px 0;
+  text-align: center;
 }
 
 .form-group {

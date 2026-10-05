@@ -55,8 +55,16 @@ const UI_ICONS = {
   book: `<svg class="ui-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
   wallet: `<svg class="ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
   inbox: `<svg class="ui-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
-  sparkle: `<svg class="ui-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+  sparkle: `<svg class="ui-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+  file: `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  download: `<svg class="ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+  task: `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`
 };
+
+// ── STORAGE & FILE CONSTANTS ──────────────────────────────
+const BUCKET_NAME = 'homework-files';
+const MAX_FILE_SIZE_CLOUD = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE_LOCAL = 2 * 1024 * 1024;  // 2 MB
 
 // ── STATE ──────────────────────────────────────────────────
 let state = {
@@ -70,6 +78,209 @@ let selectedColor = AVATAR_COLORS[0];
 let selectedRoleInModal = 'teacher';
 let pendingDeleteFn = null;
 let pendingUploadTaskId = null; // for upload confirmation dialog
+let dashTableLimit = 8;         // Task 1b master table pagination limit
+let tasksViewLimit = 10;        // Task 1b tasks view pagination limit
+let taskFormAttachments = [];   // Task 2a teacher task attachments in modal
+
+// ── PENDING-REVIEW SINGLE SOURCE OF TRUTH (Task 1a) ─────────
+/**
+ * A task is "pending review" if:
+ * 1. The student exists in state.students (not deleted/orphaned).
+ * 2. If student role is active, belongs to the logged-in student.
+ * 3. For recurring tasks: Today's instance has a submission created today, task.status is 'submitted', and today is NOT approved.
+ * 4. For regular tasks: Student has submitted (task.status === 'submitted' and has submissions or files), and teacher has not approved (task.status !== 'approved').
+ */
+function isTaskPendingReview(task) {
+  if (!task) return false;
+  const student = state.students.find(s => s.id === task.studentId);
+  if (!student) return false;
+
+  if (task.isRecurring) {
+    const hasToday = hasSubmissionToday(task) || hasSubmittedFilesToday(task);
+    const isApprovedToday = hasApprovalToday(task);
+    return hasToday && task.status === 'submitted' && !isApprovedToday;
+  } else {
+    const hasSubs = hasAnySubmissions(task);
+    return hasSubs && task.status === 'submitted' && task.status !== 'approved';
+  }
+}
+
+function getPendingReviewTasks(forCurrentUser = true) {
+  const isT = isTeacher();
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
+  return state.tasks.filter(task => {
+    if (forCurrentUser && !isT && task.studentId !== currentStudentId) return false;
+    return isTaskPendingReview(task);
+  });
+}
+
+function getTodaySubmissionsCount(task) {
+  if (!task) return 0;
+  const today = todayKey();
+  let count = 0;
+  if (task.submissions) {
+    count += task.submissions.filter(sub => {
+      const d = new Date(sub.date);
+      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return k === today;
+    }).length;
+  }
+  if (task.submittedFiles) {
+    count += task.submittedFiles.filter(f => {
+      const d = new Date(f.uploadedAt || f.date);
+      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return k === today;
+    }).length;
+  }
+  return count;
+}
+
+function hasSubmittedFilesToday(task) {
+  if (!task || !task.submittedFiles || task.submittedFiles.length === 0) return false;
+  const today = todayKey();
+  return task.submittedFiles.some(f => {
+    const d = new Date(f.uploadedAt || f.date);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return k === today;
+  });
+}
+
+function hasAnySubmissions(task) {
+  if (!task) return false;
+  const hasPhotos = task.submissions && task.submissions.length > 0;
+  const hasFiles = task.submittedFiles && task.submittedFiles.length > 0;
+  return hasPhotos || hasFiles;
+}
+
+function hasAnySubmissionsToday(task) {
+  return hasSubmissionToday(task) || hasSubmittedFilesToday(task);
+}
+
+// ── FILE ATTACHMENTS & STORAGE HELPERS (Task 2) ─────────────
+function sanitizeFileName(name) {
+  if (!name) return 'file';
+  return name.replace(/[^a-zA-Z0-9._\-]/g, '_').slice(0, 60);
+}
+
+function formatFileSize(bytes) {
+  if (!bytes || isNaN(bytes)) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function validateFileSize(file) {
+  const isCloud = isCloudEnabled && supabaseClient;
+  const maxBytes = isCloud ? MAX_FILE_SIZE_CLOUD : MAX_FILE_SIZE_LOCAL;
+  const maxLabel = isCloud ? '10 MB' : '2 MB (Chế độ ngoại tuyến)';
+  if (file.size > maxBytes) {
+    toast(`Tệp "${escHtml(file.name)}" vượt quá dung lượng tối đa cho phép (${maxLabel}).`, 'error');
+    return false;
+  }
+  return true;
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadFileStorage(file, folder = 'attachments') {
+  if (!validateFileSize(file)) return null;
+  const safeName = sanitizeFileName(file.name);
+
+  if (isCloudEnabled && supabaseClient) {
+    try {
+      const cleanPath = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safeName}`;
+      const { data, error } = await supabaseClient.storage
+        .from(BUCKET_NAME)
+        .upload(cleanPath, file, { cacheControl: '3600', upsert: false });
+
+      if (error) {
+        console.warn('Supabase storage upload error:', error);
+        toast('Lưu ý: Nếu chưa tạo bucket "homework-files", vui lòng chạy file supabase-migration.sql trên Supabase!', 'info');
+        if (file.size <= MAX_FILE_SIZE_LOCAL) {
+          const base64 = await readFileAsBase64(file);
+          return { id: uid(), name: safeName, size: file.size, type: file.type, path_or_url: base64, uploadedAt: new Date().toISOString() };
+        }
+        return null;
+      }
+
+      const { data: urlData } = supabaseClient.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(cleanPath);
+
+      return {
+        id: uid(),
+        name: safeName,
+        size: file.size,
+        type: file.type,
+        path_or_url: urlData ? urlData.publicUrl : cleanPath,
+        storagePath: cleanPath,
+        uploadedAt: new Date().toISOString()
+      };
+    } catch (err) {
+      console.warn('Storage upload error:', err);
+      if (file.size <= MAX_FILE_SIZE_LOCAL) {
+        const base64 = await readFileAsBase64(file);
+        return { id: uid(), name: safeName, size: file.size, type: file.type, path_or_url: base64, uploadedAt: new Date().toISOString() };
+      }
+      return null;
+    }
+  } else {
+    // Local offline storage fallback
+    const base64 = await readFileAsBase64(file);
+    return {
+      id: uid(),
+      name: safeName,
+      size: file.size,
+      type: file.type,
+      path_or_url: base64,
+      uploadedAt: new Date().toISOString()
+    };
+  }
+}
+
+async function deleteFileStorage(fileObj) {
+  if (!fileObj) return;
+  if (isCloudEnabled && supabaseClient && fileObj.storagePath) {
+    try {
+      await supabaseClient.storage.from(BUCKET_NAME).remove([fileObj.storagePath]);
+    } catch (e) {
+      console.warn('Error deleting cloud file:', e);
+    }
+  }
+}
+
+function getFileIcon(fileName = '', mimeType = '') {
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  if (['pdf'].includes(ext)) {
+    return `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`;
+  }
+  if (['doc', 'docx'].includes(ext)) {
+    return `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
+  }
+  if (['xls', 'xlsx', 'csv'].includes(ext)) {
+    return `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8M8 17h8M12 13v8"/></svg>`;
+  }
+  if (['ppt', 'pptx'].includes(ext)) {
+    return `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="6"/></svg>`;
+  }
+  if (['mp3', 'm4a', 'wav', 'ogg'].includes(ext)) {
+    return `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+  }
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+    return `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><circle cx="10" cy="14" r="2"/></svg>`;
+  }
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) {
+    return UI_ICONS.camera;
+  }
+  return `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+}
 
 // ── FEE TRACKER STATE ──────────────────────────────────────
 let feeState = {
@@ -391,6 +602,25 @@ async function syncFromCloud() {
           } catch (e) { approvalHistory = []; }
         }
 
+        // Parse attachments and submitted_files
+        let attachments = [];
+        if (t.attachments) {
+          try {
+            attachments = typeof t.attachments === 'string'
+              ? JSON.parse(t.attachments)
+              : (Array.isArray(t.attachments) ? t.attachments : []);
+          } catch (e) { attachments = []; }
+        }
+
+        let submittedFiles = [];
+        if (t.submitted_files) {
+          try {
+            submittedFiles = typeof t.submitted_files === 'string'
+              ? JSON.parse(t.submitted_files)
+              : (Array.isArray(t.submitted_files) ? t.submitted_files : []);
+          } catch (e) { submittedFiles = []; }
+        }
+
         return {
           id: t.id,
           title: t.title,
@@ -401,6 +631,8 @@ async function syncFromCloud() {
           isRecurring: !!t.is_recurring,
           approvedAt: t.approved_at,
           approvalHistory,
+          attachments,
+          submittedFiles,
           submissions: subs,
           createdAt: t.created_at
         };
@@ -695,9 +927,8 @@ function updateRoleUI() {
   // Update Top Navigation Badges
   const badgePending = document.getElementById('badge-nav-pending');
   if (badgePending) {
-    const submitted = state.tasks.filter(t => t.submissions && t.submissions.length > 0).length;
-    const approved = state.tasks.filter(t => t.status === 'approved').length;
-    const pendingCount = Math.max(0, submitted - approved);
+    const pendingList = getPendingReviewTasks(true);
+    const pendingCount = pendingList.length;
     badgePending.textContent = pendingCount > 0 ? `${pendingCount} chờ` : '0 chờ';
   }
 
@@ -748,6 +979,8 @@ function updateRoleUI() {
   }
 }
 
+let _isLoginInProgress = false;
+
 function selectLoginRole(role) {
   selectedRoleInModal = role;
   document.getElementById('role-btn-teacher').classList.toggle('active', role === 'teacher');
@@ -761,9 +994,17 @@ function selectLoginRole(role) {
     teacherWrap.classList.add('hidden');
     const select = document.getElementById('login-student-select');
     select.innerHTML = state.students.map(s => `<option value="${s.id}">${escHtml(s.name)} (${escHtml(s.grade || 'Student')})</option>`).join('');
+    setTimeout(() => {
+      const pin = document.getElementById('input-student-pin');
+      if (pin) pin.focus();
+    }, 60);
   } else {
     studentWrap.classList.add('hidden');
     teacherWrap.classList.remove('hidden');
+    setTimeout(() => {
+      const pass = document.getElementById('input-teacher-pass');
+      if (pass) pass.focus();
+    }, 60);
   }
 }
 
@@ -772,32 +1013,50 @@ function openLoginDialog() {
   document.getElementById('input-teacher-pass').value = '';
   document.getElementById('input-student-pin').value = '';
   openModal('modal-login');
+  setTimeout(() => {
+    const pass = document.getElementById('input-teacher-pass');
+    if (pass) pass.focus();
+  }, 100);
 }
 
-function handleDoLogin() {
+async function handleDoLogin() {
+  if (_isLoginInProgress) return;
+  const doLoginBtn = document.getElementById('btn-do-login');
+  const prevText = doLoginBtn ? doLoginBtn.textContent : '';
+
   try {
+    _isLoginInProgress = true;
+    if (doLoginBtn) {
+      doLoginBtn.disabled = true;
+      doLoginBtn.textContent = 'Đang đăng nhập…';
+    }
+
     if (selectedRoleInModal === 'teacher') {
       const pass = document.getElementById('input-teacher-pass').value.trim();
       if (pass !== TEACHER_PASSWORD) {
-        toast('Incorrect Teacher Password!', 'error');
+        toast('Mật khẩu giáo viên không đúng!', 'error');
+        const passInput = document.getElementById('input-teacher-pass');
+        if (passInput) { passInput.focus(); passInput.select(); }
         return;
       }
       state.currentUser = { role: 'teacher', studentId: null, name: 'Teacher' };
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
-      toast('Logged in as Teacher Admin!', 'success');
+      toast('Đăng nhập thành công với vai trò Giáo viên!', 'success');
       setTimeout(() => { checkStreakLosses(); checkLateFees(); }, 500);
     } else {
       const select = document.getElementById('login-student-select');
       const studentId = select ? select.value : null;
-      if (!studentId) { toast('Please select a student account.', 'error'); return; }
+      if (!studentId) { toast('Vui lòng chọn tài khoản học sinh.', 'error'); return; }
 
       const student = state.students.find(s => s.id === studentId);
       const pin = document.getElementById('input-student-pin').value.trim();
 
       if (!student || (student.pin && pin !== student.pin)) {
-        toast('Incorrect PIN passcode! (Default: 0000)', 'error');
+        toast('Mã PIN không chính xác! (Mặc định: 0000)', 'error');
+        const pinInput = document.getElementById('input-student-pin');
+        if (pinInput) { pinInput.focus(); pinInput.select(); }
         return;
       }
 
@@ -805,11 +1064,17 @@ function handleDoLogin() {
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
-      toast(`Welcome, ${student ? student.name : 'Student'}!`, 'success');
+      toast(`Xin chào ${student ? student.name : 'học sinh'}!`, 'success');
     }
   } catch (err) {
     console.error('Login error:', err);
-    toast('Login error: ' + err.message, 'error');
+    toast('Lỗi đăng nhập: ' + err.message, 'error');
+  } finally {
+    _isLoginInProgress = false;
+    if (doLoginBtn) {
+      doLoginBtn.disabled = false;
+      doLoginBtn.textContent = prevText || 'Login Now';
+    }
   }
 }
 
@@ -1059,52 +1324,93 @@ function renderDashHero() {
 
   if (isT) {
     if (heroTitle) heroTitle.textContent = 'Bài tập cần chấm điểm & Hạn chót';
-    // 1. Tasks that have submissions waiting for approval
-    state.tasks.forEach(task => {
+
+    // 1. Pending review tasks from getPendingReviewTasks (Single Source of Truth)
+    const pendingTasks = getPendingReviewTasks(true);
+    pendingTasks.forEach(task => {
       const student = state.students.find(s => s.id === task.studentId);
-      if (!student || !task.submissions || !task.submissions.length) return;
-      const isApproved = task.isRecurring ? isDateApproved(task, todayKey()) : task.status === 'approved';
-      if (!isApproved) {
-        const lastSub = task.submissions[task.submissions.length - 1];
-        urgentItems.push({
-          type: 'submission',
-          task,
-          student,
-          sub: lastSub,
-          badge: 'Chờ duyệt',
-          badgeClass: 'chip-pending-review',
-          timeStr: lastSub ? relativeTime(lastSub.date) : 'Vừa xong'
-        });
-      }
+      if (!student) return;
+      const lastPhoto = task.submissions && task.submissions.length ? task.submissions[task.submissions.length - 1] : null;
+      const lastFile = task.submittedFiles && task.submittedFiles.length ? task.submittedFiles[task.submittedFiles.length - 1] : null;
+      const subDate = (lastPhoto && lastPhoto.date) || (lastFile && (lastFile.uploadedAt || lastFile.date)) || task.submittedAt || task.createdAt;
+
+      urgentItems.push({
+        type: 'submission',
+        priority: 1,
+        sortDate: new Date(subDate || 0).getTime(),
+        task,
+        student,
+        sub: lastPhoto,
+        file: lastFile,
+        badge: 'Chờ duyệt',
+        badgeClass: 'chip-pending-review',
+        timeStr: subDate ? relativeTime(subDate) : 'Vừa xong'
+      });
     });
 
     // 2. Regular tasks that are overdue
     state.tasks.forEach(task => {
       if (task.isRecurring) return;
-      const status = getTaskStatus(task);
-      if ((status === 'overdue' || (isOverdue(task.dueDate) && status === 'pending')) && status !== 'approved' && status !== 'submitted') {
-        const student = state.students.find(s => s.id === task.studentId);
-        if (student) {
-          urgentItems.push({
-            type: 'overdue',
-            task,
-            student,
-            badge: 'Trễ hạn',
-            badgeClass: 'chip-overdue',
-            timeStr: `Hạn: ${formatDate(task.dueDate)}`
-          });
-        }
+      const student = state.students.find(s => s.id === task.studentId);
+      if (!student) return;
+      const isApproved = task.status === 'approved';
+      const hasSubs = hasAnySubmissions(task);
+      if (isOverdue(task.dueDate) && !isApproved && !hasSubs) {
+        urgentItems.push({
+          type: 'overdue',
+          priority: 2,
+          sortDate: new Date(task.dueDate).getTime(),
+          task,
+          student,
+          sub: null,
+          file: null,
+          badge: 'Trễ hạn',
+          badgeClass: 'chip-overdue',
+          timeStr: `Hạn: ${formatDate(task.dueDate)}`
+        });
       }
+    });
+
+    // 3. Regular tasks due soonest
+    state.tasks.forEach(task => {
+      if (task.isRecurring) return;
+      const student = state.students.find(s => s.id === task.studentId);
+      if (!student) return;
+      const isApproved = task.status === 'approved';
+      const hasSubs = hasAnySubmissions(task);
+      if (!isOverdue(task.dueDate) && !isApproved && !hasSubs && task.dueDate) {
+        urgentItems.push({
+          type: 'due_soon',
+          priority: 3,
+          sortDate: new Date(task.dueDate).getTime(),
+          task,
+          student,
+          sub: null,
+          file: null,
+          badge: 'Sắp tới hạn',
+          badgeClass: 'chip-pending',
+          timeStr: `Hạn: ${formatDate(task.dueDate)}`
+        });
+      }
+    });
+
+    // Sort: priority 1 (pending review: oldest submission first), priority 2 (overdue), priority 3 (due soon)
+    urgentItems.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.sortDate - b.sortDate;
     });
   } else {
     // Student portal hero: tasks due today or needing upload
     if (heroTitle) heroTitle.textContent = 'Bài tập cần hoàn thành hôm nay';
     state.tasks.filter(t => t.studentId === currentStudentId).forEach(task => {
-      const isDone = task.isRecurring ? hasSubmissionToday(task) : (task.status === 'submitted' || task.status === 'approved');
+      const student = state.students.find(s => s.id === task.studentId);
+      if (!student) return;
+      const isDone = task.isRecurring ? hasAnySubmissionsToday(task) : (task.status === 'submitted' || task.status === 'approved');
       if (!isDone) {
-        const student = state.students.find(s => s.id === task.studentId);
         urgentItems.push({
           type: 'todo',
+          priority: isOverdue(task.dueDate) && !task.isRecurring ? 1 : 2,
+          sortDate: task.dueDate ? new Date(task.dueDate).getTime() : 0,
           task,
           student,
           badge: task.isRecurring ? 'Hôm nay' : (isOverdue(task.dueDate) ? 'Quá hạn' : 'Đến hạn'),
@@ -1113,6 +1419,7 @@ function renderDashHero() {
         });
       }
     });
+    urgentItems.sort((a, b) => a.priority - b.priority || a.sortDate - b.sortDate);
   }
 
   // Update badge count
@@ -1121,8 +1428,7 @@ function renderDashHero() {
   }
   const filterPendingTabCount = document.getElementById('dash-count-pending');
   if (filterPendingTabCount) {
-    const pendingReviewCount = state.tasks.filter(t => t.submissions && t.submissions.length > 0 && t.status !== 'approved').length;
-    filterPendingTabCount.textContent = pendingReviewCount;
+    filterPendingTabCount.textContent = getPendingReviewTasks(true).length;
   }
 
   if (!urgentItems.length) {
@@ -1136,9 +1442,10 @@ function renderDashHero() {
     return;
   }
 
-  // Render cards
-  cardsContainer.innerHTML = urgentItems.slice(0, 4).map(item => {
-    const { task, student, badge, badgeClass, timeStr, sub } = item;
+  // Render at most 6 action cards (Task 1b)
+  const visibleItems = urgentItems.slice(0, 6);
+  let cardsHtml = visibleItems.map(item => {
+    const { task, student, badge, badgeClass, timeStr, sub, file } = item;
     const isSelected = selectedDashTaskId === task.id;
     const thumbImg = sub ? sub.data : '';
     return `
@@ -1157,6 +1464,10 @@ function renderDashHero() {
             <div class="action-card-thumb" onclick="event.stopPropagation(); openImageViewer('${thumbImg}', '${escHtml(task.title)} — ${escHtml(student.name)}')">
               <img src="${thumbImg}" alt="Submission thumbnail" />
             </div>
+          ` : file ? `
+            <div class="action-card-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--info);background:var(--info-bg);">
+              ${getFileIcon(file.name, file.type)}
+            </div>
           ` : `
             <div class="action-card-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-3);">
               ${UI_ICONS.book}
@@ -1170,12 +1481,38 @@ function renderDashHero() {
         <div class="action-card-foot">
           <span style="font-size: 11px; color: var(--text-3);">${task.isRecurring ? 'Bài hằng ngày' : 'Bài thường'}</span>
           <button class="action-btn-pill" type="button">
-            ${isT && sub ? 'Chấm bài →' : 'Xem chi tiết →'}
+            ${isT && (sub || file) ? 'Chấm bài →' : 'Xem chi tiết →'}
           </button>
         </div>
       </div>
     `;
   }).join('');
+
+  // If more than 6 exist, add "Xem tất cả (N)" button card (Task 1b)
+  if (urgentItems.length > 6) {
+    cardsHtml += `
+      <div class="action-card action-card-view-all" onclick="navigateToTasksWithFilter('submitted')">
+        <div class="action-card-view-all-inner">
+          <div class="action-card-view-all-icon">${UI_ICONS.task}</div>
+          <div class="action-card-view-all-text">
+            <strong>Xem tất cả (${urgentItems.length})</strong>
+            <span>Chuyển sang danh sách bài tập →</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  cardsContainer.innerHTML = cardsHtml;
+}
+
+function navigateToTasksWithFilter(statusFilter) {
+  navigateTo('tasks');
+  const sel = document.getElementById('task-filter-status');
+  if (sel) {
+    sel.value = statusFilter || 'all';
+    applyTaskFilters();
+  }
 }
 
 function renderDashMetrics() {
@@ -1187,9 +1524,8 @@ function renderDashMetrics() {
   if (isT) {
     const totalStudents = state.students.length;
     const totalTasks = state.tasks.length;
-    const submitted = state.tasks.filter(t => t.submissions && t.submissions.length > 0).length;
-    const approved = state.tasks.filter(t => t.status === 'approved').length;
-    const pendingReview = Math.max(0, submitted - approved);
+    const pendingReview = getPendingReviewTasks(true).length;
+    const approved = state.tasks.filter(t => t.isRecurring ? hasApprovalToday(t) : t.status === 'approved').length;
     const maxStreak = Math.max(0, ...state.students.map(s => getStudentStreak(s.id).streak));
 
     container.innerHTML = `
@@ -1223,8 +1559,8 @@ function renderDashMetrics() {
   } else {
     const myTasks = state.tasks.filter(t => t.studentId === currentStudentId);
     const totalTasks = myTasks.length;
-    const submitted = myTasks.filter(t => t.submissions && t.submissions.length > 0).length;
-    const approved = myTasks.filter(t => t.status === 'approved').length;
+    const pendingReview = getPendingReviewTasks(true).length;
+    const approved = myTasks.filter(t => t.isRecurring ? hasApprovalToday(t) : t.status === 'approved').length;
     const { streak } = getStudentStreak(currentStudentId);
 
     container.innerHTML = `
@@ -1237,8 +1573,8 @@ function renderDashMetrics() {
         <div class="metric-label">Bài được giao</div>
       </div>
       <div class="metric-pill">
-        <div class="metric-val" style="color: var(--wait);">${submitted}</div>
-        <div class="metric-label">Đã gửi bài</div>
+        <div class="metric-val" style="color: var(--wait);">${pendingReview}</div>
+        <div class="metric-label">Chờ chấm bài</div>
       </div>
       <div class="metric-pill">
         <div class="metric-val" style="color: var(--ok);">${approved}</div>
@@ -1248,11 +1584,36 @@ function renderDashMetrics() {
   }
 }
 
+function updateDashFilterTabCounts() {
+  const isT = isTeacher();
+  const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
+  const userTasks = state.tasks.filter(t => isT || t.studentId === currentStudentId);
+
+  const allCount = userTasks.length;
+  const pendingReviewCount = userTasks.filter(t => isTaskPendingReview(t)).length;
+  const approvedCount = userTasks.filter(t => t.isRecurring ? hasApprovalToday(t) : t.status === 'approved').length;
+  const overdueCount = userTasks.filter(t => !t.isRecurring && isOverdue(t.dueDate) && !isTaskPendingReview(t) && t.status !== 'approved').length;
+  const todoCount = Math.max(0, allCount - pendingReviewCount - approvedCount - overdueCount);
+
+  const elAll = document.getElementById('dash-count-all');
+  if (elAll) elAll.textContent = allCount;
+  const elPending = document.getElementById('dash-count-pending');
+  if (elPending) elPending.textContent = pendingReviewCount;
+  const elTodo = document.getElementById('dash-count-todo');
+  if (elTodo) elTodo.textContent = todoCount;
+  const elApp = document.getElementById('dash-count-approved');
+  if (elApp) elApp.textContent = approvedCount;
+  const elOverdue = document.getElementById('dash-count-overdue');
+  if (elOverdue) elOverdue.textContent = overdueCount;
+}
+
 function renderDashTable() {
   const isT = isTeacher();
   const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
   const body = document.getElementById('dash-table-body');
   if (!body) return;
+
+  updateDashFilterTabCounts();
 
   // Filter tasks based on role, activeFilter, and search query
   let tasks = state.tasks.filter(t => {
@@ -1260,7 +1621,7 @@ function renderDashTable() {
     const student = state.students.find(s => s.id === t.studentId);
     const studentName = student ? student.name.toLowerCase() : '';
     const taskTitle = (t.title || '').toLowerCase();
-    const taskDesc = (t.desc || '').toLowerCase();
+    const taskDesc = (t.desc || t.description || '').toLowerCase();
 
     // Search query filter
     if (dashSearchQuery) {
@@ -1269,32 +1630,32 @@ function renderDashTable() {
       }
     }
 
-    // Tab filter
+    // Tab filter using Single Source of Truth
     const status = getTaskStatus(t);
-    const hasSubs = t.submissions && t.submissions.length > 0;
+    const isPendingRev = isTaskPendingReview(t);
     const isApproved = t.isRecurring ? hasApprovalToday(t) : t.status === 'approved';
 
     if (dashActiveFilter === 'pending-review') {
-      return hasSubs && !isApproved;
+      return isPendingRev;
     }
     if (dashActiveFilter === 'pending') {
-      return !hasSubs && !isApproved && status !== 'overdue';
+      return !isPendingRev && !isApproved && status !== 'overdue';
     }
     if (dashActiveFilter === 'approved') {
       return isApproved;
     }
     if (dashActiveFilter === 'overdue') {
-      return (status === 'overdue' || (isOverdue(t.dueDate) && !t.isRecurring)) && !isApproved && !hasSubs;
+      return (status === 'overdue' || (isOverdue(t.dueDate) && !t.isRecurring)) && !isPendingRev && t.status !== 'approved';
     }
     return true; // 'all'
   });
 
-  // Sort tasks: pending-review first, then due today, then rest
+  // Sort tasks: pending-review first, then due today/newest, then rest
   tasks.sort((a, b) => {
-    const aPendingReview = a.submissions && a.submissions.length && a.status !== 'approved';
-    const bPendingReview = b.submissions && b.submissions.length && b.status !== 'approved';
-    if (aPendingReview && !bPendingReview) return -1;
-    if (!aPendingReview && bPendingReview) return 1;
+    const aPending = isTaskPendingReview(a);
+    const bPending = isTaskPendingReview(b);
+    if (aPending && !bPending) return -1;
+    if (!aPending && bPending) return 1;
     return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   });
 
@@ -1313,19 +1674,23 @@ function renderDashTable() {
     selectedDashTaskId = tasks[0].id;
   }
 
-  body.innerHTML = tasks.map(task => {
+  // Pagination limit (Task 1b: default 8 rows)
+  const visibleTasks = tasks.slice(0, dashTableLimit);
+
+  let rowsHtml = visibleTasks.map(task => {
     const student = state.students.find(s => s.id === task.studentId);
     const isSelected = task.id === selectedDashTaskId;
     const isRecurring = task.isRecurring;
-    const hasSubs = task.submissions && task.submissions.length > 0;
+    const isPendingRev = isTaskPendingReview(task);
     const isApproved = isRecurring ? hasApprovalToday(task) : task.status === 'approved';
-    const overdue = !isRecurring && isOverdue(task.dueDate) && !isApproved && !hasSubs;
+    const overdue = !isRecurring && isOverdue(task.dueDate) && !isApproved && !hasAnySubmissions(task);
 
     let chipClass = 'chip-pending';
     let chipText = 'Đang làm';
-    if (hasSubs && !isApproved) {
+    if (isPendingRev) {
       chipClass = 'chip-pending-review';
-      chipText = `${task.submissions.length} ảnh chờ duyệt`;
+      const count = isRecurring ? getTodaySubmissionsCount(task) : ((task.submissions?.length || 0) + (task.submittedFiles?.length || 0));
+      chipText = count > 0 ? `${count} bài chờ duyệt` : 'Chờ duyệt';
     } else if (isApproved) {
       chipClass = 'chip-approved';
       chipText = 'Đã duyệt';
@@ -1340,7 +1705,7 @@ function renderDashTable() {
       <div class="master-row ${isSelected ? 'selected' : ''}" data-task-id="${task.id}" onclick="selectDashboardTask('${task.id}')">
         <div class="col-task-title">
           <span class="col-task-name">${escHtml(task.title)}</span>
-          <span class="col-task-sub">${task.desc ? escHtml(task.desc.slice(0, 48)) : (isRecurring ? 'Lặp lại hằng ngày' : 'Bài tập thông thường')}</span>
+          <span class="col-task-sub">${task.desc || task.description ? escHtml((task.desc || task.description).slice(0, 48)) : (isRecurring ? 'Lặp lại hằng ngày' : 'Bài tập thông thường')}</span>
         </div>
         <div class="col-student">
           <div class="col-student-av" style="background:${student ? (student.color || 'var(--ink)') : 'var(--text-3)'}">
@@ -1357,6 +1722,26 @@ function renderDashTable() {
       </div>
     `;
   }).join('');
+
+  if (tasks.length > dashTableLimit) {
+    rowsHtml += `
+      <div class="dash-table-more-wrap">
+        <button class="btn btn-secondary btn-sm" id="btn-dash-table-more" type="button">
+          Xem thêm (${tasks.length - dashTableLimit} bài tập)
+        </button>
+      </div>
+    `;
+  }
+
+  body.innerHTML = rowsHtml;
+
+  const moreBtn = document.getElementById('btn-dash-table-more');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', () => {
+      dashTableLimit += 8;
+      renderDashTable();
+    });
+  }
 
   // Render detail for selected task
   renderDashDetail(selectedDashTaskId);
@@ -1377,6 +1762,17 @@ function selectDashboardTask(taskId) {
   if (detailEl && window.innerWidth <= 1024) {
     detailEl.classList.add('open');
   }
+}
+
+function getTaskImageGallery(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task || !task.submissions || !task.submissions.length) return [];
+  const student = state.students.find(s => s.id === task.studentId);
+  const studentName = student ? student.name : '';
+  return task.submissions.map((sub, idx) => ({
+    src: sub.data,
+    caption: `${task.title} — ${studentName} (${idx + 1}/${task.submissions.length})`
+  }));
 }
 
 function renderDashDetail(taskId) {
@@ -1404,15 +1800,18 @@ function renderDashDetail(taskId) {
   const student = state.students.find(s => s.id === task.studentId);
   const isT = isTeacher();
   const isRecurring = task.isRecurring;
-  const hasSubs = task.submissions && task.submissions.length > 0;
+  const hasPhotos = task.submissions && task.submissions.length > 0;
+  const hasFiles = task.submittedFiles && task.submittedFiles.length > 0;
+  const hasAnySub = hasPhotos || hasFiles;
   const isApproved = isRecurring ? hasApprovalToday(task) : task.status === 'approved';
-  const overdue = !isRecurring && isOverdue(task.dueDate) && !isApproved && !hasSubs;
+  const overdue = !isRecurring && isOverdue(task.dueDate) && !isApproved && !hasAnySub;
+  const isPendingReview = isTaskPendingReview(task);
 
   if (titleEl) titleEl.textContent = task.title;
   if (eyebrowEl) eyebrowEl.textContent = isRecurring ? 'Bài tập lặp lại hằng ngày' : 'Bài tập thông thường';
 
   let statusBadge = ``;
-  if (hasSubs && !isApproved) {
+  if (isPendingReview) {
     statusBadge = `<span class="status-chip chip-pending-review">Chờ thầy chấm điểm</span>`;
   } else if (isApproved) {
     statusBadge = `<span class="status-chip chip-approved">Đã phê duyệt</span>`;
@@ -1422,13 +1821,17 @@ function renderDashDetail(taskId) {
     statusBadge = `<span class="status-chip chip-pending">Đang thực hiện</span>`;
   }
 
-  const photosHtml = hasSubs ? task.submissions.map((sub, i) => `
-    <div class="detail-gallery-thumb" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)} — ${student ? escHtml(student.name) : ''} (Ảnh ${i + 1})')">
+  const gallery = getTaskImageGallery(task.id);
+  const photosHtml = hasPhotos ? task.submissions.map((sub, i) => `
+    <div class="detail-gallery-thumb" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)} — ${student ? escHtml(student.name) : ''} (${i + 1}/${task.submissions.length})', ${i}, getTaskImageGallery('${task.id}'))">
       <img src="${sub.data}" alt="Submission image ${i + 1}" />
     </div>
   `).join('') : '';
 
   const { streak } = student ? getStudentStreak(student.id) : { streak: 0 };
+
+  const taskAttachments = task.attachments || [];
+  const submittedFiles = task.submittedFiles || [];
 
   container.innerHTML = `
     <!-- Status & Student Info -->
@@ -1462,9 +1865,9 @@ function renderDashDetail(taskId) {
         </strong>
       </div>
       <div style="padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <div class="detail-section-label">Số ảnh đã nộp</div>
+        <div class="detail-section-label">Đã nộp</div>
         <strong style="font-size: 13px; color: var(--text);">
-          ${task.submissions ? task.submissions.length : 0} ảnh
+          ${task.submissions ? task.submissions.length : 0} ảnh • ${submittedFiles.length} tệp
         </strong>
       </div>
     </div>
@@ -1473,23 +1876,70 @@ function renderDashDetail(taskId) {
     <div>
       <div class="detail-section-label">Nội dung & Yêu cầu</div>
       <div class="detail-desc-box">
-        ${task.desc ? escHtml(task.desc) : '<em style="color:var(--text-3)">Không có ghi chú thêm.</em>'}
+        ${task.desc || task.description ? escHtml(task.desc || task.description) : '<em style="color:var(--text-3)">Không có ghi chú thêm.</em>'}
       </div>
+      ${taskAttachments.length > 0 ? `
+        <div style="margin-top: 10px;">
+          <div class="detail-section-label" style="margin-bottom:6px;">Tệp đính kèm (${taskAttachments.length})</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            ${taskAttachments.map(att => `
+              <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
+                ${getFileIcon(att.name)}
+                <span class="attachment-name">${escHtml(att.name)}</span>
+                <span class="attachment-size">(${formatFileSize(att.size)})</span>
+                ${UI_ICONS.download}
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
     </div>
 
     <!-- Uploaded Photos Gallery -->
     <div>
       <div class="detail-photos-header">
         <span class="detail-section-label">Ảnh bài nộp (${task.submissions ? task.submissions.length : 0})</span>
-        ${hasSubs ? `<span style="font-size: 11px; color: var(--text-3);">Bấm vào ảnh để phóng to</span>` : ''}
+        ${hasPhotos ? `<span style="font-size: 11px; color: var(--text-3);">Bấm vào ảnh để phóng to</span>` : ''}
       </div>
-      ${hasSubs ? `
+      ${hasPhotos ? `
         <div class="detail-gallery">
           ${photosHtml}
         </div>
       ` : `
-        <div style="padding: 18px 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 12px;">
+        <div style="padding: 14px 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 12px;">
           Chưa có ảnh nào được tải lên cho bài tập này.
+        </div>
+      `}
+    </div>
+
+    <!-- Uploaded Documents / Files -->
+    <div>
+      <div class="detail-photos-header">
+        <span class="detail-section-label">Tệp tài liệu bài nộp (${submittedFiles.length})</span>
+      </div>
+      ${hasFiles ? `
+        <div class="submitted-files-list">
+          ${submittedFiles.map((sf, idx) => `
+            <div class="submitted-file-row">
+              <div class="submitted-file-info">
+                ${getFileIcon(sf.name)}
+                <span class="submitted-file-name" title="${escHtml(sf.name)}">${escHtml(sf.name)}</span>
+                <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+                  ${UI_ICONS.download} Tải về
+                </a>
+                ${!isT && !isApproved ? `
+                  <button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${idx})" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp này">✕</button>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : `
+        <div style="padding: 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 12px;">
+          Chưa có tệp tài liệu nào được nộp.
         </div>
       `}
     </div>
@@ -1497,7 +1947,7 @@ function renderDashDetail(taskId) {
     <!-- Actions / Grading Area -->
     <div class="detail-actions">
       ${isT ? `
-        ${hasSubs && !isApproved ? `
+        ${isPendingReview ? `
           <button class="btn-approve-lg" type="button" onclick="approveTask('${task.id}');">
             ${UI_ICONS.check} Phê duyệt bài nộp (+ Thưởng nộp bài)
           </button>
@@ -1513,10 +1963,15 @@ function renderDashDetail(taskId) {
       ` : `
         <!-- Student Upload Actions -->
         ${!isApproved ? `
-          <label class="btn-approve-lg" style="cursor: pointer; width: 100%;">
-            <span>📷 Chụp ảnh / Tải ảnh bài làm lên</span>
-            <input type="file" accept="image/*" multiple style="display:none;" onchange="handleFileUpload(event, '${task.id}');" />
+          <label class="btn-approve-lg" style="cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span>📷 Chụp ảnh / Tải tệp bài làm lên</span>
+            <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none;" onchange="handleFileUpload(event, '${task.id}');" />
           </label>
+          ${hasAnySub && task.status !== 'submitted' ? `
+            <button class="btn-submit-homework" onclick="submitHomework('${task.id}')" style="margin-top:8px; width:100%; justify-content:center;">
+              Nộp bài cho thầy
+            </button>
+          ` : ''}
         ` : `
           <div style="padding: 10px; background: var(--ok-bg); color: var(--ok); border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; text-align: center;">
             ${UI_ICONS.check} Bài tập này đã được thầy giáo chấm điểm và duyệt!
@@ -1616,8 +2071,29 @@ function applyTaskFilters() {
     return;
   }
 
-  list.innerHTML = filtered.map(task => renderTaskCard(task)).join('');
-  filtered.forEach(task => {
+  const paged = filtered.slice(0, tasksViewLimit);
+  list.innerHTML = paged.map(task => renderTaskCard(task)).join('');
+
+  if (filtered.length > tasksViewLimit) {
+    list.innerHTML += `
+      <div class="dash-table-more-wrap" style="grid-column: 1/-1; margin-top: 14px; text-align: center;">
+        <button class="btn btn-secondary" id="btn-tasks-more" type="button">
+          Xem thêm (${filtered.length - tasksViewLimit} bài tập)
+        </button>
+      </div>
+    `;
+    setTimeout(() => {
+      const moreBtn = document.getElementById('btn-tasks-more');
+      if (moreBtn) {
+        moreBtn.onclick = () => {
+          tasksViewLimit += 10;
+          applyTaskFilters();
+        };
+      }
+    }, 0);
+  }
+
+  paged.forEach(task => {
     const fi = document.getElementById(`file-input-${task.id}`);
     if (fi) fi.addEventListener('change', e => handleFileUpload(e, task.id));
   });
@@ -1758,14 +2234,57 @@ function getStatusLabel(task) {
   return `${recurBadge}<span class="status-chip chip-${s}">${labels[s] || s}</span>`;
 }
 
+function openDayGroupViewer(taskId, dateKey, subIdx) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const groups = getRecurringDayGroups(task);
+  const grp = groups.find(g => g.dateKey === dateKey);
+  if (!grp || !grp.subs || !grp.subs.length) return;
+  const student = state.students.find(s => s.id === task.studentId);
+  const studentName = student ? student.name : '';
+  const gallery = grp.subs.map((s, idx) => ({
+    src: s.data,
+    caption: `${task.title} — ${studentName} [${grp.label}] (${idx + 1}/${grp.subs.length})`
+  }));
+  const current = gallery[subIdx] || gallery[0];
+  openImageViewer(current.src, current.caption, subIdx, gallery);
+}
+
+function openTaskSubmissionViewer(taskId, subIdx) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task || !task.submissions || !task.submissions.length) return;
+  const gallery = getTaskImageGallery(taskId);
+  const current = gallery[subIdx] || gallery[0];
+  openImageViewer(current.src, current.caption, subIdx, gallery);
+}
+
+function toggleOlderDays(containerId, toggleBtnId, count) {
+  const container = document.getElementById(containerId);
+  const btn = document.getElementById(toggleBtnId);
+  if (!container || !btn) return;
+  const isHidden = container.style.display === 'none';
+  if (isHidden) {
+    container.style.display = 'block';
+    btn.textContent = 'Thu gọn các ngày trước ▲';
+  } else {
+    container.style.display = 'none';
+    btn.textContent = `Xem các ngày trước (${count}) ▼`;
+  }
+}
+
 // ── RENDER ONE DAY-GROUP CARD for a recurring task ─────────
-function renderRecurringDayCard(task, group, studentName) {
+function renderRecurringDayCard(task, group, studentName, isModal = false) {
   const { dateKey, label, subs, dayStatus, isToday } = group;
   const isT = isTeacher();
   const allSubs = task.submissions || [];
 
+  const dayFiles = (task.submittedFiles || []).filter(f => {
+    const d = new Date(f.date || f.uploadedAt);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` === dateKey;
+  });
+
   const canUpload = !isT && isToday && dayStatus !== 'submitted' && dayStatus !== 'approved';
-  const canSubmit = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
+  const canSubmit = !isT && isToday && (subs.length > 0 || dayFiles.length > 0) && dayStatus === 'draft';
 
   const statusLabels = {
     approved: `<span class="status-chip chip-approved">${UI_ICONS.check} Đã duyệt</span>`,
@@ -1773,6 +2292,8 @@ function renderRecurringDayCard(task, group, studentName) {
     draft:    `<span class="status-chip chip-draft">${UI_ICONS.camera} Chưa nộp</span>`,
     pending:  `<span class="status-chip chip-pending">${UI_ICONS.clock} Chưa làm</span>`,
   };
+
+  const uploadId = isModal ? `modal-fi-${task.id}` : `file-input-${task.id}`;
 
   return `
     <div class="recurring-day-card ${isToday ? 'recurring-day-today' : 'recurring-day-past'}" data-date="${dateKey}">
@@ -1783,48 +2304,98 @@ function renderRecurringDayCard(task, group, studentName) {
       ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">${UI_ICONS.check} Đã được thầy duyệt!</div>` : ''}
       ${isT && dayStatus === 'submitted' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">${UI_ICONS.camera} Học sinh đã nộp — chờ bạn duyệt</div>` : ''}
       ${isT && dayStatus === 'pending' ? `<div class="teacher-waiting-note" style="margin:8px 0">${UI_ICONS.clock} Học sinh chưa làm bài ngày này.</div>` : ''}
-      ${isT && dayStatus === 'draft' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">${UI_ICONS.camera} Học sinh có ảnh nhưng chưa nộp chính thức.</div>` : ''}
+      ${isT && dayStatus === 'draft' ? `<div class="teacher-waiting-note draft-note" style="margin:8px 0">${UI_ICONS.camera} Học sinh có bài làm nhưng chưa nộp chính thức.</div>` : ''}
+
       ${canUpload ? `
       <div class="upload-zone" id="drop-${task.id}-${dateKey}"
-        onclick="openUploadConfirm('${task.id}')"
+        onclick="${isModal ? `document.getElementById('${uploadId}')?.click()` : `openUploadConfirm('${task.id}')`}"
         ondragover="handleDragOver(event,'${task.id}-${dateKey}')"
         ondragleave="handleDragLeave(event,'${task.id}-${dateKey}')"
         ondrop="handleDrop(event,'${task.id}')">
-        <div>${UI_ICONS.camera} Chụp ảnh bài tập hôm nay</div>
-        <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Thêm ảnh hoặc nộp bài bên dưới' : 'Click hoặc kéo thả ảnh vào đây'}</div>
-        <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
+        <div>${UI_ICONS.camera} Chụp ảnh hoặc tải tệp bài làm hôm nay</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${(subs.length > 0 || dayFiles.length > 0) ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
+        <input type="file" id="${uploadId}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none" onchange="handleFileUpload(event, '${task.id}'); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}" />
       </div>` : ''}
+
       ${subs.length > 0 ? `
       <div class="image-grid" style="margin-top:8px">
-        ${subs.map(sub => `
-          <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)} — ${label}')">
+        ${subs.map((sub, sIdx) => `
+          <div class="img-thumb-wrap" onclick="openDayGroupViewer('${task.id}', '${dateKey}', ${sIdx})">
             <img src="${sub.data}" alt="Submission" />
-            ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)})">✕</button>` : ''}
+            ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)}); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}">✕</button>` : ''}
           </div>
         `).join('')}
       </div>` : ''}
+
+      ${dayFiles.length > 0 ? `
+      <div class="submitted-files-list" style="margin-top:8px">
+        ${dayFiles.map(sf => `
+          <div class="submitted-file-row">
+            <div class="submitted-file-info">
+              ${getFileIcon(sf.name)}
+              <span class="submitted-file-name" title="${escHtml(sf.name)}">${escHtml(sf.name)}</span>
+              <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+                ${UI_ICONS.download} Tải về
+              </a>
+              ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${(task.submittedFiles || []).indexOf(sf)}); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp">✕</button>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>` : ''}
+
       ${canSubmit ? `
       <div class="submit-homework-bar">
-        <div class="submit-homework-hint">Xem lại ảnh rồi bấm nộp bài</div>
-        <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">Nộp bài cho thầy</button>
+        <div class="submit-homework-hint">Xem lại ảnh/tệp rồi bấm nộp bài</div>
+        <button class="btn-submit-homework" onclick="submitHomework('${task.id}'); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}">Nộp bài cho thầy</button>
       </div>` : ''}
       ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp — đang chờ thầy duyệt!</div>` : ''}
       ${isT && dayStatus === 'submitted' ? `
       <div style="margin-top:10px">
-        <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}')">${UI_ICONS.check} Approve ngày này</button>
+        <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}'); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}">${UI_ICONS.check} Phê duyệt ngày này</button>
       </div>` : ''}
     </div>
   `;
 }
 
+function renderRecurringDayCardsList(task, groups, studentName, isModal = false) {
+  const visibleGroups = groups.slice(0, 7);
+  const olderGroups = groups.slice(7);
+  const prefix = isModal ? `older-modal-${task.id}` : `older-task-${task.id}`;
+  const containerId = `${prefix}-list`;
+  const toggleBtnId = `${prefix}-btn`;
+
+  let html = visibleGroups.map(g => renderRecurringDayCard(task, g, studentName, isModal)).join('');
+
+  if (olderGroups.length > 0) {
+    html += `
+      <div class="older-days-toggle-wrap">
+        <button class="btn btn-secondary btn-sm" id="${toggleBtnId}" type="button" onclick="toggleOlderDays('${containerId}', '${toggleBtnId}', ${olderGroups.length})">
+          Xem các ngày trước (${olderGroups.length}) ▼
+        </button>
+      </div>
+      <div class="older-days-container" id="${containerId}" style="display:none; margin-top:8px;">
+        ${olderGroups.map(g => renderRecurringDayCard(task, g, studentName, isModal)).join('')}
+      </div>
+    `;
+  }
+  return html;
+}
+
 function renderTaskCard(task) {
   const student = state.students.find(s => s.id === task.studentId);
   const isT = isTeacher();
+  const taskAttachments = task.attachments || [];
 
-  // ── DAILY RECURRING: render per-day group cards ──
+  // ── DAILY RECURRING: render grouped cards with 7-day cutoff ──
   if (task.isRecurring) {
     const groups = getRecurringDayGroups(task);
-    const dayCardsHtml = groups.map(g => renderRecurringDayCard(task, g, student ? student.name : '')).join('');
+    const dayCardsHtml = renderRecurringDayCardsList(task, groups, student ? student.name : '');
+    const { streak } = student ? getStudentStreak(student.id) : { streak: 0 };
+    const todayStatus = getTaskStatus(task);
+
     return `
       <div class="task-card" id="task-card-${task.id}">
         <div class="task-card-header">
@@ -1835,7 +2406,8 @@ function renderTaskCard(task) {
             </div>
             <div class="task-card-meta">
               ${student ? `<span>Học sinh: <strong>${escHtml(student.name)}</strong></span>` : ''}
-              <span>Hạn: <strong>Hằng ngày</strong></span>
+              <span>Streak: <strong>${streak} ngày 🔥</strong></span>
+              <span>Trạng thái: <strong>${todayStatus === 'approved' ? 'Đã duyệt hôm nay' : todayStatus === 'submitted' ? 'Chờ duyệt hôm nay' : 'Đang làm'}</strong></span>
             </div>
           </div>
           <div class="task-card-actions">
@@ -1846,6 +2418,23 @@ function renderTaskCard(task) {
         </div>
         <div class="task-card-body">
           ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
+
+          ${taskAttachments.length > 0 ? `
+            <div style="margin: 8px 0 12px 0;">
+              <div style="font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:5px;">Tệp đính kèm bài tập (${taskAttachments.length}):</div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                ${taskAttachments.map(att => `
+                  <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
+                    ${getFileIcon(att.name)}
+                    <span class="attachment-name">${escHtml(att.name)}</span>
+                    <span class="attachment-size">(${formatFileSize(att.size)})</span>
+                    ${UI_ICONS.download}
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
           <div class="recurring-day-list">
             ${dayCardsHtml}
           </div>
@@ -1858,9 +2447,13 @@ function renderTaskCard(task) {
   const status = getTaskStatus(task);
   const allSubs = task.submissions || [];
   const subs = allSubs;
+  const subFiles = task.submittedFiles || [];
+  const hasAnySub = subs.length > 0 || subFiles.length > 0;
+  const isApproved = status === 'approved';
+  const isPendingReview = isTaskPendingReview(task);
 
-  const canUpload = !isT && status !== 'approved' && status !== 'submitted';
-  const canSubmit = !isT && status === 'draft' && subs.length > 0;
+  const canUpload = !isT && !isApproved && status !== 'submitted';
+  const canSubmit = !isT && status === 'draft' && hasAnySub;
 
   return `
     <div class="task-card" id="task-card-${task.id}">
@@ -1873,12 +2466,12 @@ function renderTaskCard(task) {
           <div class="task-card-meta">
             ${student ? `<span>Học sinh: <strong>${escHtml(student.name)}</strong></span>` : ''}
             ${task.dueDate ? `<span>Hạn nộp: ${formatDate(task.dueDate)}</span>` : ''}
-            <span>${subs.length} ảnh bài làm</span>
+            <span>${subs.length} ảnh • ${subFiles.length} tệp đã nộp</span>
           </div>
         </div>
         <div class="task-card-actions">
-          ${isT && status === 'submitted' ? `<button class="btn-approve" onclick="approveTask('${task.id}')">${UI_ICONS.check} Duyệt bài</button>` : ''}
-          ${isT && status === 'approved' ? `<button class="btn-approve approved" disabled>${UI_ICONS.check} Đã duyệt</button>` : ''}
+          ${isT && (status === 'submitted' || isPendingReview) ? `<button class="btn-approve" onclick="approveTask('${task.id}')">${UI_ICONS.check} Duyệt bài</button>` : ''}
+          ${isT && isApproved ? `<button class="btn-approve approved" disabled>${UI_ICONS.check} Đã duyệt</button>` : ''}
           ${isT ? `
           <button class="btn btn-ghost btn-sm" onclick="editTask('${task.id}')">Sửa</button>
           <button class="btn btn-danger btn-sm" onclick="confirmDeleteTask('${task.id}')">Xóa</button>` : ''}
@@ -1886,34 +2479,73 @@ function renderTaskCard(task) {
       </div>
       <div class="task-card-body">
         ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
-        ${isT && status === 'pending' ? `<div class="teacher-waiting-note">${UI_ICONS.clock} Học sinh chưa tải ảnh bài tập nào lên.</div>` : ''}
-        ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">${UI_ICONS.camera} Học sinh đã tải ảnh nhưng chưa nộp chính thức.</div>` : ''}
+
+        ${taskAttachments.length > 0 ? `
+          <div style="margin: 8px 0 12px 0;">
+            <div style="font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:5px;">Tệp đính kèm bài tập (${taskAttachments.length}):</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              ${taskAttachments.map(att => `
+                <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
+                  ${getFileIcon(att.name)}
+                  <span class="attachment-name">${escHtml(att.name)}</span>
+                  <span class="attachment-size">(${formatFileSize(att.size)})</span>
+                  ${UI_ICONS.download}
+                </a>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${isT && status === 'pending' ? `<div class="teacher-waiting-note">${UI_ICONS.clock} Học sinh chưa tải ảnh hoặc tệp bài tập nào lên.</div>` : ''}
+        ${isT && status === 'draft' ? `<div class="teacher-waiting-note draft-note">${UI_ICONS.camera} Học sinh đã thêm bài nhưng chưa nộp chính thức.</div>` : ''}
+
         ${canUpload ? `
         <div class="upload-zone" id="drop-${task.id}"
           onclick="openUploadConfirm('${task.id}')"
           ondragover="handleDragOver(event,'${task.id}')"
           ondragleave="handleDragLeave(event,'${task.id}')"
           ondrop="handleDrop(event,'${task.id}')">
-          <div>${UI_ICONS.camera} Chụp ảnh bài tập của bạn</div>
-          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${subs.length > 0 ? 'Thêm ảnh hoặc nộp bài bên dưới' : 'Click hoặc kéo thả ảnh vào đây'}</div>
-          <input type="file" id="file-input-${task.id}" accept="image/*" multiple style="display:none" />
+          <div>${UI_ICONS.camera} Chụp ảnh hoặc tải tệp bài làm của bạn</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${hasAnySub ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
+          <input type="file" id="file-input-${task.id}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none" />
         </div>` : ''}
+
         ${subs.length > 0 ? `
-        <div class="image-grid">
-          ${subs.map((sub) => `
-            <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}', '${escHtml(task.title)}')">
+        <div class="image-grid" style="margin-top:8px;">
+          ${subs.map((sub, sIdx) => `
+            <div class="img-thumb-wrap" onclick="openTaskSubmissionViewer('${task.id}', ${sIdx})">
               <img src="${sub.data}" alt="Bài làm" />
               ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)})">✕</button>` : ''}
             </div>
           `).join('')}
         </div>` : ''}
+
+        ${subFiles.length > 0 ? `
+        <div class="submitted-files-list" style="margin-top:8px;">
+          ${subFiles.map((sf, fIdx) => `
+            <div class="submitted-file-row">
+              <div class="submitted-file-info">
+                ${getFileIcon(sf.name)}
+                <span class="submitted-file-name" title="${escHtml(sf.name)}">${escHtml(sf.name)}</span>
+                <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+                  ${UI_ICONS.download} Tải về
+                </a>
+                ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${fIdx})" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp này">✕</button>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>` : ''}
+
         ${canSubmit ? `
-        <div class="submit-homework-bar">
-          <div class="submit-homework-hint">Xem lại ảnh rồi bấm nộp bài</div>
+        <div class="submit-homework-bar" style="margin-top:10px;">
+          <div class="submit-homework-hint">Xem lại ảnh/tệp rồi bấm nộp bài</div>
           <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">Nộp bài cho thầy</button>
         </div>` : ''}
         ${!isT && status === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp bài — đang chờ thầy duyệt!</div>` : ''}
-        ${!isT && status === 'approved' ? `<div class="approved-notice">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt 🎉</div>` : ''}
+        ${!isT && isApproved ? `<div class="approved-notice">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt 🎉</div>` : ''}
       </div>
     </div>
   `;
@@ -2011,65 +2643,35 @@ function openStudentDetail(studentId) {
     body.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${UI_ICONS.task}</div><p>No tasks assigned yet.</p>${isT ? `<button class="btn btn-primary mt-2" onclick="closeModal('modal-student-detail');openAddTaskFor('${studentId}')">+ Create Task</button>` : ''}</div>`;
   } else {
     body.innerHTML = tasks.map(task => {
-      // ── Recurring: render per-day sections ──
+      const taskAttachments = task.attachments || [];
+
+      // ── Recurring: render per-day sections with 7-day limit ──
       if (task.isRecurring) {
         const groups = getRecurringDayGroups(task);
-        const dayHtml = groups.map(group => {
-          const { dateKey, label, subs, dayStatus, isToday } = group;
-          const allSubs = task.submissions || [];
-          const canUploadModal = !isT && isToday && dayStatus !== 'submitted' && dayStatus !== 'approved';
-          const canSubmitModal = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
-          const statusLabels = {
-            approved: `<span class="status-chip chip-approved">${UI_ICONS.check} Đã duyệt</span>`,
-            submitted: `<span class="status-chip chip-submitted">${UI_ICONS.clock} Chờ duyệt</span>`,
-            draft:    `<span class="status-chip chip-draft">${UI_ICONS.camera} Chưa nộp</span>`,
-            pending:  `<span class="status-chip chip-pending">${UI_ICONS.clock} Chưa làm</span>`,
-          };
-          return `
-            <div class="recurring-day-card ${isToday ? 'recurring-day-today' : 'recurring-day-past'}" style="margin-top:10px">
-              <div class="recurring-day-header">
-                <span class="recurring-day-label">${label}</span>
-                <span>${statusLabels[dayStatus] || dayStatus}</span>
-              </div>
-              ${dayStatus === 'approved' ? `<div class="approved-notice" style="margin:8px 0 0">${UI_ICONS.check} Đã được thầy duyệt!</div>` : ''}
-              ${canUploadModal ? `
-              <div class="upload-zone" style="padding:12px;margin-top:8px"
-                onclick="openUploadConfirm('${task.id}','${studentId}')"
-                ondragover="handleDragOver(event,'modal-${task.id}')"
-                ondragleave="handleDragLeave(event,'modal-${task.id}')"
-                ondrop="handleDrop(event,'${task.id}')">
-                <div>${UI_ICONS.camera} Click để upload ảnh bài tập hôm nay</div>
-                <input type="file" id="modal-fi-${task.id}" accept="image/*" multiple style="display:none"
-                  onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
-              </div>` : ''}
-              ${subs.length > 0 ? `
-              <div class="image-grid" style="margin-top:8px">
-                ${subs.map(sub => `
-                  <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)}')">
-                    <img src="${sub.data}" alt="Submission" />
-                    ${canUploadModal ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)});refreshStudentDetail('${studentId}')">✕</button>` : ''}
-                  </div>
-                `).join('')}
-              </div>` : ''}
-              ${canSubmitModal ? `
-              <div class="submit-homework-bar">
-                <div class="submit-homework-hint">Xem lại ảnh rồi bấm nộp bài</div>
-                <button class="btn-submit-homework" onclick="submitHomework('${task.id}');refreshStudentDetail('${studentId}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
-              </div>` : ''}
-              ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp — đang chờ thầy duyệt!</div>` : ''}
-              ${isT && dayStatus === 'submitted' ? `
-              <div style="margin-top:8px">
-                <button class="btn-approve" onclick="approveTask('${task.id}','${dateKey}');refreshStudentDetail('${studentId}')">${UI_ICONS.check} Approve ngày này</button>
-              </div>` : ''}
-            </div>
-          `;
-        }).join('');
+        const dayHtml = renderRecurringDayCardsList(task, groups, student.name, true);
         return `
           <div class="student-task-item">
             <div class="student-task-item-header">
-              <div class="student-task-item-title"><span class="badge-recurring">${UI_ICONS.recurring} Daily</span> ${escHtml(task.title)}</div>
+              <div class="student-task-item-title"><span class="badge-recurring">${UI_ICONS.repeat} Hằng ngày</span> ${escHtml(task.title)}</div>
             </div>
-            ${task.description ? `<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">${escHtml(task.description)}</div>` : ''}
+            ${task.description ? `<div style="font-size:11px;color:var(--text-2);margin-bottom:6px">${escHtml(task.description)}</div>` : ''}
+
+            ${taskAttachments.length > 0 ? `
+              <div style="margin: 6px 0 10px 0;">
+                <div style="font-size:10px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:4px;">Tệp đính kèm (${taskAttachments.length}):</div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                  ${taskAttachments.map(att => `
+                    <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
+                      ${getFileIcon(att.name)}
+                      <span class="attachment-name">${escHtml(att.name)}</span>
+                      <span class="attachment-size">(${formatFileSize(att.size)})</span>
+                      ${UI_ICONS.download}
+                    </a>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
             ${dayHtml}
           </div>
         `;
@@ -2079,6 +2681,13 @@ function openStudentDetail(studentId) {
       const status = getTaskStatus(task);
       const allSubs = task.submissions || [];
       const subs = allSubs;
+      const subFiles = task.submittedFiles || [];
+      const hasAnySub = subs.length > 0 || subFiles.length > 0;
+      const isApproved = status === 'approved';
+      const isPendingReview = isTaskPendingReview(task);
+      const canUpload = !isT && !isApproved && status !== 'submitted';
+      const canSubmit = !isT && status === 'draft' && hasAnySub;
+
       return `
         <div class="student-task-item">
           <div class="student-task-item-header">
@@ -2087,32 +2696,81 @@ function openStudentDetail(studentId) {
           </div>
           <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">
             ${task.description ? `<div>${escHtml(task.description)}</div>` : ''}
-            ${task.dueDate ? `<div>Due: ${formatDate(task.dueDate)}</div>` : ''}
+            ${task.dueDate ? `<div>Hạn nộp: ${formatDate(task.dueDate)}</div>` : ''}
+            <div>Đã nộp: <strong>${subs.length} ảnh • ${subFiles.length} tệp</strong></div>
           </div>
-          ${status !== 'approved' ? `
+
+          ${taskAttachments.length > 0 ? `
+            <div style="margin: 6px 0 10px 0;">
+              <div style="font-size:10px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:4px;">Tệp đính kèm (${taskAttachments.length}):</div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                ${taskAttachments.map(att => `
+                  <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
+                    ${getFileIcon(att.name)}
+                    <span class="attachment-name">${escHtml(att.name)}</span>
+                    <span class="attachment-size">(${formatFileSize(att.size)})</span>
+                    ${UI_ICONS.download}
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          ${canUpload ? `
           <div class="upload-zone" style="padding:12px"
-            onclick="openUploadConfirm('${task.id}', '${studentId}')"
+            onclick="document.getElementById('modal-fi-${task.id}')?.click()"
             ondragover="handleDragOver(event,'modal-${task.id}')"
             ondragleave="handleDragLeave(event,'modal-${task.id}')"
             ondrop="handleDrop(event,'${task.id}')">
-            <div>${UI_ICONS.camera} Click to upload homework photo</div>
-            <input type="file" id="modal-fi-${task.id}" accept="image/*" multiple style="display:none"
+            <div>${UI_ICONS.camera} Click để upload ảnh hoặc tệp bài làm</div>
+            <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${hasAnySub ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
+            <input type="file" id="modal-fi-${task.id}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none"
               onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
           </div>` : ''}
+
           ${subs.length > 0 ? `
           <div class="image-grid" style="margin-top:8px">
-            ${subs.map((sub) => `
-              <div class="img-thumb-wrap" onclick="openImageViewer('${sub.data}','${escHtml(task.title)}')">
+            ${subs.map((sub, sIdx) => `
+              <div class="img-thumb-wrap" onclick="openTaskSubmissionViewer('${task.id}', ${sIdx})">
                 <img src="${sub.data}" alt="Submission" />
-                ${status !== 'approved' ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)});refreshStudentDetail('${studentId}')">✕</button>` : ''}
+                ${canUpload ? `<button class="img-thumb-remove" onclick="removeSubmission(event,'${task.id}',${allSubs.indexOf(sub)});refreshStudentDetail('${studentId}')">✕</button>` : ''}
               </div>
             `).join('')}
           </div>` : ''}
-          ${isT && status === 'submitted' ? `
-          <div style="margin-top:8px">
-            <button class="btn-approve" onclick="approveTask('${task.id}');refreshStudentDetail('${studentId}')">${UI_ICONS.check} Approve Homework</button>
+
+          ${subFiles.length > 0 ? `
+          <div class="submitted-files-list" style="margin-top:8px">
+            ${subFiles.map((sf, fIdx) => `
+              <div class="submitted-file-row">
+                <div class="submitted-file-info">
+                  ${getFileIcon(sf.name)}
+                  <span class="submitted-file-name" title="${escHtml(sf.name)}">${escHtml(sf.name)}</span>
+                  <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+                    ${UI_ICONS.download} Tải về
+                  </a>
+                  ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${fIdx});refreshStudentDetail('${studentId}')" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp này">✕</button>` : ''}
+                </div>
+              </div>
+            `).join('')}
           </div>` : ''}
-          ${isT && status === 'approved' ? `<div style="margin-top:8px"><button class="btn-approve approved" disabled>${UI_ICONS.check} Approved</button></div>` : ''}
+
+          ${canSubmit ? `
+          <div class="submit-homework-bar" style="margin-top:10px;">
+            <div class="submit-homework-hint">Xem lại ảnh/tệp rồi bấm nộp bài</div>
+            <button class="btn-submit-homework" onclick="submitHomework('${task.id}');refreshStudentDetail('${studentId}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
+          </div>` : ''}
+
+          ${!isT && status === 'submitted' ? `<div class="submitted-notice" style="margin-top:8px;">${UI_ICONS.clock} Đã nộp bài — đang chờ thầy duyệt!</div>` : ''}
+          ${!isT && isApproved ? `<div class="approved-notice" style="margin-top:8px;">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt 🎉</div>` : ''}
+
+          ${isT && (status === 'submitted' || isPendingReview) ? `
+          <div style="margin-top:8px">
+            <button class="btn-approve" onclick="approveTask('${task.id}');refreshStudentDetail('${studentId}')">${UI_ICONS.check} Phê duyệt bài tập</button>
+          </div>` : ''}
+          ${isT && isApproved ? `<div style="margin-top:8px"><button class="btn-approve approved" disabled>${UI_ICONS.check} Đã duyệt</button></div>` : ''}
         </div>
       `;
     }).join('');
@@ -2165,57 +2823,104 @@ async function processFiles(files, taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
   if (!task.submissions) task.submissions = [];
+  if (!task.submittedFiles) task.submittedFiles = [];
 
-  let loaded = 0;
+  const limitMb = isCloudEnabled ? MAX_FILE_SIZE_CLOUD : MAX_FILE_SIZE_LOCAL;
+  let addedPhotos = 0;
+  let addedFiles = 0;
+
   for (const file of files) {
-    if (!file.type.startsWith('image/')) {
-      toast('Please select an image file.', 'error');
+    if (!validateFileSize(file)) {
+      toast(`Tệp "${file.name}" vượt quá giới hạn ${limitMb} MB!`, 'error');
       continue;
     }
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const imgData = e.target.result;
-      task.submissions.push({ data: imgData, date: new Date().toISOString() });
-      loaded++;
-      if (task.status === 'approved') task.status = 'submitted';
 
-      if (isCloudEnabled && supabaseClient) {
-        try {
-          const { data: subData, error: subErr } = await supabaseClient.from('submissions').insert([{
-            task_id: task.id,
-            student_id: task.studentId,
-            image_url: imgData
-          }]).select();
-          if (subErr) {
-            console.warn('Cloud submission failed:', subErr);
-          } else if (subData && subData[0]) {
-            const lastSub = task.submissions[task.submissions.length - 1];
-            if (lastSub) lastSub.id = subData[0].id;
+    if (file.type.startsWith('image/')) {
+      try {
+        const imgData = await readFileAsBase64(file);
+        const newSub = {
+          id: uid(),
+          data: imgData,
+          name: sanitizeFileName(file.name),
+          date: new Date().toISOString()
+        };
+        task.submissions.push(newSub);
+        addedPhotos++;
+
+        if (isCloudEnabled && supabaseClient) {
+          try {
+            const { data: subData, error: subErr } = await supabaseClient.from('submissions').insert([{
+              task_id: task.id,
+              student_id: task.studentId,
+              image_url: imgData
+            }]).select();
+            if (!subErr && subData && subData[0]) {
+              newSub.id = subData[0].id;
+            }
+          } catch (cloudErr) {
+            console.warn('Cloud submission insert error:', cloudErr);
           }
-          await supabaseClient.from('tasks').update({ status: task.status }).eq('id', task.id);
-        } catch (err) {
-          console.warn('Cloud submission failed:', err);
         }
+      } catch (err) {
+        console.error('Error reading image file:', err);
       }
+    } else {
+      // Non-image document / audio / file
+      try {
+        const uploadedMeta = await uploadFileStorage(file);
+        uploadedMeta.date = new Date().toISOString();
+        task.submittedFiles.push(uploadedMeta);
+        addedFiles++;
 
-      if (loaded === files.length) {
-        saveState();
-        renderView(currentView);
-        toast(`${files.length} photo${files.length !== 1 ? 's' : ''} added! Click "Submit" to send to your teacher.`, 'info');
+        if (isCloudEnabled && supabaseClient) {
+          try {
+            await supabaseClient.from('tasks').update({
+              submitted_files: JSON.stringify(task.submittedFiles)
+            }).eq('id', task.id);
+          } catch (cloudErr) {
+            console.warn('Cloud file update error:', cloudErr);
+          }
+        }
+      } catch (err) {
+        console.error('Error uploading file:', err);
+        toast(`Không thể tải lên tệp "${file.name}"`, 'error');
       }
-    };
-    reader.readAsDataURL(file);
+    }
+  }
+
+  if (addedPhotos > 0 || addedFiles > 0) {
+    // When student uploads new content, reset approved status to draft
+    if (task.status === 'approved' || task.status === 'pending') {
+      task.status = 'draft';
+    }
+    if (isCloudEnabled && supabaseClient) {
+      supabaseClient.from('tasks').update({ status: task.status }).eq('id', task.id)
+        .then(() => {}).catch(err => console.warn(err));
+    }
+
+    saveState();
+    renderView(currentView);
+
+    const parts = [];
+    if (addedPhotos > 0) parts.push(`${addedPhotos} ảnh`);
+    if (addedFiles > 0) parts.push(`${addedFiles} tệp`);
+    toast(`Đã thêm ${parts.join(' và ')}! Bấm "Nộp bài cho thầy" khi sẵn sàng.`, 'info');
   }
 }
 
 async function removeSubmission(event, taskId, idx) {
-  event.stopPropagation();
+  if (event) event.stopPropagation();
   const task = state.tasks.find(t => t.id === taskId);
   if (!task || !task.submissions) return;
 
   const sub = task.submissions[idx];
   task.submissions.splice(idx, 1);
-  if (task.submissions.length === 0 && task.status === 'approved') task.status = 'pending';
+
+  if (!hasAnySubmissions(task) && task.status === 'approved') {
+    task.status = 'pending';
+  } else if (!hasAnySubmissions(task) && task.status === 'draft') {
+    task.status = 'pending';
+  }
 
   if (isCloudEnabled && supabaseClient && sub && sub.id) {
     await supabaseClient.from('submissions').delete().eq('id', sub.id);
@@ -2223,59 +2928,42 @@ async function removeSubmission(event, taskId, idx) {
 
   saveState();
   renderView(currentView);
-  toast('Photo removed.', 'info');
+  toast('Đã gỡ ảnh bài nộp.', 'info');
 }
 
-function handleDragOver(event, id) {
-  event.preventDefault();
-  const el = document.getElementById(`drop-${id}`);
-  if (el) el.classList.add('drag-over');
-}
-function handleDragLeave(event, id) {
-  const el = document.getElementById(`drop-${id}`);
-  if (el) el.classList.remove('drag-over');
-}
-function handleDrop(event, taskId) {
-  event.preventDefault();
-  const el = document.getElementById(`drop-${taskId}`);
-  if (el) el.classList.remove('drag-over');
-  const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-  if (files.length) processFiles(files, taskId);
-}
-
-// ── SUBMIT HOMEWORK (Student official submission) ──────────
-function submitHomework(taskId) {
+async function removeSubmittedFile(event, taskId, idx) {
+  if (event) event.stopPropagation();
   const task = state.tasks.find(t => t.id === taskId);
-  if (!task) return;
-  if (isTeacher()) return;
+  if (!task || !task.submittedFiles) return;
 
-  // For daily recurring tasks: only count TODAY's submissions
-  const subsToCheck = task.isRecurring
-    ? (task.submissions || []).filter(sub => {
-        const d = new Date(sub.date);
-        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        return k === todayKey();
-      })
-    : (task.submissions || []);
+  const fileMeta = task.submittedFiles[idx];
+  if (fileMeta) {
+    await deleteFileStorage(fileMeta);
+  }
+  task.submittedFiles.splice(idx, 1);
 
-  if (subsToCheck.length === 0) {
-    toast('Please upload at least one photo before submitting!', 'error');
-    return;
+  if (!hasAnySubmissions(task) && task.status === 'approved') {
+    task.status = 'pending';
+  } else if (!hasAnySubmissions(task) && task.status === 'draft') {
+    task.status = 'pending';
   }
 
-  task.status = 'submitted';
-  task.submittedAt = new Date().toISOString();
-
   if (isCloudEnabled && supabaseClient) {
-    supabaseClient.from('tasks').update({ status: 'submitted' }).eq('id', task.id)
-      .then(({ error }) => { if (error) console.warn('Cloud submit error:', error); });
+    try {
+      await supabaseClient.from('tasks').update({
+        submitted_files: JSON.stringify(task.submittedFiles),
+        status: task.status
+      }).eq('id', task.id);
+    } catch (cloudErr) {
+      console.warn('Cloud update submitted_files error:', cloudErr);
+    }
   }
 
   saveState();
-  closeModal('modal-student-detail');
   renderView(currentView);
-  toast('Homework submitted! Waiting for teacher review.', 'success');
+  toast('Đã xóa tệp bài nộp.', 'info');
 }
+
 
 // ── APPROVE TASK ───────────────────────────────────────────
 // submissionDate: the dateKey (YYYY-MM-DD) of the day being approved.
@@ -2329,59 +3017,213 @@ async function approveTask(taskId, submissionDate) {
   toast('Bài đã được duyệt!', 'success');
 }
 
-// ── IMAGE VIEWER ───────────────────────────────────────────
-let _viewerScale = 1;
-let _viewerRotation = 0;
+// ── IMAGE VIEWER (Task 3) ───────────────────────────────────
+let _viewerState = {
+  scale: 1,
+  x: 0,
+  y: 0,
+  rotation: 0
+};
 let _viewerSrc = '';
+let _viewerGallery = [];
+let _viewerIndex = 0;
+let _isViewerPanning = false;
+let _panStartX = 0;
+let _panStartY = 0;
+let _viewerPointers = new Map();
+let _initialPinchDist = null;
+let _initialPinchScale = 1;
+let _pinchCenter = { x: 0, y: 0 };
 
-function openImageViewer(src, caption) {
-  _viewerSrc = src;
-  _viewerScale = 1;
-  _viewerRotation = 0;
+function _applyViewerTransform(animate = false) {
   const img = document.getElementById('viewer-img');
-  img.src = src;
-  img.style.transform = '';
-  document.getElementById('viewer-caption').textContent = caption || '';
+  const zoomVal = document.getElementById('viewer-zoom-val');
+  if (!img) return;
+  img.style.transition = animate ? 'transform 0.15s ease' : 'none';
+  img.style.transform = `translate(${_viewerState.x}px, ${_viewerState.y}px) scale(${_viewerState.scale}) rotate(${_viewerState.rotation}deg)`;
+  if (zoomVal) {
+    zoomVal.textContent = `${Math.round(_viewerState.scale * 100)}%`;
+  }
+}
+
+function openImageViewer(src, caption, index = 0, gallery = null) {
+  _viewerSrc = src;
+  _viewerGallery = Array.isArray(gallery) && gallery.length > 0 ? gallery : [{ src, caption }];
+  _viewerIndex = Math.max(0, Math.min(index, _viewerGallery.length - 1));
+  _showCurrentImage(false);
   openModal('modal-image-viewer');
 }
 
-function _applyViewerTransform() {
+function _showCurrentImage(animate = false) {
+  const item = _viewerGallery[_viewerIndex] || { src: _viewerSrc, caption: '' };
+  _viewerSrc = item.src;
+  _viewerState = { scale: 1, x: 0, y: 0, rotation: 0 };
   const img = document.getElementById('viewer-img');
-  img.style.transform = `scale(${_viewerScale}) rotate(${_viewerRotation}deg)`;
+  if (img) img.src = item.src;
+  const cap = document.getElementById('viewer-caption');
+  if (cap) cap.textContent = item.caption || '';
+
+  const prevBtn = document.getElementById('viewer-btn-prev');
+  const nextBtn = document.getElementById('viewer-btn-next');
+  if (prevBtn) prevBtn.style.display = _viewerGallery.length > 1 ? 'flex' : 'none';
+  if (nextBtn) nextBtn.style.display = _viewerGallery.length > 1 ? 'flex' : 'none';
+
+  _applyViewerTransform(animate);
+}
+
+function viewerPrevImage() {
+  if (_viewerGallery.length <= 1) return;
+  _viewerIndex = (_viewerIndex - 1 + _viewerGallery.length) % _viewerGallery.length;
+  _showCurrentImage(true);
+}
+
+function viewerNextImage() {
+  if (_viewerGallery.length <= 1) return;
+  _viewerIndex = (_viewerIndex + 1) % _viewerGallery.length;
+  _showCurrentImage(true);
+}
+
+function viewerReset() {
+  _viewerState = { scale: 1, x: 0, y: 0, rotation: 0 };
+  _applyViewerTransform(true);
 }
 
 function viewerZoomIn() {
-  _viewerScale = Math.min(_viewerScale + 0.25, 5);
-  _applyViewerTransform();
+  _viewerState.scale = Math.min(8, Math.round((_viewerState.scale + 0.25) * 100) / 100);
+  _applyViewerTransform(true);
 }
 
 function viewerZoomOut() {
-  _viewerScale = Math.max(_viewerScale - 0.25, 0.25);
-  _applyViewerTransform();
+  _viewerState.scale = Math.max(0.5, Math.round((_viewerState.scale - 0.25) * 100) / 100);
+  _applyViewerTransform(true);
 }
 
 function viewerRotateCW() {
-  _viewerRotation = (_viewerRotation + 90) % 360;
-  _applyViewerTransform();
+  _viewerState.rotation = (_viewerState.rotation + 90) % 360;
+  _applyViewerTransform(true);
 }
 
 function viewerRotateCCW() {
-  _viewerRotation = (_viewerRotation - 90 + 360) % 360;
-  _applyViewerTransform();
+  _viewerState.rotation = (_viewerState.rotation - 90 + 360) % 360;
+  _applyViewerTransform(true);
 }
 
 function viewerDownload() {
   if (!_viewerSrc) return;
   const a = document.createElement('a');
   a.href = _viewerSrc;
-  // Extract a filename hint from caption or fallback
-  const cap = document.getElementById('viewer-caption').textContent || 'homework';
+  const cap = document.getElementById('viewer-caption')?.textContent || 'homework';
   a.download = cap.replace(/[^a-z0-9一-鿿À-ɏ _-]/gi, '_').slice(0, 60) + '.jpg';
   a.click();
 }
 
+function handleViewerWheel(e) {
+  e.preventDefault();
+  const wrap = document.getElementById('viewer-img-wrap');
+  if (!wrap) return;
+
+  const factor = e.deltaY < 0 ? 1.15 : 0.87;
+  const oldScale = _viewerState.scale;
+  const newScale = Math.min(8, Math.max(0.5, oldScale * factor));
+  if (newScale === oldScale) return;
+
+  const rect = wrap.getBoundingClientRect();
+  const cx = e.clientX - (rect.left + rect.width / 2);
+  const cy = e.clientY - (rect.top + rect.height / 2);
+
+  const px = (cx - _viewerState.x) / oldScale;
+  const py = (cy - _viewerState.y) / oldScale;
+
+  _viewerState.x = cx - px * newScale;
+  _viewerState.y = cy - py * newScale;
+  _viewerState.scale = newScale;
+
+  _applyViewerTransform(false);
+}
+
+function initViewerGestures() {
+  const wrap = document.getElementById('viewer-img-wrap');
+  if (!wrap) return;
+
+  wrap.addEventListener('wheel', handleViewerWheel, { passive: false });
+
+  wrap.addEventListener('pointerdown', e => {
+    _viewerPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
+
+    if (_viewerPointers.size === 1) {
+      _isViewerPanning = true;
+      _panStartX = e.clientX - _viewerState.x;
+      _panStartY = e.clientY - _viewerState.y;
+      wrap.classList.add('panning');
+    } else if (_viewerPointers.size === 2) {
+      _isViewerPanning = false;
+      const [p1, p2] = Array.from(_viewerPointers.values());
+      _initialPinchDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      _initialPinchScale = _viewerState.scale;
+      _pinchCenter = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }
+  });
+
+  wrap.addEventListener('pointermove', e => {
+    if (!_viewerPointers.has(e.pointerId)) return;
+    _viewerPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (_viewerPointers.size === 1 && _isViewerPanning) {
+      if (_viewerState.scale > 1) {
+        _viewerState.x = e.clientX - _panStartX;
+        _viewerState.y = e.clientY - _panStartY;
+        _applyViewerTransform(false);
+      }
+    } else if (_viewerPointers.size === 2 && _initialPinchDist) {
+      const [p1, p2] = Array.from(_viewerPointers.values());
+      const currentDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const scaleFactor = currentDist / _initialPinchDist;
+      const newScale = Math.min(8, Math.max(0.5, _initialPinchScale * scaleFactor));
+      const rect = wrap.getBoundingClientRect();
+      const cx = _pinchCenter.x - (rect.left + rect.width / 2);
+      const cy = _pinchCenter.y - (rect.top + rect.height / 2);
+      const px = (cx - _viewerState.x) / _viewerState.scale;
+      const py = (cy - _viewerState.y) / _viewerState.scale;
+      _viewerState.x = cx - px * newScale;
+      _viewerState.y = cy - py * newScale;
+      _viewerState.scale = newScale;
+      _applyViewerTransform(false);
+    }
+  });
+
+  const endPointer = e => {
+    _viewerPointers.delete(e.pointerId);
+    if (_viewerPointers.size < 2) _initialPinchDist = null;
+    if (_viewerPointers.size === 0) {
+      _isViewerPanning = false;
+      wrap.classList.remove('panning');
+    }
+  };
+
+  wrap.addEventListener('pointerup', endPointer);
+  wrap.addEventListener('pointercancel', endPointer);
+
+  // Double-click toggles between fit-to-screen and 2.5x
+  wrap.addEventListener('dblclick', e => {
+    if (_viewerState.scale > 1.2) {
+      viewerReset();
+    } else {
+      const rect = wrap.getBoundingClientRect();
+      const cx = e.clientX - (rect.left + rect.width / 2);
+      const cy = e.clientY - (rect.top + rect.height / 2);
+      const newScale = 2.5;
+      const px = (cx - _viewerState.x) / _viewerState.scale;
+      const py = (cy - _viewerState.y) / _viewerState.scale;
+      _viewerState.x = cx - px * newScale;
+      _viewerState.y = cy - py * newScale;
+      _viewerState.scale = newScale;
+      _applyViewerTransform(true);
+    }
+  });
+}
+
 function handleViewerBackdropClick(e) {
-  // Close only when clicking the dark overlay (not the modal itself)
   if (e.target === document.getElementById('modal-image-viewer')) {
     closeModal('modal-image-viewer');
   }
@@ -2468,6 +3310,16 @@ function confirmDeleteStudent(id) {
   document.getElementById('confirm-message').textContent =
     `Delete "${student?.name}"? This will also remove their assignments.`;
   pendingDeleteFn = async () => {
+    const studentTasks = state.tasks.filter(t => t.studentId === id);
+    for (const t of studentTasks) {
+      if (t.attachments) {
+        for (const att of t.attachments) await deleteFileStorage(att);
+      }
+      if (t.submittedFiles) {
+        for (const sf of t.submittedFiles) await deleteFileStorage(sf);
+      }
+    }
+
     state.students = state.students.filter(s => s.id !== id);
     state.tasks = state.tasks.filter(t => t.studentId !== id);
     if (state.currentUser && state.currentUser.studentId === id) {
@@ -2500,6 +3352,65 @@ function handleRecurringToggle() {
   }
 }
 
+// ── TASK ATTACHMENTS (Teacher side) ────────────────────────
+function renderTaskFormAttachments() {
+  const listEl = document.getElementById('task-attachments-list');
+  if (!listEl) return;
+  if (!taskFormAttachments.length) {
+    listEl.innerHTML = '';
+    return;
+  }
+  listEl.innerHTML = taskFormAttachments.map((f, i) => `
+    <div class="file-item">
+      <div class="file-item-info">
+        ${getFileIcon(f.name)}
+        <span class="file-item-name" title="${escHtml(f.name)}">${escHtml(f.name)}</span>
+        <span class="file-item-size">(${formatFileSize(f.size)})</span>
+      </div>
+      <button class="file-item-remove" type="button" onclick="removeTaskFormAttachment(${i})" title="Gỡ tệp này">✕</button>
+    </div>
+  `).join('');
+}
+
+async function removeTaskFormAttachment(index) {
+  const removed = taskFormAttachments.splice(index, 1)[0];
+  if (removed) {
+    await deleteFileStorage(removed);
+  }
+  renderTaskFormAttachments();
+}
+
+async function handleTaskAttachmentsInput(files) {
+  if (!files || !files.length) return;
+  const dropZone = document.getElementById('task-attach-drop-zone');
+  const hint = document.getElementById('task-attach-hint');
+  const prevHint = hint ? hint.textContent : '';
+  if (dropZone) dropZone.classList.add('uploading');
+  if (hint) hint.textContent = 'Đang tải tệp lên...';
+  const saveBtn = document.getElementById('btn-save-task');
+  if (saveBtn) saveBtn.disabled = true;
+
+  try {
+    const limit = isCloudEnabled ? MAX_FILE_SIZE_CLOUD : MAX_FILE_SIZE_LOCAL;
+    for (const file of Array.from(files)) {
+      if (!validateFileSize(file)) {
+        toast(`Tệp "${file.name}" vượt quá giới hạn (${limit} MB)!`, 'error');
+        continue;
+      }
+      const uploaded = await uploadFileStorage(file);
+      taskFormAttachments.push(uploaded);
+    }
+  } catch (err) {
+    console.error('Error attaching file:', err);
+    toast('Lỗi khi tải tệp lên!', 'error');
+  } finally {
+    if (dropZone) dropZone.classList.remove('uploading');
+    if (hint) hint.textContent = prevHint || 'Kéo thả hoặc click để chọn tệp';
+    if (saveBtn) saveBtn.disabled = false;
+    renderTaskFormAttachments();
+  }
+}
+
 // ── ADD / EDIT TASK ────────────────────────────────────────
 function openAddTask() {
   const sel = document.getElementById('input-task-student');
@@ -2513,6 +3424,8 @@ function openAddTask() {
   const recurChk = document.getElementById('input-task-recurring');
   if (recurChk) recurChk.checked = false;
   handleRecurringToggle();
+  taskFormAttachments = [];
+  renderTaskFormAttachments();
   openModal('modal-task');
 }
 
@@ -2535,6 +3448,8 @@ function editTask(id) {
   const recurChk = document.getElementById('input-task-recurring');
   if (recurChk) recurChk.checked = !!task.isRecurring;
   handleRecurringToggle();
+  taskFormAttachments = task.attachments ? JSON.parse(JSON.stringify(task.attachments)) : [];
+  renderTaskFormAttachments();
   openModal('modal-task');
 }
 
@@ -2553,6 +3468,8 @@ async function saveTask() {
   if (!title) { toast('Please enter a task title.', 'error'); return; }
   if (!studentId) { toast('Please select a student.', 'error'); return; }
 
+  const attachmentsCopy = [...taskFormAttachments];
+
   if (id) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
@@ -2561,6 +3478,7 @@ async function saveTask() {
       task.studentId = studentId;
       task.dueDate = dueDate;
       task.isRecurring = isRecurring;
+      task.attachments = attachmentsCopy;
     }
     if (isCloudEnabled && supabaseClient) {
       const { error } = await supabaseClient.from('tasks').update({
@@ -2568,11 +3486,16 @@ async function saveTask() {
         description,
         student_id: studentId,
         due_date: dueDate || null,
-        is_recurring: isRecurring
+        is_recurring: isRecurring,
+        attachments: JSON.stringify(attachmentsCopy)
       }).eq('id', id);
       if (error) {
         console.error('Supabase update task error:', error);
-        toast(`Error saving to cloud: ${error.message}`, 'error');
+        if (error.message && error.message.includes('attachments')) {
+          toast('Cần cập nhật cấu trúc Supabase: vui lòng chạy supabase-migration.sql', 'error');
+        } else {
+          toast(`Lỗi lưu lên cloud: ${error.message}`, 'error');
+        }
       }
     }
     toast('Task updated!', 'success');
@@ -2587,6 +3510,8 @@ async function saveTask() {
       isRecurring,
       status: 'pending',
       submissions: [],
+      submittedFiles: [],
+      attachments: attachmentsCopy,
       createdAt: new Date().toISOString()
     };
     state.tasks.push(newTask);
@@ -2597,11 +3522,16 @@ async function saveTask() {
         description,
         student_id: studentId,
         due_date: dueDate || null,
-        is_recurring: isRecurring
+        is_recurring: isRecurring,
+        attachments: JSON.stringify(attachmentsCopy)
       }]).select();
       if (error) {
         console.error('Supabase insert task error:', error);
-        toast(`Error saving to cloud: ${error.message}`, 'error');
+        if (error.message && error.message.includes('attachments')) {
+          toast('Cần cập nhật cấu trúc Supabase: vui lòng chạy supabase-migration.sql', 'error');
+        } else {
+          toast(`Lỗi lưu lên cloud: ${error.message}`, 'error');
+        }
       } else if (data && data[0]) {
         newTask.id = data[0].id;
       }
@@ -2618,6 +3548,15 @@ function confirmDeleteTask(id) {
   const task = state.tasks.find(t => t.id === id);
   document.getElementById('confirm-message').textContent = `Delete assignment "${task?.title}"?`;
   pendingDeleteFn = async () => {
+    if (task) {
+      if (task.attachments) {
+        for (const att of task.attachments) await deleteFileStorage(att);
+      }
+      if (task.submittedFiles) {
+        for (const sf of task.submittedFiles) await deleteFileStorage(sf);
+      }
+    }
+
     state.tasks = state.tasks.filter(t => t.id !== id);
 
     if (isCloudEnabled && supabaseClient) {
@@ -2864,12 +3803,65 @@ function init() {
     });
   }
 
+  // Global keyboard shortcuts (Command palette + Image viewer controls)
   document.addEventListener('keydown', e => {
+    const isViewerOpen = document.getElementById('modal-image-viewer')?.classList.contains('active');
+    if (isViewerOpen) {
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        viewerZoomIn();
+        return;
+      }
+      if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        viewerZoomOut();
+        return;
+      }
+      if (e.key === '0') {
+        e.preventDefault();
+        viewerReset();
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (_viewerGallery.length > 1) {
+          viewerPrevImage();
+        } else {
+          _viewerState.x += 40;
+          _applyViewerTransform(false);
+        }
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (_viewerGallery.length > 1) {
+          viewerNextImage();
+        } else {
+          _viewerState.x -= 40;
+          _applyViewerTransform(false);
+        }
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _viewerState.y += 40;
+        _applyViewerTransform(false);
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _viewerState.y -= 40;
+        _applyViewerTransform(false);
+        return;
+      }
+    }
+
     if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       openCmd();
     }
     if (e.key === 'Escape') {
+      if (isViewerOpen) closeModal('modal-image-viewer');
       closeCmd();
     }
   });
@@ -2890,14 +3882,55 @@ function init() {
   const roleStudentBtn = document.getElementById('role-btn-student');
   if (roleStudentBtn) roleStudentBtn.addEventListener('click', () => selectLoginRole('student'));
 
-  // Supabase config modal buttons
+  // Task 4: Login modal Enter key listener (with Vietnamese IME protection)
+  function handleLoginEnter(e) {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleDoLogin();
+    }
+  }
+  const teacherPassInput = document.getElementById('input-teacher-pass');
+  if (teacherPassInput) teacherPassInput.addEventListener('keydown', handleLoginEnter);
+
+  const studentPinInput = document.getElementById('input-student-pin');
+  if (studentPinInput) studentPinInput.addEventListener('keydown', handleLoginEnter);
+
+  const loginStudentSelect = document.getElementById('login-student-select');
+  if (loginStudentSelect) loginStudentSelect.addEventListener('keydown', handleLoginEnter);
+
+  // Supabase config modal buttons & Enter key
   const useOfflineBtn = document.getElementById('btn-use-offline');
   if (useOfflineBtn) useOfflineBtn.addEventListener('click', useOfflineLocalStorage);
 
   const saveCloudBtn = document.getElementById('btn-save-cloud');
   if (saveCloudBtn) saveCloudBtn.addEventListener('click', saveSupabaseConfig);
 
-  // Image viewer toolbar controls
+  function handleSupabaseEnter(e) {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveSupabaseConfig();
+    }
+  }
+  const supaUrlInput = document.getElementById('input-supabase-url');
+  if (supaUrlInput) supaUrlInput.addEventListener('keydown', handleSupabaseEnter);
+
+  const supaKeyInput = document.getElementById('input-supabase-key');
+  if (supaKeyInput) supaKeyInput.addEventListener('keydown', handleSupabaseEnter);
+
+  // Image viewer toolbar controls & gesture setup
+  initViewerGestures();
+
+  const viewerPrevBtn = document.getElementById('viewer-btn-prev');
+  if (viewerPrevBtn) viewerPrevBtn.addEventListener('click', viewerPrevImage);
+
+  const viewerNextBtn = document.getElementById('viewer-btn-next');
+  if (viewerNextBtn) viewerNextBtn.addEventListener('click', viewerNextImage);
+
+  const viewerResetBtn = document.getElementById('viewer-btn-reset');
+  if (viewerResetBtn) viewerResetBtn.addEventListener('click', viewerReset);
+
   const viewerZoomOutBtn = document.getElementById('viewer-btn-zoom-out');
   if (viewerZoomOutBtn) viewerZoomOutBtn.addEventListener('click', viewerZoomOut);
 
@@ -2943,12 +3976,74 @@ function init() {
   const recurCheckbox = document.getElementById('input-task-recurring');
   if (recurCheckbox) recurCheckbox.addEventListener('change', handleRecurringToggle);
 
-  // Modal saves
+  // Modal saves & Enter key in single-line inputs
   const saveStudentBtn = document.getElementById('btn-save-student');
   if (saveStudentBtn) saveStudentBtn.addEventListener('click', saveStudent);
 
+  function handleStudentEnter(e) {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveStudent();
+    }
+  }
+  const studentNameInput = document.getElementById('input-student-name');
+  if (studentNameInput) studentNameInput.addEventListener('keydown', handleStudentEnter);
+  const studentGradeInput = document.getElementById('input-student-grade');
+  if (studentGradeInput) studentGradeInput.addEventListener('keydown', handleStudentEnter);
+  const studentPassInput = document.getElementById('input-student-passcode');
+  if (studentPassInput) studentPassInput.addEventListener('keydown', handleStudentEnter);
+
   const saveTaskBtn = document.getElementById('btn-save-task');
   if (saveTaskBtn) saveTaskBtn.addEventListener('click', saveTask);
+
+  function handleTaskEnter(e) {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveTask();
+    }
+  }
+  const taskTitleInput = document.getElementById('input-task-title');
+  if (taskTitleInput) taskTitleInput.addEventListener('keydown', handleTaskEnter);
+  const taskDueInput = document.getElementById('input-task-due');
+  if (taskDueInput) taskDueInput.addEventListener('keydown', handleTaskEnter);
+
+  // Task attachments in #modal-task
+  const taskFilesInput = document.getElementById('input-task-files');
+  if (taskFilesInput) {
+    taskFilesInput.addEventListener('change', e => {
+      handleTaskAttachmentsInput(e.target.files);
+      e.target.value = '';
+    });
+  }
+
+  const btnSelectTaskFiles = document.getElementById('btn-select-task-files');
+  if (btnSelectTaskFiles) {
+    btnSelectTaskFiles.addEventListener('click', e => {
+      e.stopPropagation();
+      taskFilesInput?.click();
+    });
+  }
+
+  const taskDropZone = document.getElementById('task-attach-drop-zone');
+  if (taskDropZone) {
+    taskDropZone.addEventListener('click', () => {
+      taskFilesInput?.click();
+    });
+    taskDropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      taskDropZone.classList.add('drag-over');
+    });
+    taskDropZone.addEventListener('dragleave', () => {
+      taskDropZone.classList.remove('drag-over');
+    });
+    taskDropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      taskDropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files) handleTaskAttachmentsInput(e.dataTransfer.files);
+    });
+  }
 
   const confirmDeleteBtn = document.getElementById('btn-confirm-delete');
   if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', () => pendingDeleteFn && pendingDeleteFn());
