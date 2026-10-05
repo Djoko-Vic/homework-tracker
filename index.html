@@ -7,7 +7,7 @@
   <meta name="description" content="Minimalist student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -96,12 +96,6 @@
         <h1 id="page-title">Dashboard</h1>
       </div>
       <div class="contextnav-right">
-        <div class="search-wrap" id="search-wrap" style="display: none;">
-          <input type="search" id="global-search" placeholder="Search tasks or students…" autocomplete="off" spellcheck="false" />
-        </div>
-        <button class="btn btn-secondary btn-sm" id="btn-login-modal" type="button" style="display: none;">
-          Switch Account
-        </button>
         <span class="contextnav-date" id="sidebar-date"></span>
       </div>
     </div>
@@ -320,28 +314,28 @@
         <p class="modal-intro-text">Select your role to log in:</p>
         
         <div class="role-selector">
-          <button class="role-card active" id="role-btn-teacher" type="button" onclick="selectLoginRole('teacher')">
+          <button class="role-card active" id="role-btn-teacher" type="button">
             <div class="role-title">Teacher Portal</div>
             <div class="role-desc">Full access: assign tasks, review & approve photos, manage students</div>
           </button>
           
-          <button class="role-card" id="role-btn-student" type="button" onclick="selectLoginRole('student')">
+          <button class="role-card" id="role-btn-student" type="button">
             <div class="role-title">Student Portal</div>
             <div class="role-desc">Upload homework photos, view assigned tasks & streak progress</div>
           </button>
         </div>
 
-        <div id="student-login-select-wrap" class="form-group hidden" style="margin-top: 16px;">
+        <div id="student-login-select-wrap" class="form-group hidden form-group-spaced">
           <label for="login-student-select">Select Student Name:</label>
-          <select id="login-student-select" class="select-input" style="width: 100%; margin-top: 6px;"></select>
+          <select id="login-student-select" class="select-input select-full"></select>
           
-          <div class="form-group" style="margin-top: 12px;">
+          <div class="form-group form-group-sm-spaced">
             <label for="input-student-pin">Student PIN:</label>
             <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN (e.g. 0000)…" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" spellcheck="false" />
           </div>
         </div>
 
-        <div id="teacher-login-pass-wrap" class="form-group" style="margin-top: 16px;">
+        <div id="teacher-login-pass-wrap" class="form-group form-group-spaced">
           <label for="input-teacher-pass">Teacher Password:</label>
           <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password…" autocomplete="current-password" spellcheck="false" />
         </div>
@@ -361,7 +355,7 @@
         <button class="modal-close" data-modal="modal-supabase-config" type="button" aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
-        <p style="font-size: 13px; color: var(--text-2); margin-bottom: 14px;">
+        <p class="modal-intro-text">
           Enter your Supabase <strong>Project URL</strong> and <strong>Anon Key</strong> to enable real-time online synchronization between Teacher and Students:
         </p>
         <div class="form-group">
@@ -374,8 +368,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="useOfflineLocalStorage()">Use Offline Mode (Local)</button>
-        <button class="btn btn-primary" onclick="saveSupabaseConfig()">Save & Connect Cloud</button>
+        <button class="btn btn-ghost" id="btn-use-offline" type="button">Use Offline Mode (Local)</button>
+        <button class="btn btn-primary" id="btn-save-cloud" type="button">Save & Connect Cloud</button>
       </div>
     </div>
   </div>
@@ -464,28 +458,28 @@
   </div>
 
   <!-- Image Viewer Modal -->
-  <div class="modal-overlay" id="modal-image-viewer" onclick="handleViewerBackdropClick(event)">
+  <div class="modal-overlay" id="modal-image-viewer">
     <div class="modal modal-img">
       <!-- Toolbar -->
       <div class="viewer-toolbar">
         <div class="viewer-caption" id="viewer-caption"></div>
         <div class="viewer-actions">
-          <button class="viewer-btn" onclick="viewerZoomOut()" title="Zoom Out" aria-label="Zoom Out">
+          <button class="viewer-btn" id="viewer-btn-zoom-out" type="button" title="Zoom Out" aria-label="Zoom Out">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
           </button>
-          <button class="viewer-btn" onclick="viewerZoomIn()" title="Zoom In" aria-label="Zoom In">
+          <button class="viewer-btn" id="viewer-btn-zoom-in" type="button" title="Zoom In" aria-label="Zoom In">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
           </button>
-          <button class="viewer-btn" onclick="viewerRotateCCW()" title="Rotate Counter-Clockwise" aria-label="Rotate Counter-Clockwise">
+          <button class="viewer-btn" id="viewer-btn-rotate-ccw" type="button" title="Rotate Counter-Clockwise" aria-label="Rotate Counter-Clockwise">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
           </button>
-          <button class="viewer-btn" onclick="viewerRotateCW()" title="Rotate Clockwise" aria-label="Rotate Clockwise">
+          <button class="viewer-btn" id="viewer-btn-rotate-cw" type="button" title="Rotate Clockwise" aria-label="Rotate Clockwise">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           </button>
-          <button class="viewer-btn" onclick="viewerDownload()" title="Download" aria-label="Download Image">
+          <button class="viewer-btn" id="viewer-btn-download" type="button" title="Download" aria-label="Download Image">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </button>
-          <button class="viewer-btn viewer-btn-close" onclick="closeModal('modal-image-viewer')" title="Close" aria-label="Close Image Viewer">
+          <button class="viewer-btn viewer-btn-close" id="viewer-btn-close" data-modal="modal-image-viewer" type="button" title="Close" aria-label="Close Image Viewer">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>

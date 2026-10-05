@@ -14,8 +14,7 @@ const FEE_LATE_DAILY   = 5000;    // +5,000đ  if daily task has no submission t
 const TEACHER_PASSWORD = '2992006bot1';
 
 const AVATAR_COLORS = [
-  '#d96b43', '#4a7c59', '#d99b26', '#3d5a80',
-  '#6b5b95', '#c94a53', '#2a9d8f', '#e76f51',
+  '#b4533a', '#3d6585', '#3f7a56', '#8a6a2f', '#6b5b8a', '#5a6e6a'
 ];
 
 // ── SUPABASE CLIENT CONFIG ─────────────────────────────────
@@ -188,8 +187,8 @@ function renderFeeWidget() {
   const tuitionBadge = document.getElementById('badge-nav-tuition');
   if (tuitionBadge) tuitionBadge.textContent = formatVND(bal);
 
-  const balColor = bal >= 800000 ? 'var(--sage)' : bal >= 500000 ? 'var(--mustard)' : 'var(--rose)';
-  const balBg   = bal >= 800000 ? 'var(--sage-dim)' : bal >= 500000 ? 'var(--mustard-dim)' : 'var(--rose-dim)';
+  const balColor = bal >= 800000 ? 'var(--ok)' : bal >= 500000 ? 'var(--wait)' : 'var(--danger)';
+  const balBg   = bal >= 800000 ? 'var(--ok-bg)' : bal >= 500000 ? 'var(--wait-bg)' : 'var(--danger-bg)';
 
   // If student is logged in, show transactions relevant to them or general resets
   const displayLogs = (!isT && currentStudentId)
@@ -212,7 +211,7 @@ function renderFeeWidget() {
     if (!entries.length) return `<div class="fee-log-empty">Chưa có giao dịch nào được ghi nhận</div>`;
     return entries.map(entry => {
       const sign = entry.amount > 0 ? '+' : '';
-      const col = entry.amount > 0 ? 'var(--rose)' : entry.amount < 0 ? 'var(--sage)' : 'var(--text)';
+      const col = entry.amount > 0 ? 'var(--danger)' : entry.amount < 0 ? 'var(--ok)' : 'var(--text)';
       const d = new Date(entry.created_at || entry.date);
       const timeStr = !isNaN(d) ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
       const dateStr = !isNaN(d) ? d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '';
@@ -663,7 +662,7 @@ function updateRoleUI() {
   if (isT) {
     if (avatarEl) {
       avatarEl.textContent = 'T';
-      avatarEl.style.background = 'var(--terracotta-dim)';
+      avatarEl.style.background = 'rgba(31, 28, 24, 0.08)';
     }
     if (nameEl) nameEl.textContent = 'Giáo viên';
     if (roleEl) roleEl.textContent = 'Admin';
@@ -671,7 +670,7 @@ function updateRoleUI() {
     const s = state.students.find(st => st.id === user.studentId);
     if (avatarEl) {
       avatarEl.textContent = s ? initials(s.name) : 'S';
-      avatarEl.style.background = s && s.color ? s.color : 'var(--denim)';
+      avatarEl.style.background = s && s.color ? s.color : 'var(--info)';
     }
     if (nameEl) nameEl.textContent = s ? s.name : 'Học sinh';
     if (roleEl) roleEl.textContent = s ? (s.grade || 'Học sinh') : 'Học sinh';
@@ -1146,7 +1145,7 @@ function renderDashHero() {
       <div class="action-card ${isSelected ? 'selected' : ''}" data-task-id="${task.id}" onclick="selectDashboardTask('${task.id}')">
         <div class="action-card-top">
           <div class="action-card-student">
-            <div class="action-card-av" style="background: ${student.color || 'var(--terracotta)'}">
+            <div class="action-card-av" style="background: ${student.color || 'var(--ink)'}">
               ${initials(student.name)}
             </div>
             <span>${escHtml(student.name)}</span>
@@ -1195,27 +1194,27 @@ function renderDashMetrics() {
 
     container.innerHTML = `
       <div class="metric-pill">
-        <div class="metric-val" style="color: var(--violet);">${totalStudents}</div>
+        <div class="metric-val" style="color: var(--text);">${totalStudents}</div>
         <div class="metric-label">Học sinh</div>
       </div>
       <div class="metric-pill">
-        <div class="metric-val" style="color: var(--denim);">${totalTasks}</div>
+        <div class="metric-val" style="color: var(--info);">${totalTasks}</div>
         <div class="metric-label">Tổng bài tập</div>
       </div>
       <div class="metric-pill">
-        <div class="metric-val" style="color: #b45309;">${pendingReview}</div>
+        <div class="metric-val" style="color: var(--wait);">${pendingReview}</div>
         <div class="metric-label">Chờ chấm điểm</div>
       </div>
       <div class="metric-pill">
-        <div class="metric-val" style="color: var(--sage);">${approved}</div>
+        <div class="metric-val" style="color: var(--ok);">${approved}</div>
         <div class="metric-label">Đã duyệt</div>
       </div>
       <div class="metric-pill clickable" onclick="navigateTo('streaks')">
-        <div class="metric-val" style="color: var(--terracotta);">${maxStreak} ngày 🔥</div>
+        <div class="metric-val" style="color: var(--accent);">${maxStreak} ngày 🔥</div>
         <div class="metric-label">Top Streak</div>
       </div>
       <div class="metric-pill clickable" onclick="navigateTo('tuition')">
-        <div class="metric-val" style="color: ${feeState.balance >= 800000 ? 'var(--sage)' : 'var(--terracotta)'}; font-size: 15px;">
+        <div class="metric-val" style="color: ${feeState.balance >= 800000 ? 'var(--ok)' : 'var(--danger)'}; font-size: 15px;">
           ${formatVND(feeState.balance)}
         </div>
         <div class="metric-label">Học phí & Quỹ →</div>
@@ -1230,19 +1229,19 @@ function renderDashMetrics() {
 
     container.innerHTML = `
       <div class="metric-pill clickable" onclick="navigateTo('streaks')">
-        <div class="metric-val" style="color: var(--terracotta);">${streak} ngày 🔥</div>
+        <div class="metric-val" style="color: var(--accent);">${streak} ngày 🔥</div>
         <div class="metric-label">Chuỗi học tập</div>
       </div>
       <div class="metric-pill">
-        <div class="metric-val" style="color: var(--denim);">${totalTasks}</div>
+        <div class="metric-val" style="color: var(--info);">${totalTasks}</div>
         <div class="metric-label">Bài được giao</div>
       </div>
       <div class="metric-pill">
-        <div class="metric-val" style="color: #b45309;">${submitted}</div>
+        <div class="metric-val" style="color: var(--wait);">${submitted}</div>
         <div class="metric-label">Đã gửi bài</div>
       </div>
       <div class="metric-pill">
-        <div class="metric-val" style="color: var(--sage);">${approved}</div>
+        <div class="metric-val" style="color: var(--ok);">${approved}</div>
         <div class="metric-label">Đã được duyệt</div>
       </div>
     `;
@@ -1344,7 +1343,7 @@ function renderDashTable() {
           <span class="col-task-sub">${task.desc ? escHtml(task.desc.slice(0, 48)) : (isRecurring ? 'Lặp lại hằng ngày' : 'Bài tập thông thường')}</span>
         </div>
         <div class="col-student">
-          <div class="col-student-av" style="background:${student ? (student.color || 'var(--terracotta)') : 'var(--text-3)'}">
+          <div class="col-student-av" style="background:${student ? (student.color || 'var(--ink)') : 'var(--text-3)'}">
             ${student ? initials(student.name) : '?'}
           </div>
           <span>${student ? escHtml(student.name) : '—'}</span>
@@ -1439,7 +1438,7 @@ function renderDashDetail(taskId) {
         ${statusBadge}
       </div>
       <div class="detail-student-card">
-        <div class="detail-student-av" style="background:${student ? (student.color || 'var(--terracotta)') : 'var(--text-3)'}">
+        <div class="detail-student-av" style="background:${student ? (student.color || 'var(--ink)') : 'var(--text-3)'}">
           ${student ? initials(student.name) : '?'}
         </div>
         <div class="detail-student-info" style="flex:1;">
@@ -1458,7 +1457,7 @@ function renderDashDetail(taskId) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
       <div style="padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);">
         <div class="detail-section-label">Hạn nộp</div>
-        <strong style="font-size: 13px; color: ${overdue ? 'var(--rose)' : 'var(--text)'};">
+        <strong style="font-size: 13px; color: ${overdue ? 'var(--danger)' : 'var(--text)'};">
           ${isRecurring ? 'Hôm nay (hằng ngày)' : (task.dueDate ? formatDate(task.dueDate) : 'Không có')}
         </strong>
       </div>
@@ -1519,7 +1518,7 @@ function renderDashDetail(taskId) {
             <input type="file" accept="image/*" multiple style="display:none;" onchange="handleFileUpload(event, '${task.id}');" />
           </label>
         ` : `
-          <div style="padding: 10px; background: var(--sage-dim); color: #047857; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; text-align: center;">
+          <div style="padding: 10px; background: var(--ok-bg); color: var(--ok); border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; text-align: center;">
             ${UI_ICONS.check} Bài tập này đã được thầy giáo chấm điểm và duyệt!
           </div>
         `}
@@ -1551,7 +1550,7 @@ function renderStudents(filter = '') {
     return `
       <div class="student-card" onclick="openStudentDetail('${student.id}')">
         <div class="student-card-header">
-          <div class="student-avatar" style="background:${student.color || 'var(--terracotta)'}">${initials(student.name)}</div>
+          <div class="student-avatar" style="background:${student.color || 'var(--ink)'}">${initials(student.name)}</div>
           <div class="student-info-main">
             <div class="student-card-name">${escHtml(student.name)}</div>
             <div class="student-card-grade">${escHtml(student.grade || 'Học sinh')} • PIN: <code>${escHtml(student.pin || '0000')}</code></div>
@@ -1565,7 +1564,7 @@ function renderStudents(filter = '') {
             <strong>${stats.submitted}/${stats.total} bài (${progress}%)</strong>
           </div>
           <div class="progress-bar-wrap">
-            <div class="progress-bar" style="width:${progress}%;background:${student.color || 'var(--terracotta)'};"></div>
+            <div class="progress-bar" style="width:${progress}%;background:${student.color || 'var(--ink)'};"></div>
           </div>
         </div>
 
@@ -1756,7 +1755,7 @@ function getStatusLabel(task) {
     overdue:  `Overdue`,
   };
   const recurBadge = task.isRecurring ? `<span class="badge-recurring">${UI_ICONS.repeat} Daily</span> ` : '';
-  return `${recurBadge}<span class="status-pill status-${s}">${labels[s] || s}</span>`;
+  return `${recurBadge}<span class="status-chip chip-${s}">${labels[s] || s}</span>`;
 }
 
 // ── RENDER ONE DAY-GROUP CARD for a recurring task ─────────
@@ -1769,10 +1768,10 @@ function renderRecurringDayCard(task, group, studentName) {
   const canSubmit = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
 
   const statusLabels = {
-    approved: `<span class="status-pill status-approved">${UI_ICONS.check} Đã duyệt</span>`,
-    submitted: `<span class="status-pill status-submitted">${UI_ICONS.clock} Chờ duyệt</span>`,
-    draft:    `<span class="status-pill status-draft">${UI_ICONS.camera} Chưa nộp</span>`,
-    pending:  `<span class="status-pill status-pending">${UI_ICONS.clock} Chưa làm</span>`,
+    approved: `<span class="status-chip chip-approved">${UI_ICONS.check} Đã duyệt</span>`,
+    submitted: `<span class="status-chip chip-submitted">${UI_ICONS.clock} Chờ duyệt</span>`,
+    draft:    `<span class="status-chip chip-draft">${UI_ICONS.camera} Chưa nộp</span>`,
+    pending:  `<span class="status-chip chip-pending">${UI_ICONS.clock} Chưa làm</span>`,
   };
 
   return `
@@ -1965,15 +1964,15 @@ function renderStreaks() {
 
         <div class="streak-mini-stats">
           <div class="streak-mini-stat">
-            <div class="streak-mini-stat-val" style="color:var(--denim)">${item.stats.total}</div>
+            <div class="streak-mini-stat-val" style="color:var(--info)">${item.stats.total}</div>
             <div class="streak-mini-stat-lbl">Bài tập</div>
           </div>
           <div class="streak-mini-stat">
-            <div class="streak-mini-stat-val" style="color:var(--mustard)">${item.stats.submitted}</div>
+            <div class="streak-mini-stat-val" style="color:var(--wait)">${item.stats.submitted}</div>
             <div class="streak-mini-stat-lbl">Đã nộp</div>
           </div>
           <div class="streak-mini-stat">
-            <div class="streak-mini-stat-val" style="color:var(--sage)">${item.stats.approved}</div>
+            <div class="streak-mini-stat-val" style="color:var(--ok)">${item.stats.approved}</div>
             <div class="streak-mini-stat-lbl">Đã duyệt</div>
           </div>
         </div>
@@ -2001,7 +2000,7 @@ function openStudentDetail(studentId) {
     <div>
       <strong>${escHtml(student.name)}</strong>
       <div style="color:var(--text-2);font-size:12px;display:flex;align-items:center;gap:4px;margin-top:2px;">
-        ${escHtml(student.grade || '')} • <span style="display:inline-flex;align-items:center;gap:3px;color:var(--terracotta);font-weight:700;">${UI_ICONS.fire} ${streak} Day Streak</span>
+        ${escHtml(student.grade || '')} • <span style="display:inline-flex;align-items:center;gap:3px;color:var(--accent);font-weight:700;">${UI_ICONS.fire} ${streak} Day Streak</span>
       </div>
     </div>
   `;
@@ -2021,10 +2020,10 @@ function openStudentDetail(studentId) {
           const canUploadModal = !isT && isToday && dayStatus !== 'submitted' && dayStatus !== 'approved';
           const canSubmitModal = !isT && isToday && subs.length > 0 && dayStatus === 'draft';
           const statusLabels = {
-            approved: `<span class="status-pill status-approved">${UI_ICONS.check} Đã duyệt</span>`,
-            submitted: `<span class="status-pill status-submitted">${UI_ICONS.clock} Chờ duyệt</span>`,
-            draft:    `<span class="status-pill status-draft">${UI_ICONS.camera} Chưa nộp</span>`,
-            pending:  `<span class="status-pill status-pending">${UI_ICONS.clock} Chưa làm</span>`,
+            approved: `<span class="status-chip chip-approved">${UI_ICONS.check} Đã duyệt</span>`,
+            submitted: `<span class="status-chip chip-submitted">${UI_ICONS.clock} Chờ duyệt</span>`,
+            draft:    `<span class="status-chip chip-draft">${UI_ICONS.camera} Chưa nộp</span>`,
+            pending:  `<span class="status-chip chip-pending">${UI_ICONS.clock} Chưa làm</span>`,
           };
           return `
             <div class="recurring-day-card ${isToday ? 'recurring-day-today' : 'recurring-day-past'}" style="margin-top:10px">
@@ -2881,13 +2880,38 @@ function init() {
     switchUserBtn.addEventListener('click', openLoginDialog);
   }
 
-  const loginModalBtn = document.getElementById('btn-login-modal');
-  if (loginModalBtn) {
-    loginModalBtn.addEventListener('click', openLoginDialog);
-  }
-
   const doLoginBtn = document.getElementById('btn-do-login');
   if (doLoginBtn) doLoginBtn.addEventListener('click', handleDoLogin);
+
+  // Role selector buttons
+  const roleTeacherBtn = document.getElementById('role-btn-teacher');
+  if (roleTeacherBtn) roleTeacherBtn.addEventListener('click', () => selectLoginRole('teacher'));
+
+  const roleStudentBtn = document.getElementById('role-btn-student');
+  if (roleStudentBtn) roleStudentBtn.addEventListener('click', () => selectLoginRole('student'));
+
+  // Supabase config modal buttons
+  const useOfflineBtn = document.getElementById('btn-use-offline');
+  if (useOfflineBtn) useOfflineBtn.addEventListener('click', useOfflineLocalStorage);
+
+  const saveCloudBtn = document.getElementById('btn-save-cloud');
+  if (saveCloudBtn) saveCloudBtn.addEventListener('click', saveSupabaseConfig);
+
+  // Image viewer toolbar controls
+  const viewerZoomOutBtn = document.getElementById('viewer-btn-zoom-out');
+  if (viewerZoomOutBtn) viewerZoomOutBtn.addEventListener('click', viewerZoomOut);
+
+  const viewerZoomInBtn = document.getElementById('viewer-btn-zoom-in');
+  if (viewerZoomInBtn) viewerZoomInBtn.addEventListener('click', viewerZoomIn);
+
+  const viewerRotateCCWBtn = document.getElementById('viewer-btn-rotate-ccw');
+  if (viewerRotateCCWBtn) viewerRotateCCWBtn.addEventListener('click', viewerRotateCCW);
+
+  const viewerRotateCWBtn = document.getElementById('viewer-btn-rotate-cw');
+  if (viewerRotateCWBtn) viewerRotateCWBtn.addEventListener('click', viewerRotateCW);
+
+  const viewerDownloadBtn = document.getElementById('viewer-btn-download');
+  if (viewerDownloadBtn) viewerDownloadBtn.addEventListener('click', viewerDownload);
 
   // Primary add
   const addPrimaryBtn = document.getElementById('btn-add-primary');
