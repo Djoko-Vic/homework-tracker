@@ -58,6 +58,7 @@ const UI_ICONS = {
   sparkle: `<svg class="ui-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
   file: `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
   download: `<svg class="ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+  upload: `<svg class="ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
   task: `<svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`
 };
 
@@ -81,6 +82,48 @@ let pendingUploadTaskId = null; // for upload confirmation dialog
 let dashTableLimit = 8;         // Task 1b master table pagination limit
 let tasksViewLimit = 10;        // Task 1b tasks view pagination limit
 let taskFormAttachments = [];   // Task 2a teacher task attachments in modal
+
+// ── VIETNAM TIMEZONE (GMT+7, Asia/Ho_Chi_Minh) DATE HELPERS ────
+/**
+ * Chuẩn hóa timestamp/Date sang chuỗi ngày YYYY-MM-DD theo múi giờ Asia/Ho_Chi_Minh (GMT+7).
+ * Ranh giới một ngày là 00:00:00 - 23:59:59 giờ Việt Nam.
+ */
+function getVNDate(dateInput = new Date()) {
+  if (!dateInput) return '';
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    return dateInput;
+  }
+  const date = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(date);
+}
+
+/**
+ * Cộng/trừ ngày an toàn trên chuỗi YYYY-MM-DD không bị ảnh hưởng bởi DST/múi giờ máy client.
+ */
+function addDaysToDateKey(dateKey, days) {
+  if (!dateKey) return '';
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days, 12, 0, 0));
+  const year = dt.getUTCFullYear();
+  const month = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dt.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function todayKey() {
+  return getVNDate();
+}
+
+function getPastDateKey(daysAgo = 1) {
+  return addDaysToDateKey(todayKey(), -daysAgo);
+}
 
 // ── PENDING-REVIEW SINGLE SOURCE OF TRUTH (Task 1a) ─────────
 /**
@@ -119,18 +162,10 @@ function getTodaySubmissionsCount(task) {
   const today = todayKey();
   let count = 0;
   if (task.submissions) {
-    count += task.submissions.filter(sub => {
-      const d = new Date(sub.date);
-      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      return k === today;
-    }).length;
+    count += task.submissions.filter(sub => getVNDate(sub.date) === today).length;
   }
   if (task.submittedFiles) {
-    count += task.submittedFiles.filter(f => {
-      const d = new Date(f.uploadedAt || f.date);
-      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      return k === today;
-    }).length;
+    count += task.submittedFiles.filter(f => getVNDate(f.uploadedAt || f.date) === today).length;
   }
   return count;
 }
@@ -138,11 +173,7 @@ function getTodaySubmissionsCount(task) {
 function hasSubmittedFilesToday(task) {
   if (!task || !task.submittedFiles || task.submittedFiles.length === 0) return false;
   const today = todayKey();
-  return task.submittedFiles.some(f => {
-    const d = new Date(f.uploadedAt || f.date);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return k === today;
-  });
+  return task.submittedFiles.some(f => getVNDate(f.uploadedAt || f.date) === today);
 }
 
 function hasAnySubmissions(task) {
@@ -728,20 +759,15 @@ function formatDate(iso) {
 
 function isOverdue(iso) {
   if (!iso) return false;
-  const d = parseDateLocal(iso);
-  // A task is overdue only if the due date's local midnight has fully passed (i.e. not today, not future)
-  const now = new Date();
-  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return d < todayMidnight;
+  // So sánh ngày theo múi giờ Việt Nam (Asia/Ho_Chi_Minh)
+  const dueVn = getVNDate(iso);
+  const todayVn = getVNDate();
+  return dueVn < todayVn;
 }
 
 function isToday(iso) {
   if (!iso) return false;
-  const d = parseDateLocal(iso);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
+  return getVNDate(iso) === getVNDate();
 }
 
 function relativeTime(isoStr) {
@@ -793,25 +819,34 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// ── STREAK CALCULATION ─────────────────────────────────────
+// ── STREAK CALCULATION (VIETNAM TIMEZONE GMT+7) ────────────
+/**
+ * Tính chuỗi ngày làm bài liên tục theo múi giờ Asia/Ho_Chi_Minh.
+ * Ranh giới chuyển ngày là đúng 00:00 giờ Việt Nam.
+ * Kiểm tra cả ảnh bài nộp (submissions) và tệp bài nộp (submittedFiles).
+ */
 function getStudentStreak(studentId) {
   const days = new Set();
   state.tasks.forEach(task => {
     if (task.studentId !== studentId) return;
     if (task.submissions && task.submissions.length > 0) {
       task.submissions.forEach(sub => {
-        const d = new Date(sub.date);
-        days.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+        const k = getVNDate(sub.date);
+        if (k) days.add(k);
+      });
+    }
+    if (task.submittedFiles && task.submittedFiles.length > 0) {
+      task.submittedFiles.forEach(f => {
+        const k = getVNDate(f.uploadedAt || f.date);
+        if (k) days.add(k);
       });
     }
   });
 
   let streak = 0;
-  const today = new Date();
+  const todayVn = getVNDate();
   for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const key = addDaysToDateKey(todayVn, -i);
     if (days.has(key)) {
       streak++;
     } else if (i > 0) {
@@ -823,25 +858,32 @@ function getStudentStreak(studentId) {
 
 function getLast30DaysActivity(studentId) {
   const result = [];
-  const today = new Date();
+  const todayVn = getVNDate();
   const submissionDays = new Set();
 
   state.tasks.forEach(task => {
     if (task.studentId !== studentId) return;
-    if (task.submissions) {
+    if (task.submissions && task.submissions.length > 0) {
       task.submissions.forEach(sub => {
-        const d = new Date(sub.date);
-        submissionDays.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+        const k = getVNDate(sub.date);
+        if (k) submissionDays.add(k);
+      });
+    }
+    if (task.submittedFiles && task.submittedFiles.length > 0) {
+      task.submittedFiles.forEach(f => {
+        const k = getVNDate(f.uploadedAt || f.date);
+        if (k) submissionDays.add(k);
       });
     }
   });
 
   for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const key = addDaysToDateKey(todayVn, -i);
+    const [y, m, d] = key.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
     result.push({
-      date: d,
+      date: dateObj,
+      dateKey: key,
       active: submissionDays.has(key),
       isToday: i === 0,
     });
@@ -852,8 +894,8 @@ function getLast30DaysActivity(studentId) {
 function getStudentStats(studentId) {
   const tasks = state.tasks.filter(t => t.studentId === studentId);
   const total = tasks.length;
-  const submitted = tasks.filter(t => t.submissions && t.submissions.length > 0).length;
-  const approved = tasks.filter(t => t.status === 'approved').length;
+  const submitted = tasks.filter(t => hasAnySubmissions(t)).length;
+  const approved = tasks.filter(t => t.status === 'approved' || (t.isRecurring && hasApprovalToday(t))).length;
   const { streak } = getStudentStreak(studentId);
   return { total, submitted, approved, streak };
 }
@@ -1969,7 +2011,7 @@ function renderDashDetail(taskId) {
           </label>
           ${hasAnySub && task.status !== 'submitted' ? `
             <button class="btn-submit-homework" onclick="submitHomework('${task.id}')" style="margin-top:8px; width:100%; justify-content:center;">
-              Nộp bài cho thầy
+              ${UI_ICONS.upload} Nộp bài cho thầy
             </button>
           ` : ''}
         ` : `
@@ -2099,34 +2141,15 @@ function applyTaskFilters() {
   });
 }
 
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
 function hasSubmissionToday(task) {
-  if (!task.submissions || task.submissions.length === 0) return false;
-  const today = todayKey();
-  return task.submissions.some(sub => {
-    const d = new Date(sub.date);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return k === today;
-  });
-}
-
-function getPastDateKey(daysAgo = 1) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return hasSubmissionOnDate(task, todayKey());
 }
 
 function hasSubmissionOnDate(task, dateKey) {
-  if (!task.submissions || task.submissions.length === 0) return false;
-  return task.submissions.some(sub => {
-    const d = new Date(sub.date);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return k === dateKey;
-  });
+  if (!task) return false;
+  const hasPhotos = (task.submissions || []).some(sub => getVNDate(sub.date) === dateKey);
+  const hasFiles = (task.submittedFiles || []).some(f => getVNDate(f.uploadedAt || f.date) === dateKey);
+  return hasPhotos || hasFiles;
 }
 
 // Returns true if a specific date's submission was approved (backward-compat with old 'date' field)
@@ -2140,21 +2163,28 @@ function hasApprovalToday(task) {
   return isDateApproved(task, todayKey());
 }
 
-// ── RECURRING DAY GROUPS ────────────────────────────────────
+// ── RECURRING DAY GROUPS (VIETNAM TIMEZONE GMT+7) ───────────
 // Returns an array of day objects for a recurring task, newest first.
-// Each group: { dateKey, label, subs, dayStatus, isToday, submitted }
+// Each group: { dateKey, label, subs, dayStatus, isToday }
 // dayStatus: 'approved' | 'submitted' | 'draft' | 'pending'
 function getRecurringDayGroups(task) {
   const today = todayKey();
   const allSubs = task.submissions || [];
+  const allFiles = task.submittedFiles || [];
 
-  // Group submissions by day
+  // Group submissions and files by VN date
   const byDay = {}; // dateKey -> [subs]
   allSubs.forEach(sub => {
-    const d = new Date(sub.date);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const k = getVNDate(sub.date);
+    if (!k) return;
     if (!byDay[k]) byDay[k] = [];
     byDay[k].push(sub);
+  });
+
+  allFiles.forEach(f => {
+    const k = getVNDate(f.uploadedAt || f.date);
+    if (!k) return;
+    if (!byDay[k]) byDay[k] = [];
   });
 
   // Always include today
@@ -2164,27 +2194,19 @@ function getRecurringDayGroups(task) {
   const keys = Object.keys(byDay).sort().reverse();
 
   return keys.map(dateKey => {
-    const subs = byDay[dateKey];
+    const subs = byDay[dateKey] || [];
     const isToday = dateKey === today;
     const approved = isDateApproved(task, dateKey);
+    const dayFiles = allFiles.filter(f => getVNDate(f.uploadedAt || f.date) === dateKey);
+    const hasItems = subs.length > 0 || dayFiles.length > 0;
 
     let dayStatus;
     if (approved) {
       dayStatus = 'approved';
-    } else if (subs.length === 0) {
+    } else if (!hasItems) {
       dayStatus = 'pending';
     } else {
-      // Check if these subs were officially submitted (task.status = 'submitted' and
-      // the submission happened on this day)
-      const anySubmittedOnThisDay = subs.some(sub => {
-        const d = new Date(sub.date);
-        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        return k === dateKey;
-      });
-      if (anySubmittedOnThisDay && task.status === 'submitted' && !isToday) {
-        // Prior day that was submitted and awaiting teacher approval
-        dayStatus = 'submitted';
-      } else if (anySubmittedOnThisDay && task.status === 'submitted' && isToday) {
+      if (task.status === 'submitted') {
         dayStatus = 'submitted';
       } else {
         dayStatus = 'draft';
@@ -2204,20 +2226,19 @@ function getRecurringDayGroups(task) {
 
 function getTaskStatus(task) {
   // For recurring tasks, getTaskStatus returns the overall state
-  // (used for non-rendering purposes like streak counting)
   if (task.isRecurring) {
-    if (hasSubmissionToday(task)) {
+    if (hasAnySubmissionsToday(task)) {
       if (task.status === 'submitted') return 'submitted';
       return 'draft';
     }
-    if (task.status === 'submitted' && (task.submissions || []).length > 0) return 'submitted';
+    if (task.status === 'submitted' && hasAnySubmissions(task)) return 'submitted';
     if (hasApprovalToday(task)) return 'approved';
     return 'pending';
   }
   if (task.status === 'approved') return 'approved';
   if (task.status === 'submitted') return 'submitted';
-  // Has photos but student hasn't clicked Submit yet
-  if (task.submissions && task.submissions.length > 0) return 'draft';
+  // Has photos or files but student hasn't clicked Submit yet
+  if (hasAnySubmissions(task)) return 'draft';
   if (isOverdue(task.dueDate)) return 'overdue';
   return 'pending';
 }
@@ -2279,8 +2300,7 @@ function renderRecurringDayCard(task, group, studentName, isModal = false) {
   const allSubs = task.submissions || [];
 
   const dayFiles = (task.submittedFiles || []).filter(f => {
-    const d = new Date(f.date || f.uploadedAt);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` === dateKey;
+    return getVNDate(f.date || f.uploadedAt) === dateKey;
   });
 
   const canUpload = !isT && isToday && dayStatus !== 'submitted' && dayStatus !== 'approved';
@@ -2349,7 +2369,7 @@ function renderRecurringDayCard(task, group, studentName, isModal = false) {
       ${canSubmit ? `
       <div class="submit-homework-bar">
         <div class="submit-homework-hint">Xem lại ảnh/tệp rồi bấm nộp bài</div>
-        <button class="btn-submit-homework" onclick="submitHomework('${task.id}'); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}">Nộp bài cho thầy</button>
+        <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
       </div>` : ''}
       ${!isT && isToday && dayStatus === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp — đang chờ thầy duyệt!</div>` : ''}
       ${isT && dayStatus === 'submitted' ? `
@@ -2453,7 +2473,7 @@ function renderTaskCard(task) {
   const isPendingReview = isTaskPendingReview(task);
 
   const canUpload = !isT && !isApproved && status !== 'submitted';
-  const canSubmit = !isT && status === 'draft' && hasAnySub;
+  const canSubmit = !isT && status !== 'submitted' && !isApproved && hasAnySub;
 
   return `
     <div class="task-card" id="task-card-${task.id}">
@@ -2507,7 +2527,7 @@ function renderTaskCard(task) {
           ondrop="handleDrop(event,'${task.id}')">
           <div>${UI_ICONS.camera} Chụp ảnh hoặc tải tệp bài làm của bạn</div>
           <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${hasAnySub ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
-          <input type="file" id="file-input-${task.id}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none" />
+          <input type="file" id="file-input-${task.id}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none" onchange="handleFileUpload(event, '${task.id}');" />
         </div>` : ''}
 
         ${subs.length > 0 ? `
@@ -2542,7 +2562,7 @@ function renderTaskCard(task) {
         ${canSubmit ? `
         <div class="submit-homework-bar" style="margin-top:10px;">
           <div class="submit-homework-hint">Xem lại ảnh/tệp rồi bấm nộp bài</div>
-          <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">Nộp bài cho thầy</button>
+          <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
         </div>` : ''}
         ${!isT && status === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp bài — đang chờ thầy duyệt!</div>` : ''}
         ${!isT && isApproved ? `<div class="approved-notice">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt 🎉</div>` : ''}
@@ -2573,7 +2593,7 @@ function renderStreaks() {
 
   grid.innerHTML = sorted.map(item => {
     const calHtml = item.activity.map(day => `
-      <div class="cal-day ${day.active ? 'active' : ''} ${day.isToday ? 'today' : ''}" title="${day.date.toLocaleDateString('vi-VN')}"></div>
+      <div class="cal-day ${day.active ? 'active' : ''} ${day.isToday ? 'today' : ''}" title="${day.dateKey ? day.dateKey.split('-').reverse().join('/') : ''}"></div>
     `).join('');
 
     return `
@@ -2686,7 +2706,7 @@ function openStudentDetail(studentId) {
       const isApproved = status === 'approved';
       const isPendingReview = isTaskPendingReview(task);
       const canUpload = !isT && !isApproved && status !== 'submitted';
-      const canSubmit = !isT && status === 'draft' && hasAnySub;
+      const canSubmit = !isT && status !== 'submitted' && !isApproved && hasAnySub;
 
       return `
         <div class="student-task-item">
@@ -2760,7 +2780,7 @@ function openStudentDetail(studentId) {
           ${canSubmit ? `
           <div class="submit-homework-bar" style="margin-top:10px;">
             <div class="submit-homework-hint">Xem lại ảnh/tệp rồi bấm nộp bài</div>
-            <button class="btn-submit-homework" onclick="submitHomework('${task.id}');refreshStudentDetail('${studentId}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
+            <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
           </div>` : ''}
 
           ${!isT && status === 'submitted' ? `<div class="submitted-notice" style="margin-top:8px;">${UI_ICONS.clock} Đã nộp bài — đang chờ thầy duyệt!</div>` : ''}
@@ -2964,6 +2984,91 @@ async function removeSubmittedFile(event, taskId, idx) {
   toast('Đã xóa tệp bài nộp.', 'info');
 }
 
+// ── SUBMIT HOMEWORK (Student official submission) ──────────
+let _isSubmittingHomework = false;
+
+async function submitHomework(taskId) {
+  if (_isSubmittingHomework) return;
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) {
+    toast('Không tìm thấy bài tập!', 'error');
+    return;
+  }
+  if (isTeacher()) {
+    toast('Tài khoản giáo viên không thể nộp bài tập!', 'info');
+    return;
+  }
+
+  // Phân quyền: Học sinh chỉ có thể nộp bài tập của chính mình
+  if (state.currentUser && state.currentUser.role === 'student' && state.currentUser.studentId !== task.studentId) {
+    toast('Bạn chỉ có thể nộp bài tập của chính mình!', 'error');
+    return;
+  }
+
+  // Kiểm tra bài làm đã tải lên hay chưa
+  if (task.isRecurring) {
+    const hasToday = hasAnySubmissionsToday(task);
+    if (!hasToday) {
+      toast('Vui lòng chụp ảnh hoặc tải tệp bài làm hôm nay trước khi nộp bài!', 'error');
+      return;
+    }
+  } else {
+    const hasSubs = hasAnySubmissions(task);
+    if (!hasSubs) {
+      toast('Vui lòng chụp ảnh hoặc tải tệp bài làm trước khi nộp bài!', 'error');
+      return;
+    }
+  }
+
+  _isSubmittingHomework = true;
+  // Khóa nút nộp bài và hiển thị trạng thái đang xử lý
+  const submitBtns = document.querySelectorAll('.btn-submit-homework');
+  submitBtns.forEach(btn => {
+    btn.disabled = true;
+    btn.dataset.origText = btn.innerHTML;
+    btn.innerHTML = 'Đang nộp bài...';
+  });
+
+  try {
+    const prevStatus = task.status;
+    task.status = 'submitted';
+    task.submittedAt = new Date().toISOString();
+
+    if (isCloudEnabled && supabaseClient) {
+      const { error } = await supabaseClient.from('tasks').update({
+        status: 'submitted'
+      }).eq('id', task.id);
+
+      if (error) {
+        console.error('Supabase submit error:', error);
+        task.status = prevStatus;
+        toast(`Lỗi khi nộp bài lên máy chủ: ${error.message || 'Không thể kết nối'}`, 'error');
+        return;
+      }
+    }
+
+    saveState();
+    renderView(currentView);
+
+    // Nếu modal chi tiết học sinh đang mở, refresh lại nội dung modal
+    const modalStudentDetail = document.getElementById('modal-student-detail');
+    if (modalStudentDetail && modalStudentDetail.classList.contains('open')) {
+      refreshStudentDetail(task.studentId);
+    }
+
+    toast('Bài đã được nộp cho thầy! Hãy đợi duyệt.', 'success');
+  } catch (err) {
+    console.error('submitHomework error:', err);
+    toast('Đã xảy ra lỗi khi nộp bài. Vui lòng thử lại!', 'error');
+  } finally {
+    _isSubmittingHomework = false;
+    const submitBtnsAfter = document.querySelectorAll('.btn-submit-homework');
+    submitBtnsAfter.forEach(btn => {
+      btn.disabled = false;
+      if (btn.dataset.origText) btn.innerHTML = btn.dataset.origText;
+    });
+  }
+}
 
 // ── APPROVE TASK ───────────────────────────────────────────
 // submissionDate: the dateKey (YYYY-MM-DD) of the day being approved.
@@ -2983,8 +3088,10 @@ async function approveTask(taskId, submissionDate) {
     if (task.approvalHistory.length > 60) task.approvalHistory = task.approvalHistory.slice(-60);
     // Check if any other days are still pending — if not, reset status to 'pending'
     const stillPending = (task.submissions || []).some(sub => {
-      const d = new Date(sub.date);
-      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const k = getVNDate(sub.date);
+      return !isDateApproved(task, k);
+    }) || (task.submittedFiles || []).some(f => {
+      const k = getVNDate(f.uploadedAt || f.date);
       return !isDateApproved(task, k);
     });
     task.status = stillPending ? 'submitted' : 'pending';
@@ -3678,7 +3785,7 @@ function checkLateFees() {
       if (!feeState.dailyCharged[dailyChargeKey]) {
         const hadSubmissionYesterday = hasSubmissionOnDate(task, yesterday);
         const wasApprovedYesterday = isDateApproved(task, yesterday);
-        const taskCreatedDate = task.createdAt ? task.createdAt.slice(0, 10) : '';
+        const taskCreatedDate = task.createdAt ? getVNDate(task.createdAt) : '';
 
         // Only penalize if the task was active on/before yesterday, and yesterday had no submission
         if (taskCreatedDate && taskCreatedDate <= yesterday && !hadSubmissionYesterday && !wasApprovedYesterday) {
