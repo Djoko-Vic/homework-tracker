@@ -442,6 +442,7 @@ function renderFeeWidget() {
 
   const TYPE_BADGES = {
     reward: '<span class="fee-badge fee-badge-reward">Thưởng nộp bài</span>',
+    refund: '<span class="fee-badge fee-badge-reward">Hoàn phí</span>',
     penalty_streak: '<span class="fee-badge fee-badge-streak">Mất streak</span>',
     penalty_late: '<span class="fee-badge fee-badge-late">Trễ hạn</span>',
     payment: '<span class="fee-badge fee-badge-pay">Thanh toán</span>',
@@ -542,17 +543,19 @@ function renderFeeWidget() {
 
 // ── PERSISTENCE ────────────────────────────────────────────
 function saveState() {
-  // Strip base64 image data before saving to localStorage to prevent quota errors.
-  // Images are already stored on Supabase — only URLs (http/https) are kept locally.
+  // Strip large base64 image data before saving to localStorage to prevent quota errors,
+  // but preserve submission metadata (id, name, date) so dates are not lost.
   const stateToSave = {
     students: state.students,
     tasks: state.tasks.map(t => ({
       ...t,
       submissions: (t.submissions || []).map(sub => ({
-        ...sub,
-        // Drop base64 data blobs; keep only remote URLs
-        data: (sub.data && sub.data.startsWith('http')) ? sub.data : null
-      })).filter(sub => sub.data)
+        id: sub.id,
+        name: sub.name,
+        date: sub.date,
+        // Keep remote URLs; clear base64 data blobs in local storage
+        data: (sub.data && sub.data.startsWith('http')) ? sub.data : ''
+      }))
     }))
   };
   try {
@@ -841,6 +844,16 @@ function getStudentStreak(studentId) {
         if (k) days.add(k);
       });
     }
+    if (task.submittedAt) {
+      const k = getVNDate(task.submittedAt);
+      if (k) days.add(k);
+    }
+    if (task.approvalHistory && task.approvalHistory.length > 0) {
+      task.approvalHistory.forEach(a => {
+        const k = a.submissionDate || a.date;
+        if (k) days.add(k);
+      });
+    }
   });
 
   let streak = 0;
@@ -872,6 +885,16 @@ function getLast30DaysActivity(studentId) {
     if (task.submittedFiles && task.submittedFiles.length > 0) {
       task.submittedFiles.forEach(f => {
         const k = getVNDate(f.uploadedAt || f.date);
+        if (k) submissionDays.add(k);
+      });
+    }
+    if (task.submittedAt) {
+      const k = getVNDate(task.submittedAt);
+      if (k) submissionDays.add(k);
+    }
+    if (task.approvalHistory && task.approvalHistory.length > 0) {
+      task.approvalHistory.forEach(a => {
+        const k = a.submissionDate || a.date;
         if (k) submissionDays.add(k);
       });
     }
@@ -1086,7 +1109,12 @@ async function handleDoLogin() {
       closeModal('modal-login');
       renderView(currentView);
       toast('Đăng nhập thành công với vai trò Giáo viên!', 'success');
-      setTimeout(() => { checkStreakLosses(); checkLateFees(); }, 500);
+      setTimeout(() => {
+        if (!isSyncing) {
+          checkStreakLosses();
+          checkLateFees();
+        }
+      }, 500);
     } else {
       const select = document.getElementById('login-student-select');
       const studentId = select ? select.value : null;
@@ -2149,7 +2177,9 @@ function hasSubmissionOnDate(task, dateKey) {
   if (!task) return false;
   const hasPhotos = (task.submissions || []).some(sub => getVNDate(sub.date) === dateKey);
   const hasFiles = (task.submittedFiles || []).some(f => getVNDate(f.uploadedAt || f.date) === dateKey);
-  return hasPhotos || hasFiles;
+  const hasSubmittedAt = task.submittedAt && getVNDate(task.submittedAt) === dateKey;
+  const isApproved = isDateApproved(task, dateKey);
+  return hasPhotos || hasFiles || hasSubmittedAt || isApproved;
 }
 
 // Returns true if a specific date's submission was approved (backward-compat with old 'date' field)
@@ -3111,12 +3141,29 @@ async function approveTask(taskId, submissionDate) {
   // Fee tracker: deduct 2,500đ per completed assignment (reward at most once per task/date)
   feeState.rewardedApprovals = feeState.rewardedApprovals || {};
   const rewardKey = `${task.id}__${submissionDate || 'single'}`;
+  const student = state.students.find(s => s.id === task.studentId);
+  const studentName = student ? student.name : 'Học sinh';
+
   if (!feeState.rewardedApprovals[rewardKey]) {
     feeState.rewardedApprovals[rewardKey] = new Date().toISOString();
-    const student = state.students.find(s => s.id === task.studentId);
-    const studentName = student ? student.name : 'Học sinh';
     const subLabel = submissionDate ? ` (${submissionDate})` : '';
     adjustFee(FEE_PER_ASSIGNMENT, `${studentName} hoàn thành bài: ${task.title.slice(0, 24)}${subLabel}`, 'reward', task.studentId);
+  }
+
+  // If a late penalty was previously charged for this task/day before the teacher reviewed it,
+  // automatically refund it now that the teacher has reviewed and approved the homework.
+  if (task.isRecurring) {
+    const dateKey = submissionDate || todayKey();
+    const dailyChargeKey = `${task.id}__${dateKey}`;
+    if (feeState.dailyCharged && feeState.dailyCharged[dailyChargeKey]) {
+      delete feeState.dailyCharged[dailyChargeKey];
+      adjustFee(-FEE_LATE_DAILY, `Hoàn phí trễ hạn (thầy đã duyệt ${dateKey}): ${task.title.slice(0, 24)}`, 'refund', task.studentId);
+    }
+  } else {
+    if (feeState.lateCharged && feeState.lateCharged[task.id]) {
+      delete feeState.lateCharged[task.id];
+      adjustFee(-FEE_LATE_REGULAR, `Hoàn phí trễ hạn (thầy đã duyệt): ${task.title.slice(0, 24)}`, 'refund', task.studentId);
+    }
   }
 
   saveState();
@@ -3742,6 +3789,7 @@ function seedDemoData() {
 // Never repeatedly charges students who are already at streak 0.
 function checkStreakLosses() {
   if (!isTeacher()) return;
+  if (isCloudEnabled && isSyncing) return; // Wait until cloud data is fully loaded
   if (!state.students || !state.students.length) return;
 
   feeState.studentStreaks = feeState.studentStreaks || {};
@@ -3765,8 +3813,10 @@ function checkStreakLosses() {
 // ── LATE FEE DETECTION (ACCURATE ALGORITHM) ────────────────────
 // Charges +10,000đ ONCE per overdue regular task (past due date, not submitted/approved).
 // Charges +5,000đ ONCE for missed daily tasks of YESTERDAY (never penalizes current day in progress).
+// NEVER penalizes students who have already submitted and are awaiting teacher review.
 function checkLateFees() {
   if (!isTeacher()) return;
+  if (isCloudEnabled && isSyncing) return; // Wait until cloud data is fully loaded
   if (!state.tasks || !state.tasks.length) return;
 
   feeState.lateCharged = feeState.lateCharged || {};
@@ -3787,8 +3837,22 @@ function checkLateFees() {
         const wasApprovedYesterday = isDateApproved(task, yesterday);
         const taskCreatedDate = task.createdAt ? getVNDate(task.createdAt) : '';
 
-        // Only penalize if the task was active on/before yesterday, and yesterday had no submission
-        if (taskCreatedDate && taskCreatedDate <= yesterday && !hadSubmissionYesterday && !wasApprovedYesterday) {
+        // Check if student has submitted and is awaiting teacher review
+        let isAwaitingApproval = task.status === 'submitted' || isTaskPendingReview(task);
+        if (typeof getRecurringDayGroups === 'function') {
+          const groups = getRecurringDayGroups(task);
+          const yesterdayGrp = groups.find(g => g.dateKey === yesterday);
+          if (yesterdayGrp && (yesterdayGrp.dayStatus === 'submitted' || yesterdayGrp.dayStatus === 'approved')) {
+            isAwaitingApproval = true;
+          }
+        }
+
+        // Only penalize if:
+        // - Task was active on/before yesterday
+        // - Yesterday had no submission
+        // - Yesterday was not approved
+        // - Task/day is not currently submitted and awaiting teacher review
+        if (taskCreatedDate && taskCreatedDate <= yesterday && !hadSubmissionYesterday && !wasApprovedYesterday && !isAwaitingApproval) {
           feeState.dailyCharged[dailyChargeKey] = new Date().toISOString();
           saveFeeState();
           adjustFee(FEE_LATE_DAILY, `${studentName} chưa làm bài hằng ngày (${yesterday}): ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId);
@@ -3801,8 +3865,9 @@ function checkLateFees() {
       if (feeState.lateCharged[task.id]) return; // Already charged once for this task
 
       const status = getTaskStatus(task);
+      const isAwaitingReview = status === 'submitted' || task.status === 'submitted' || isTaskPendingReview(task);
       if ((status === 'overdue' || (isOverdue(task.dueDate) && status === 'pending')) &&
-          status !== 'submitted' && status !== 'approved') {
+          !isAwaitingReview && status !== 'approved' && task.status !== 'approved') {
         feeState.lateCharged[task.id] = new Date().toISOString();
         saveFeeState();
         adjustFee(FEE_LATE_REGULAR, `${studentName} trễ hạn bài tập: ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId);
