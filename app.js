@@ -314,104 +314,95 @@ function getFileIcon(fileName = '', mimeType = '') {
 }
 
 // ── FEE TRACKER STATE ──────────────────────────────────────
-let feeState = {
-  balance: FEE_INITIAL,
-  log: [],               // Array of { id, student_id, amount, balance_after, type, reason, created_at, date }
-  studentStreaks: {},    // { [studentId]: lastStreak } — tracks active streaks to detect true drops to 0
-  lateCharged: {},       // { [taskId]: ISOString } — marks that a regular task was penalized for being overdue
-  dailyCharged: {},      // { [`${taskId}__${dateKey}`]: ISOString } — marks that a daily task was penalized for dateKey
-  rewardedApprovals: {}  // { [`${taskId}__${dateKey}`]: ISOString } — marks that an approval was rewarded
-};
+let feeState = FeeLedger.empty();
+let selectedFeeStudentId = null;
+const FEE_V2_KEY = 'homeworkhub_fee_tracker_v2';
 
+function feeStudentId() {
+  if (!isTeacher()) return state.currentUser?.studentId || null;
+  if (!state.students.some(s => s.id === selectedFeeStudentId)) selectedFeeStudentId = state.students[0]?.id || null;
+  return selectedFeeStudentId;
+}
+function feeTotals() { return FeeLedger.totals(feeState, feeStudentId(), getVNDate()); }
 function loadFeeState() {
-  const raw = localStorage.getItem(FEE_STORAGE_KEY);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      feeState.balance = typeof parsed.balance === 'number' ? parsed.balance : FEE_INITIAL;
-      feeState.log = Array.isArray(parsed.log) ? parsed.log : [];
-      feeState.studentStreaks = parsed.studentStreaks || {};
-      feeState.lateCharged = parsed.lateCharged || {};
-      feeState.dailyCharged = parsed.dailyCharged || {};
-      feeState.rewardedApprovals = parsed.rewardedApprovals || {};
-    } catch (e) {
-      feeState = {
-        balance: FEE_INITIAL,
-        log: [],
-        studentStreaks: {},
-        lateCharged: {},
-        dailyCharged: {},
-        rewardedApprovals: {}
-      };
-    }
-  }
+  try {
+    const current = localStorage.getItem(FEE_V2_KEY);
+    const legacy = localStorage.getItem(FEE_STORAGE_KEY);
+    feeState = current ? JSON.parse(current) : legacy ? FeeLedger.migrate(JSON.parse(legacy), state.students) : FeeLedger.empty();
+    saveFeeState(); // The original v1 key is never overwritten.
+  } catch (e) { console.warn('Fee data retained; unable to load:', e); }
 }
-
-function saveFeeState() {
-  localStorage.setItem(FEE_STORAGE_KEY, JSON.stringify(feeState));
+function saveFeeState() { localStorage.setItem(FEE_V2_KEY, JSON.stringify(feeState)); }
+function feeWritable() {
+  if (!isTeacher() || !feeStudentId()) return false;
+  if (isCloudEnabled && (isSyncing || !feeCloudReady)) { toast('Chờ đồng bộ / chạy fee-migration.sql trước khi sửa học phí.', 'info'); return false; }
+  if (feeState.legacy) { toast('Cần xác nhận chủ sở hữu dữ liệu học phí cũ.', 'info'); return false; }
+  return true;
 }
-
-function adjustFee(amount, reason, type = 'manual', studentId = null) {
-  const newBalance = feeState.balance + amount;
-  feeState.balance = newBalance;
-  const nowIso = new Date().toISOString();
-  const entry = {
-    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('fee-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
-    student_id: studentId,
-    amount,
-    balance_after: newBalance,
-    type,
-    reason,
-    created_at: nowIso,
-    date: nowIso
-  };
-
-  feeState.log.unshift(entry);
-  if (feeState.log.length > 100) feeState.log = feeState.log.slice(0, 100);
-  saveFeeState();
-  renderFeeWidget();
-
-  // Async sync to Supabase fee_logs table
-  if (isCloudEnabled && supabaseClient) {
-    supabaseClient.from('fee_logs').insert([{
-      id: entry.id,
-      student_id: entry.student_id,
-      amount: entry.amount,
-      balance_after: entry.balance_after,
-      type: entry.type,
-      reason: entry.reason,
-      created_at: entry.created_at
-    }]).then(({ error }) => {
-      if (error && error.code !== 'PGRST205') {
-        console.warn('Supabase fee_logs insert notice:', error.message);
-      }
-    }).catch(err => console.warn('Supabase fee_logs network notice:', err));
-  }
+let feeCloudReady = false;
+async function persistFee(entry, operation = 'insert') {
+  if (!isCloudEnabled || !supabaseClient) return true;
+  const payload = {...entry}; delete payload.date; delete payload.balance_after;
+  const total = FeeLedger.totals(feeState, entry.student_id);
+  payload.balance_after = total.balance;
+  try {
+    let query = supabaseClient.from('fee_logs');
+    if (operation === 'insert') query = query.insert([payload]);
+    else if (operation === 'update') query = query.update(payload).eq('id',entry.id).eq('student_id',entry.student_id);
+    else query = query.delete().eq('id',entry.id).eq('student_id',entry.student_id);
+    const {error} = await query;
+    if (error) throw error;
+    return true;
+  } catch(e) { feeCloudReady=false; toast('Không thể lưu học phí lên cloud: ' + e.message, 'error'); return false; }
 }
-
+function adjustFee(amount, reason, type = 'manual', studentId = feeStudentId(), dueDate = null) {
+  if (!feeWritable()) return false;
+  try {
+    const entry = FeeLedger.add(feeState,state.students,{student_id:studentId,amount,reason,type,due_date:dueDate});
+    saveFeeState(); renderFeeWidget();
+    persistFee(entry).then(ok => { if (!ok) { FeeLedger.remove(feeState,studentId,entry.id); saveFeeState(); renderFeeWidget(); } });
+    return true;
+  } catch(e) { toast(e.message,'error'); return false; }
+}
 function resetFeeBalance() {
-  const defaultNote = `Thanh toán học phí & reset về 1,000,000đ (Dư trước: ${formatVND(feeState.balance)})`;
-  const note = prompt('Ghi chú thanh toán / nhận tiền học phí (hoặc nhấn OK để dùng mặc định):', defaultNote);
-  if (note === null) return; // Người dùng nhấn Huỷ
-  const prevBal = feeState.balance;
-  feeState.balance = FEE_INITIAL;
-  const reason = note.trim() || defaultNote;
-  adjustFee(0, reason, 'payment');
-  toast('Đã ghi nhận thanh toán & đặt lại về 1,000,000đ!', 'success');
+  if (!feeWritable()) return;
+  const id=feeStudentId(), balance=feeTotals().balance;
+  const note=prompt('Ghi chú thanh toán & bắt đầu kỳ mới:', 'Thanh toán và học phí kỳ mới');
+  if(note === null) return;
+  if(balance) adjustFee(-balance,note.trim() || 'Thanh toán','payment',id);
+  adjustFee(FEE_INITIAL,'Học phí kỳ mới','charge',id);
 }
-
-function manualAdjustFee(sign) {
-  const input = document.getElementById('fee-manual-input');
-  const reasonInput = document.getElementById('fee-manual-reason');
-  if (!input) return;
-  const raw = parseFloat(input.value.replace(/[^0-9.]/g, ''));
-  if (!raw || raw <= 0) { toast('Nhập số tiền hợp lệ!', 'error'); return; }
-  const amount = sign * Math.round(raw);
-  const reason = (reasonInput && reasonInput.value.trim()) || (sign > 0 ? 'Cộng tay' : 'Trừ tay');
-  adjustFee(amount, reason, 'manual');
-  input.value = '';
-  if (reasonInput) reasonInput.value = '';
-  toast(`${sign > 0 ? '+' : ''}${formatVND(amount)} đã được ghi nhận`, sign > 0 ? 'success' : 'info');
+function manualAdjustFee(sign, type = 'manual') {
+  if (!feeWritable()) return;
+  const input=document.getElementById('fee-manual-input');
+  const raw=Number(input?.value);
+  if (!input?.value || !Number.isSafeInteger(raw) || raw<=0) { toast('Nhập số tiền nguyên dương hợp lệ.','error'); return; }
+  const reason=document.getElementById('fee-manual-reason').value.trim() || (type==='payment' ? 'Thanh toán' : 'Điều chỉnh');
+  adjustFee(sign*raw,reason,type,feeStudentId(),document.getElementById('fee-due-date').value || null);
+}
+async function editFeeRecord(id, remove = false) {
+  if (!feeWritable()) return;
+  const studentId=feeStudentId();
+  const entry=feeState.log.find(e=>e.id===id && e.student_id===studentId);
+  if(!entry) return;
+  const backup=JSON.parse(JSON.stringify(feeState));
+  try {
+    if(remove) { if(!confirm('Xóa giao dịch này?')) return; FeeLedger.remove(feeState,studentId,id); }
+    else {
+      const amount=prompt('Số tiền (+ thu phí / − thanh toán):',entry.amount); if(amount===null) return;
+      const reason=prompt('Ghi chú:',entry.reason); if(reason===null) return;
+      const due_date=prompt('Ngày đến hạn (YYYY-MM-DD), để trống nếu không có:',entry.due_date || ''); if(due_date===null) return;
+      FeeLedger.edit(feeState,state.students,studentId,id,{amount:Number(amount),reason,due_date:due_date || null});
+    }
+    if(!await persistFee(remove ? entry : feeState.log.find(e=>e.id===id),remove?'delete':'update')) feeState=backup;
+    saveFeeState(); renderFeeWidget();
+  } catch(e) { feeState=backup; toast(e.message,'error'); }
+}
+function resolveLegacyFees() {
+  if (!isTeacher() || !feeState.legacy || isCloudEnabled) return;
+  const id=feeStudentId();
+  if(!id || !confirm('Gán số dư đầu kỳ và giao dịch chưa có chủ sở hữu cho học sinh đang chọn?')) return;
+  feeState=FeeLedger.migrate(feeState.legacy,state.students,id); saveFeeState(); renderFeeWidget();
 }
 
 function formatVND(amount) {
@@ -425,17 +416,16 @@ function renderFeeWidget() {
   const isT = isTeacher();
   const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
 
-  const bal = feeState.balance;
+  const bal = feeTotals().balance;
   const tuitionBadge = document.getElementById('badge-nav-tuition');
   if (tuitionBadge) tuitionBadge.textContent = formatVND(bal);
 
   const balColor = bal >= 800000 ? 'var(--ok)' : bal >= 500000 ? 'var(--wait)' : 'var(--danger)';
   const balBg   = bal >= 800000 ? 'var(--ok-bg)' : bal >= 500000 ? 'var(--wait-bg)' : 'var(--danger-bg)';
 
-  // If student is logged in, show transactions relevant to them or general resets
-  const displayLogs = (!isT && currentStudentId)
-    ? feeState.log.filter(l => !l.student_id || l.student_id === currentStudentId)
-    : feeState.log;
+  const selectedId = feeStudentId();
+  const totals = feeTotals();
+  const displayLogs = feeState.log.filter(l => selectedId && l.student_id === selectedId);
 
   const PREVIEW_COUNT = 6;
   const totalLog = displayLogs.length;
@@ -470,6 +460,8 @@ function renderFeeWidget() {
         </div>
         <div class="fee-log-item-right">
           <span class="fee-log-amount" style="color:${col}">${sign}${entry.amount !== 0 ? formatVND(entry.amount) : '0đ'}</span>
+          <span class="fee-log-date">${entry.due_date ? 'Hạn: '+escHtml(entry.due_date) : 'Không có hạn'} · ${entry.amount < 0 ? 'Đã ghi nhận' : totals.balance <= 0 ? 'Đã thanh toán' : entry.due_date && entry.due_date < getVNDate() ? 'Quá hạn' : 'Chưa thanh toán'}</span>
+          ${isT ? `<button type="button" data-fee-edit="${escHtml(entry.id)}">Sửa</button><button type="button" data-fee-delete="${escHtml(entry.id)}">Xóa</button>` : ''}
           ${typeof entry.balance_after === 'number' ? `<span class="fee-log-bal-after">Số dư: ${formatVND(entry.balance_after)}</span>` : ''}
         </div>
       </div>`;
@@ -480,6 +472,10 @@ function renderFeeWidget() {
   const hasMore = totalLog > PREVIEW_COUNT;
 
   widget.innerHTML = `
+    ${isT ? `<label for="fee-student-select">Học sinh</label><select id="fee-student-select" class="select-input"><option value="">Chọn học sinh</option>${state.students.map(s=>`<option value="${escHtml(s.id)}" ${s.id===selectedId?'selected':''}>${escHtml(s.name)}</option>`).join('')}</select>` : ''}
+    ${isT && feeState.legacy ? `<p role="status">Dữ liệu học phí cũ chưa rõ chủ sở hữu. ${isCloudEnabled ? 'Chạy fee-migration.sql với mã học sinh đã xác nhận.' : '<button id="fee-resolve" type="button">Gán cho học sinh đang chọn</button>'}</p>` : ''}
+    ${!selectedId ? '<p>Chưa có học sinh. Thêm học sinh để ghi nhận học phí.</p>' : ''}
+    <dl class="fee-totals"><div><dt>Tổng phí</dt><dd>${formatVND(totals.due)}</dd></div><div><dt>Đã trả / giảm trừ</dt><dd>${formatVND(totals.paid)}</dd></div><div><dt>Còn lại</dt><dd>${formatVND(totals.balance)}</dd></div><div><dt>Quá hạn</dt><dd>${formatVND(totals.overdue)}</dd></div></dl>
     <div class="fee-widget-header">
       <span class="fee-widget-title">${UI_ICONS.wallet} Học phí & Quỹ học bổng</span>
       ${isT 
@@ -497,9 +493,9 @@ function renderFeeWidget() {
     </div>
     ${isT ? `
     <div class="fee-manual-wrap">
-      <input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Số tiền (đ)…" min="0" />
-      <input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Lý do cộng/trừ (không bắt buộc)" />
-      <div class="fee-manual-btns">
+      <label for="fee-manual-input">Số tiền</label><input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Số tiền (đ)…" min="0" />
+      <label for="fee-manual-reason">Ghi chú</label><input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Lý do cộng/trừ (không bắt buộc)" />
+      <label for="fee-due-date">Ngày đến hạn</label><input type="date" id="fee-due-date" /><div class="fee-manual-btns"><button type="button" id="btn-fee-pay">Ghi nhận thanh toán</button>
         <button class="fee-manual-btn fee-manual-add" id="btn-fee-add" type="button" title="Cộng tiền phạt / phát sinh">+ Cộng</button>
         <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Trừ tiền thưởng / thanh toán">− Trừ</button>
       </div>
@@ -514,6 +510,11 @@ function renderFeeWidget() {
   `;
 
   if (isT) {
+    document.getElementById('fee-student-select')?.addEventListener('change',e=>{selectedFeeStudentId=e.target.value;renderFeeWidget();updateRoleUI();});
+    document.getElementById('fee-resolve')?.addEventListener('click',resolveLegacyFees);
+    document.getElementById('btn-fee-pay')?.addEventListener('click',()=>manualAdjustFee(-1,'payment'));
+    widget.querySelectorAll('[data-fee-edit]').forEach(b=>b.addEventListener('click',()=>editFeeRecord(b.dataset.feeEdit)));
+    widget.querySelectorAll('[data-fee-delete]').forEach(b=>b.addEventListener('click',()=>editFeeRecord(b.dataset.feeDelete,true)));
     const resetBtn = document.getElementById('btn-fee-reset');
     if (resetBtn) resetBtn.addEventListener('click', resetFeeBalance);
     const addBtn = document.getElementById('btn-fee-add');
@@ -678,30 +679,22 @@ async function syncFromCloud() {
 
     // 4. Fetch Fee Logs from Supabase
     try {
-      const { data: dbFeeLogs, error: errFee } = await supabaseClient
-        .from('fee_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (!errFee && dbFeeLogs && dbFeeLogs.length > 0) {
-        feeState.log = dbFeeLogs.map(l => ({
-          id: l.id,
-          student_id: l.student_id,
-          amount: l.amount,
-          balance_after: l.balance_after,
-          type: l.type || 'manual',
-          reason: l.reason,
-          created_at: l.created_at,
-          date: l.created_at
-        }));
-        if (typeof dbFeeLogs[0].balance_after === 'number') {
-          feeState.balance = dbFeeLogs[0].balance_after;
-        }
-        saveFeeState();
-        renderFeeWidget();
-      } else if (errFee && errFee.code !== 'PGRST205') {
-        console.warn('Supabase fee_logs fetch notice:', errFee.message);
+      if (!isLoggedIn()) return;
+      const dbFeeLogs=[];
+      for(let offset=0;;offset+=1000) {
+        let pageQuery=supabaseClient.from('fee_logs').select('*').order('created_at',{ascending:false}).order('id');
+        if(!isTeacher()) pageQuery=pageQuery.eq('student_id',state.currentUser?.studentId || '00000000-0000-0000-0000-000000000000');
+        const {data,error}=await pageQuery.range(offset,offset+999);
+        if(error) throw error;
+        dbFeeLogs.push(...data); if(data.length<1000) break;
+      }
+      const {error: schemaError}=await supabaseClient.from('fee_logs').select('due_date').limit(1);
+      feeCloudReady=!schemaError && !dbFeeLogs.some(e=>!e.student_id);
+      if(!schemaError) {
+        // Cloud is authoritative; no stale local fee records survive deletion on another device.
+        feeState.log=dbFeeLogs.filter(e=>e.student_id);
+        if(feeCloudReady) delete feeState.legacy;
+        saveFeeState(); renderFeeWidget();
       }
     } catch (feeErr) {
       console.warn('Supabase fee_logs sync notice:', feeErr);
@@ -1022,7 +1015,7 @@ function updateRoleUI() {
 
   const badgeTuition = document.getElementById('badge-nav-tuition');
   if (badgeTuition) {
-    badgeTuition.textContent = formatVND(feeState.balance);
+    badgeTuition.textContent = formatVND(feeTotals().balance);
   }
 
   // Welcome banner
@@ -1108,6 +1101,7 @@ async function handleDoLogin() {
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
+      if (isCloudEnabled) syncFromCloud();
       toast('Đăng nhập thành công với vai trò Giáo viên!', 'success');
       setTimeout(() => {
         if (!isSyncing) {
@@ -1134,6 +1128,7 @@ async function handleDoLogin() {
       updateRoleUI();
       closeModal('modal-login');
       renderView(currentView);
+      if (isCloudEnabled) syncFromCloud();
       toast(`Xin chào ${student ? student.name : 'học sinh'}!`, 'success');
     }
   } catch (err) {
@@ -1620,8 +1615,8 @@ function renderDashMetrics() {
         <div class="metric-label">Top Streak</div>
       </div>
       <div class="metric-pill clickable" onclick="navigateTo('tuition')">
-        <div class="metric-val" style="color: ${feeState.balance >= 800000 ? 'var(--ok)' : 'var(--danger)'}; font-size: 15px;">
-          ${formatVND(feeState.balance)}
+        <div class="metric-val" style="color: ${feeTotals().balance >= 800000 ? 'var(--ok)' : 'var(--danger)'}; font-size: 15px;">
+          ${formatVND(feeTotals().balance)}
         </div>
         <div class="metric-label">Học phí & Quỹ →</div>
       </div>
@@ -3144,7 +3139,7 @@ async function approveTask(taskId, submissionDate) {
   const student = state.students.find(s => s.id === task.studentId);
   const studentName = student ? student.name : 'Học sinh';
 
-  if (!feeState.rewardedApprovals[rewardKey]) {
+  if (feeWritable() && !feeState.rewardedApprovals[rewardKey]) {
     feeState.rewardedApprovals[rewardKey] = new Date().toISOString();
     const subLabel = submissionDate ? ` (${submissionDate})` : '';
     adjustFee(FEE_PER_ASSIGNMENT, `${studentName} hoàn thành bài: ${task.title.slice(0, 24)}${subLabel}`, 'reward', task.studentId);
@@ -3155,12 +3150,12 @@ async function approveTask(taskId, submissionDate) {
   if (task.isRecurring) {
     const dateKey = submissionDate || todayKey();
     const dailyChargeKey = `${task.id}__${dateKey}`;
-    if (feeState.dailyCharged && feeState.dailyCharged[dailyChargeKey]) {
+    if (feeWritable() && feeState.dailyCharged && feeState.dailyCharged[dailyChargeKey]) {
       delete feeState.dailyCharged[dailyChargeKey];
       adjustFee(-FEE_LATE_DAILY, `Hoàn phí trễ hạn (thầy đã duyệt ${dateKey}): ${task.title.slice(0, 24)}`, 'refund', task.studentId);
     }
   } else {
-    if (feeState.lateCharged && feeState.lateCharged[task.id]) {
+    if (feeWritable() && feeState.lateCharged && feeState.lateCharged[task.id]) {
       delete feeState.lateCharged[task.id];
       adjustFee(-FEE_LATE_REGULAR, `Hoàn phí trễ hạn (thầy đã duyệt): ${task.title.slice(0, 24)}`, 'refund', task.studentId);
     }
@@ -3474,15 +3469,18 @@ function confirmDeleteStudent(id) {
       }
     }
 
+    if (isCloudEnabled && supabaseClient) {
+      const {error}=await supabaseClient.from('students').delete().eq('id',id);
+      if(error) { toast('Không thể xóa học sinh: '+error.message,'error'); return; }
+    }
+    FeeLedger.deleteStudent(feeState,id);
+    saveFeeState();
     state.students = state.students.filter(s => s.id !== id);
     state.tasks = state.tasks.filter(t => t.studentId !== id);
     if (state.currentUser && state.currentUser.studentId === id) {
       state.currentUser = null;
     }
 
-    if (isCloudEnabled && supabaseClient) {
-      await supabaseClient.from('students').delete().eq('id', id);
-    }
 
     saveState();
     renderView(currentView);
@@ -3788,7 +3786,7 @@ function seedDemoData() {
 // Only charges when an ACTIVE streak (>= 1 day) drops to 0.
 // Never repeatedly charges students who are already at streak 0.
 function checkStreakLosses() {
-  if (!isTeacher()) return;
+  if (!feeWritable()) return;
   if (isCloudEnabled && isSyncing) return; // Wait until cloud data is fully loaded
   if (!state.students || !state.students.length) return;
 
@@ -3815,7 +3813,7 @@ function checkStreakLosses() {
 // Charges +5,000đ ONCE for missed daily tasks of YESTERDAY (never penalizes current day in progress).
 // NEVER penalizes students who have already submitted and are awaiting teacher review.
 function checkLateFees() {
-  if (!isTeacher()) return;
+  if (!feeWritable()) return;
   if (isCloudEnabled && isSyncing) return; // Wait until cloud data is fully loaded
   if (!state.tasks || !state.tasks.length) return;
 

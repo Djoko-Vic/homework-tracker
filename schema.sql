@@ -44,8 +44,9 @@ CREATE TABLE IF NOT EXISTS public.submissions (
 -- 4. Create Fee / Tuition Logs Table (Lịch sử cộng, trừ và thanh toán học phí)
 CREATE TABLE IF NOT EXISTS public.fee_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID REFERENCES public.students(id) ON DELETE SET NULL,
+    student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
     amount INTEGER NOT NULL,            -- e.g. -2500 (thưởng nộp bài), +10000 (mất streak), +10000 (trễ bài thường), +5000 (trễ hằng ngày), hoặc số tiền thanh toán/điều chỉnh
+    due_date DATE,
     balance_after INTEGER NOT NULL,     -- Số dư sau giao dịch
     type TEXT NOT NULL DEFAULT 'manual', -- 'reward' | 'penalty_streak' | 'penalty_late' | 'payment' | 'reset' | 'manual'
     reason TEXT NOT NULL,               -- Chi tiết lý do giao dịch
