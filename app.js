@@ -14,7 +14,7 @@ const FEE_LATE_DAILY   = 5000;    // +5,000đ  if daily task has no submission t
 const TEACHER_PASSWORD = '2992006bot1';
 
 const AVATAR_COLORS = [
-  '#b4533a', '#3d6585', '#3f7a56', '#8a6a2f', '#6b5b8a', '#5a6e6a'
+  '#111111', '#444444', '#777777', '#AAAAAA', '#DDDDDD', '#F4561D'
 ];
 
 // ── SUPABASE CLIENT CONFIG ─────────────────────────────────
@@ -531,7 +531,7 @@ function renderFeeWidget() {
       const dateStr = !isNaN(d) ? d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '';
       const badge = TYPE_BADGES[entry.type] || TYPE_BADGES.manual;
 
-      return `<div class="fee-log-item">
+      return `<div class="fee-log-item ${entry.amount > 0 && entry.due_date && entry.due_date < getVNDate() && totals.overdue > 0 ? 'overdue' : ''}">
         <div class="fee-log-item-left">
           <div class="fee-log-meta">
             ${badge}
@@ -1090,11 +1090,11 @@ function updateRoleUI() {
   if (badgeStreak) {
     if (isT) {
       const maxStreak = Math.max(0, ...state.students.map(s => getStudentStreak(s.id).streak));
-      badgeStreak.textContent = `${maxStreak}🔥`;
+      badgeStreak.textContent = `${maxStreak}↑`;
     } else {
       const s = state.students.find(st => st.id === user.studentId);
       const streak = s ? getStudentStreak(s.id).streak : 0;
-      badgeStreak.textContent = `${streak}🔥`;
+      badgeStreak.textContent = `${streak}↑`;
     }
   }
 
@@ -1239,6 +1239,8 @@ function navigateTo(view) {
     return;
   }
   currentView = view;
+  document.body.dataset.view = view;
+  window.scrollTo?.({top:0,behavior:'instant'});
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const viewEl = document.getElementById(`view-${view}`);
   if (viewEl) viewEl.classList.add('active');
@@ -1254,7 +1256,8 @@ function navigateTo(view) {
       students: 'Quản lý học sinh',
       tasks: isTeacher() ? 'Danh sách bài tập' : 'Bài tập của tôi',
       streaks: 'Bảng xếp hạng Streak',
-      tuition: 'Học phí & Quỹ học bổng'
+      tuition: 'Học phí & Quỹ học bổng',
+      settings: 'Cài đặt'
     }[view] || 'HomeworkHub';
   }
 
@@ -1307,16 +1310,16 @@ function renderCmdResults(query) {
 
   // 1. Quick Actions
   const actions = [
-    { type: 'action', title: 'Tới Dashboard', desc: 'Xem tổng quan và bài nộp gần đây', icon: '📊', run: () => navigateTo('dashboard') },
-    { type: 'action', title: 'Tới Bài tập / Assignments', desc: 'Xem toàn bộ danh sách bài tập', icon: '📝', run: () => navigateTo('tasks') },
-    { type: 'action', title: 'Tới Streak Tracker', desc: 'Xem chuỗi học tập của học sinh', icon: '🔥', run: () => navigateTo('streaks') },
-    { type: 'action', title: 'Tới Quản lý Học phí', desc: 'Kiểm tra số dư và lịch sử giao dịch', icon: '💳', run: () => navigateTo('tuition') },
-    { type: 'action', title: 'Đổi tài khoản / Switch Role', desc: 'Chuyển đổi vai trò Giáo viên / Học sinh', icon: '🔄', run: () => openLoginDialog() },
+    { type: 'action', title: 'Tới Dashboard', desc: 'Xem tổng quan và bài nộp gần đây', icon: '▥', run: () => navigateTo('dashboard') },
+    { type: 'action', title: 'Tới Bài tập / Assignments', desc: 'Xem toàn bộ danh sách bài tập', icon: '≡', run: () => navigateTo('tasks') },
+    { type: 'action', title: 'Tới Streak Tracker', desc: 'Xem chuỗi học tập của học sinh', icon: '↑', run: () => navigateTo('streaks') },
+    { type: 'action', title: 'Tới Quản lý Học phí', desc: 'Kiểm tra số dư và lịch sử giao dịch', icon: '▭', run: () => navigateTo('tuition') },
+    { type: 'action', title: 'Đổi tài khoản / Switch Role', desc: 'Chuyển đổi vai trò Giáo viên / Học sinh', icon: '↔', run: () => openLoginDialog() },
   ];
   if (isT) {
     actions.unshift(
-      { type: 'action', title: '+ Thêm bài tập mới', desc: 'Giao bài tập cho học sinh', icon: '➕', run: () => openAddTask() },
-      { type: 'action', title: '+ Thêm học sinh mới', desc: 'Đăng ký hồ sơ học sinh mới', icon: '👤', run: () => openAddStudent() }
+      { type: 'action', title: '+ Thêm bài tập mới', desc: 'Giao bài tập cho học sinh', icon: '+', run: () => openAddTask() },
+      { type: 'action', title: '+ Thêm học sinh mới', desc: 'Đăng ký hồ sơ học sinh mới', icon: '○', run: () => openAddStudent() }
     );
   }
 
@@ -1336,7 +1339,7 @@ function renderCmdResults(query) {
           type: 'student',
           title: s.name,
           desc: `${s.grade || 'Học sinh'} • PIN: ${s.pin || '0000'}`,
-          icon: '🎓',
+          icon: '◇',
           run: () => {
             if (isT) {
               navigateTo('students');
@@ -1361,7 +1364,7 @@ function renderCmdResults(query) {
           type: 'task',
           title: t.title,
           desc: `${student ? student.name : 'Chưa giao'} • Trạng thái: ${t.status || 'pending'}`,
-          icon: t.status === 'approved' ? '✅' : '📌',
+          icon: t.status === 'approved' ? '✓' : '•',
           run: () => {
             navigateTo('tasks');
           }
@@ -1584,7 +1587,7 @@ function renderDashHero() {
   if (!urgentItems.length) {
     cardsContainer.innerHTML = `
       <div style="grid-column: 1 / -1; padding: 22px; text-align: center; color: var(--text-2); background: var(--bg); border-radius: var(--radius-sm); border: 1px dashed var(--border);">
-        <div style="font-size: 22px; margin-bottom: 6px;">🎉</div>
+        <div style="font-size: 22px; margin-bottom: 6px;">✓</div>
         <strong style="font-size: 13px; color: var(--text);">Tất cả bài tập đã được xử lý hoàn tất!</strong>
         <p style="font-size: 12px; color: var(--text-3); margin-top: 2px;">Không có bài nộp nào đang chờ duyệt hoặc bị trễ hạn.</p>
       </div>
@@ -1696,7 +1699,7 @@ function renderDashMetrics() {
         <div class="metric-label">Đã duyệt</div>
       </div>
       <div class="metric-pill clickable" onclick="navigateTo('streaks')">
-        <div class="metric-val" style="color: var(--accent);">${maxStreak} ngày 🔥</div>
+        <div class="metric-val" style="color: var(--accent);">${maxStreak} ngày ↑</div>
         <div class="metric-label">Top Streak</div>
       </div>
       <div class="metric-pill clickable" onclick="navigateTo('tuition')">
@@ -1715,7 +1718,7 @@ function renderDashMetrics() {
 
     container.innerHTML = `
       <div class="metric-pill clickable" onclick="navigateTo('streaks')">
-        <div class="metric-val" style="color: var(--accent);">${streak} ngày 🔥</div>
+        <div class="metric-val" style="color: var(--accent);">${streak} ngày ↑</div>
         <div class="metric-label">Chuỗi học tập</div>
       </div>
       <div class="metric-pill">
@@ -1935,7 +1938,7 @@ function renderDashDetail(taskId) {
     if (titleEl) titleEl.textContent = 'Chọn một bài tập';
     container.innerHTML = `
       <div class="detail-empty-state">
-        <div style="font-size: 28px;">📋</div>
+        <div style="font-size: 28px;">≡</div>
         <strong style="font-size: 13px; color: var(--text);">Chưa chọn bài tập</strong>
         <p style="font-size: 12px; color: var(--text-3); max-width: 220px;">
           Bấm vào bất kỳ bài tập nào ở danh sách bên trái để xem ảnh nộp, hướng dẫn và chấm điểm.
@@ -1996,7 +1999,7 @@ function renderDashDetail(taskId) {
         </div>
         <div class="detail-student-info" style="flex:1;">
           <strong>${student ? escHtml(student.name) : 'Chưa gán'}</strong>
-          <span>${student ? escHtml(student.grade || 'Học sinh') : ''} • Streak: ${streak} ngày 🔥</span>
+          <span>${student ? escHtml(student.grade || 'Học sinh') : ''} • Streak: ${streak} ngày ↑</span>
         </div>
         ${isT && student ? `
           <button class="btn btn-secondary btn-sm" onclick="navigateTo('students'); openStudentDetail('${student.id}');" type="button" style="font-size:11px; padding: 4px 8px;">
@@ -2536,7 +2539,7 @@ function renderTaskCard(task) {
             </div>
             <div class="task-card-meta">
               ${student ? `<span>Học sinh: <strong>${escHtml(student.name)}</strong></span>` : ''}
-              <span>Streak: <strong>${streak} ngày 🔥</strong></span>
+              <span>Streak: <strong>${streak} ngày ↑</strong></span>
               <span>Trạng thái: <strong>${todayStatus === 'approved' ? 'Đã duyệt hôm nay' : todayStatus === 'submitted' ? 'Chờ duyệt hôm nay' : 'Đang làm'}</strong></span>
             </div>
           </div>
@@ -2675,7 +2678,7 @@ function renderTaskCard(task) {
           <button class="btn-submit-homework" onclick="submitHomework('${task.id}')">${UI_ICONS.upload} Nộp bài cho thầy</button>
         </div>` : ''}
         ${!isT && status === 'submitted' ? `<div class="submitted-notice">${UI_ICONS.clock} Đã nộp bài — đang chờ thầy duyệt!</div>` : ''}
-        ${!isT && isApproved ? `<div class="approved-notice">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt 🎉</div>` : ''}
+        ${!isT && isApproved ? `<div class="approved-notice">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt ✓</div>` : ''}
       </div>
     </div>
   `;
@@ -2894,7 +2897,7 @@ function openStudentDetail(studentId) {
           </div>` : ''}
 
           ${!isT && status === 'submitted' ? `<div class="submitted-notice" style="margin-top:8px;">${UI_ICONS.clock} Đã nộp bài — đang chờ thầy duyệt!</div>` : ''}
-          ${!isT && isApproved ? `<div class="approved-notice" style="margin-top:8px;">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt 🎉</div>` : ''}
+          ${!isT && isApproved ? `<div class="approved-notice" style="margin-top:8px;">${UI_ICONS.check} Bài tập đã được duyệt! Rất tốt ✓</div>` : ''}
 
           ${isT && (status === 'submitted' || isPendingReview) ? `
           <div style="margin-top:8px">
@@ -3490,8 +3493,8 @@ function editStudent(id) {
 
 function renderColorPicker() {
   document.getElementById('color-picker').innerHTML = AVATAR_COLORS.map(c => `
-    <div class="color-swatch ${c === selectedColor ? 'selected' : ''}"
-      style="background:${c}" onclick="selectColor('${c}')"></div>
+    <button type="button" aria-label="Màu ${c}" aria-pressed="${c === selectedColor}" class="color-swatch ${c === selectedColor ? 'selected' : ''}"
+      style="background:${c}" onclick="selectColor('${c}')"></button>
   `).join('');
 }
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,8 +7,10 @@
   <meta name="description" content="Minimalist student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="editorial.css" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -55,17 +57,19 @@
         <button class="nav-item topnav-item" data-view="streaks" id="nav-streaks" type="button">
           <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
           <span>Streak Tracker</span>
-          <span class="nav-badge" id="badge-nav-streak">0🔥</span>
+          <span class="nav-badge" id="badge-nav-streak">0↑</span>
         </button>
         <button class="nav-item topnav-item" data-view="tuition" id="nav-tuition" type="button">
           <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
           <span>Học phí</span>
           <span class="nav-badge" id="badge-nav-tuition">0đ</span>
         </button>
+        <button class="nav-item topnav-item" data-view="settings" type="button">Cài đặt</button>
       </nav>
 
       <!-- Right Utilities -->
       <div class="topnav-right">
+        <button id="editorial-menu-toggle" type="button" aria-label="Mở menu" aria-expanded="false" aria-controls="editorial-menu"><span></span><span></span></button>
         <!-- Command Palette Trigger -->
         <button class="cmd-trigger" id="cmd-trigger-btn" type="button" aria-label="Open command palette (Ctrl+K)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -261,6 +265,12 @@
           </div>
         </section>
 
+        <section id="view-settings" class="view">
+          <div class="settings-panel"><h2>Cài đặt hiển thị</h2><p>Lựa chọn được lưu trên thiết bị này.</p>
+            <label class="setting-row"><input id="setting-motion" type="checkbox" /> Giảm chuyển động</label>
+            <label class="setting-row"><input id="setting-text" type="checkbox" /> Cỡ chữ lớn hơn</label>
+          </div>
+        </section>
       </div>
     </main>
 
@@ -536,10 +546,16 @@
     </div>
   </div>
 
+  <dialog id="editorial-menu" aria-label="Điều hướng">
+    <button type="button" id="editorial-menu-close" aria-label="Đóng menu">Đóng ×</button>
+    <nav aria-label="Menu"><button type="button" data-go="dashboard">Tổng quan</button><button type="button" data-go="tasks">Bài tập</button><button type="button" data-go="tuition">Học phí</button><button type="button" data-go="students" class="teacher-only">Học sinh</button><button type="button" data-go="streaks">Chuỗi học tập</button><button type="button" data-go="settings">Cài đặt</button></nav>
+  </dialog>
+  <button id="scroll-top" type="button" aria-label="Về đầu trang">↑</button>
   <!-- Toast Notifications -->
   <div id="toast-container" role="status" aria-live="polite"></div>
 
   <script src="fee-ledger.js"></script>
   <script src="app.js"></script>
+  <script src="editorial.js"></script>
 </body>
 </html>

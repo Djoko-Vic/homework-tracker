@@ -50,7 +50,7 @@
 html,
 body {
   height: 100%;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'IBM Plex Mono', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
   overflow: hidden;
@@ -168,7 +168,7 @@ body {
 }
 
 .brand-text {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 800;
   font-size: 17px;
   color: var(--text);
@@ -303,7 +303,7 @@ body {
   justify-content: center;
   font-weight: 800;
   font-size: 11px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   flex-shrink: 0;
 }
 
@@ -358,7 +358,7 @@ body {
 }
 
 #page-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -646,7 +646,7 @@ body {
 }
 
 .tuition-header-titles h2 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
@@ -885,7 +885,7 @@ body {
 }
 
 .hero-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -1068,7 +1068,7 @@ body {
 }
 
 .metric-val {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
@@ -1372,7 +1372,7 @@ body {
 }
 
 .detail-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
@@ -1558,7 +1558,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: transform var(--transition), background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'IBM Plex Mono', sans-serif;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1694,7 +1694,7 @@ body {
 }
 
 .view-header-titles h2 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
@@ -1788,7 +1788,7 @@ body {
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .student-info-main {
@@ -1894,7 +1894,7 @@ body {
 }
 
 .student-stat-val {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -2084,7 +2084,7 @@ body {
 }
 
 .streak-count {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 40px;
   font-weight: 800;
   color: var(--accent);
@@ -2115,7 +2115,7 @@ body {
 }
 
 .streak-mini-stat-val {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -2186,7 +2186,7 @@ body {
 }
 
 .role-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
@@ -2292,7 +2292,7 @@ body {
 }
 
 .modal-header h3 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -2410,7 +2410,7 @@ body {
   min-width: 48px;
   padding: 0 8px;
   height: 36px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
@@ -3023,7 +3023,7 @@ body {
 }
 
 .fee-widget-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11.5px;
   font-weight: 700;
   color: var(--text);
@@ -3043,7 +3043,7 @@ body {
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'IBM Plex Mono', sans-serif;
   transition: background-color var(--transition), color var(--transition);
   white-space: nowrap;
 }
@@ -3067,7 +3067,7 @@ body {
 }
 
 .fee-balance {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 21px;
   font-weight: 800;
   text-align: center;
@@ -3120,7 +3120,7 @@ body {
   color: var(--text-2);
   cursor: pointer;
   padding: 2px 8px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'IBM Plex Mono', sans-serif;
   transition: background-color var(--transition), border-color var(--transition), color var(--transition);
 }
 
@@ -3199,7 +3199,7 @@ body {
 }
 
 .fee-log-amount {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: 14px;
   white-space: nowrap;
@@ -3288,7 +3288,7 @@ body {
 }
 
 .fee-manual-input {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -3306,7 +3306,7 @@ body {
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'IBM Plex Mono', sans-serif;
   transition: background-color var(--transition), color var(--transition);
   display: inline-flex;
   align-items: center;
