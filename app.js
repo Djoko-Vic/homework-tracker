@@ -1588,8 +1588,8 @@ function renderDashHero() {
     cardsContainer.innerHTML = `
       <div style="grid-column: 1 / -1; padding: 22px; text-align: center; color: var(--text-2); background: var(--bg); border-radius: var(--radius-sm); border: 1px dashed var(--border);">
         <div style="font-size: 22px; margin-bottom: 6px;">✓</div>
-        <strong style="font-size: 13px; color: var(--text);">Tất cả bài tập đã được xử lý hoàn tất!</strong>
-        <p style="font-size: 12px; color: var(--text-3); margin-top: 2px;">Không có bài nộp nào đang chờ duyệt hoặc bị trễ hạn.</p>
+        <strong style="font-size: 15px; color: var(--text);">Tất cả bài tập đã được xử lý hoàn tất!</strong>
+        <p style="font-size: 14px; color: var(--text-3); margin-top: 2px;">Không có bài nộp nào đang chờ duyệt hoặc bị trễ hạn.</p>
       </div>
     `;
     return;
@@ -1632,7 +1632,7 @@ function renderDashHero() {
           </div>
         </div>
         <div class="action-card-foot">
-          <span style="font-size: 11px; color: var(--text-3);">${task.isRecurring ? 'Bài hằng ngày' : 'Bài thường'}</span>
+          <span style="font-size: 14px; color: var(--text-3);">${task.isRecurring ? 'Bài hằng ngày' : 'Bài thường'}</span>
           <button class="action-btn-pill" type="button">
             ${isT && (sub || file) ? 'Chấm bài →' : 'Xem chi tiết →'}
           </button>
@@ -1703,7 +1703,7 @@ function renderDashMetrics() {
         <div class="metric-label">Top Streak</div>
       </div>
       <div class="metric-pill clickable" onclick="navigateTo('tuition')">
-        <div class="metric-val" style="color: ${feeTotals().balance >= 800000 ? 'var(--ok)' : 'var(--danger)'}; font-size: 15px;">
+        <div class="metric-val" style="color: ${feeTotals().balance >= 800000 ? 'var(--ok)' : 'var(--danger)'}; font-size: 16px;">
           ${formatVND(feeTotals().balance)}
         </div>
         <div class="metric-label">Học phí & Quỹ →</div>
@@ -1939,8 +1939,8 @@ function renderDashDetail(taskId) {
     container.innerHTML = `
       <div class="detail-empty-state">
         <div style="font-size: 28px;">≡</div>
-        <strong style="font-size: 13px; color: var(--text);">Chưa chọn bài tập</strong>
-        <p style="font-size: 12px; color: var(--text-3); max-width: 220px;">
+        <strong style="font-size: 15px; color: var(--text);">Chưa chọn bài tập</strong>
+        <p style="font-size: 14px; color: var(--text-3); max-width: 220px;">
           Bấm vào bất kỳ bài tập nào ở danh sách bên trái để xem ảnh nộp, hướng dẫn và chấm điểm.
         </p>
       </div>
@@ -2002,7 +2002,7 @@ function renderDashDetail(taskId) {
           <span>${student ? escHtml(student.grade || 'Học sinh') : ''} • Streak: ${streak} ngày ↑</span>
         </div>
         ${isT && student ? `
-          <button class="btn btn-secondary btn-sm" onclick="navigateTo('students'); openStudentDetail('${student.id}');" type="button" style="font-size:11px; padding: 4px 8px;">
+          <button class="btn btn-secondary btn-sm" onclick="navigateTo('students'); openStudentDetail('${student.id}');" type="button" style="font-size:13px; padding: 4px 8px;">
             Hồ sơ →
           </button>
         ` : ''}
@@ -2013,13 +2013,13 @@ function renderDashDetail(taskId) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
       <div style="padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);">
         <div class="detail-section-label">Hạn nộp</div>
-        <strong style="font-size: 13px; color: ${overdue ? 'var(--danger)' : 'var(--text)'};">
+        <strong style="font-size: 14px; color: ${overdue ? 'var(--danger)' : 'var(--text)'};">
           ${isRecurring ? 'Hôm nay (hằng ngày)' : (task.dueDate ? formatDate(task.dueDate) : 'Không có')}
         </strong>
       </div>
       <div style="padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);">
         <div class="detail-section-label">Đã nộp</div>
-        <strong style="font-size: 13px; color: var(--text);">
+        <strong style="font-size: 14px; color: var(--text);">
           ${task.submissions ? task.submissions.length : 0} ảnh • ${submittedFiles.length} tệp
         </strong>
       </div>
@@ -2052,14 +2052,14 @@ function renderDashDetail(taskId) {
     <div>
       <div class="detail-photos-header">
         <span class="detail-section-label">Ảnh bài nộp (${task.submissions ? task.submissions.length : 0})</span>
-        ${hasPhotos ? `<span style="font-size: 11px; color: var(--text-3);">Bấm vào ảnh để phóng to</span>` : ''}
+        ${hasPhotos ? `<span style="font-size: 14px; color: var(--text-3);">Bấm vào ảnh để phóng to</span>` : ''}
       </div>
       ${hasPhotos ? `
         <div class="detail-gallery">
           ${photosHtml}
         </div>
       ` : `
-        <div style="padding: 14px 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 12px;">
+        <div style="padding: 14px 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 14px;">
           Chưa có ảnh nào được tải lên cho bài tập này.
         </div>
       `}
@@ -2080,18 +2080,18 @@ function renderDashDetail(taskId) {
                 <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
               </div>
               <div style="display:flex; align-items:center; gap:6px;">
-                <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+                <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:13px; padding:3px 8px;">
                   ${UI_ICONS.download} Tải về
                 </a>
                 ${!isT && !isApproved ? `
-                  <button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${idx})" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp này">✕</button>
+                  <button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${idx})" style="color:var(--danger); font-size:13px; padding:3px 6px;" title="Xóa tệp này">✕</button>
                 ` : ''}
               </div>
             </div>
           `).join('')}
         </div>
       ` : `
-        <div style="padding: 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 12px;">
+        <div style="padding: 12px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-3); font-size: 14px;">
           Chưa có tệp tài liệu nào được nộp.
         </div>
       `}
@@ -2126,7 +2126,7 @@ function renderDashDetail(taskId) {
             </button>
           ` : ''}
         ` : `
-          <div style="padding: 10px; background: var(--ok-bg); color: var(--ok); border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; text-align: center;">
+          <div style="padding: 10px; background: var(--ok-bg); color: var(--ok); border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; text-align: center;">
             ${UI_ICONS.check} Bài tập này đã được thầy giáo chấm điểm và duyệt!
           </div>
         `}
@@ -2446,7 +2446,7 @@ function renderRecurringDayCard(task, group, studentName, isModal = false) {
         ondragleave="handleDragLeave(event,'${task.id}-${dateKey}')"
         ondrop="handleDrop(event,'${task.id}')">
         <div>${UI_ICONS.camera} Chụp ảnh hoặc tải tệp bài làm hôm nay</div>
-        <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${(subs.length > 0 || dayFiles.length > 0) ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
+        <div style="font-size:14px;margin-top:4px;color:var(--text-3)">${(subs.length > 0 || dayFiles.length > 0) ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
         <input type="file" id="${uploadId}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none" onchange="handleFileUpload(event, '${task.id}'); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}" />
       </div>` : ''}
 
@@ -2470,10 +2470,10 @@ function renderRecurringDayCard(task, group, studentName, isModal = false) {
               <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+              <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:13px; padding:3px 8px;">
                 ${UI_ICONS.download} Tải về
               </a>
-              ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${(task.submittedFiles || []).indexOf(sf)}); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp">✕</button>` : ''}
+              ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${(task.submittedFiles || []).indexOf(sf)}); ${isModal ? `refreshStudentDetail('${task.studentId}');` : ''}" style="color:var(--danger); font-size:13px; padding:3px 6px;" title="Xóa tệp">✕</button>` : ''}
             </div>
           </div>
         `).join('')}
@@ -2554,7 +2554,7 @@ function renderTaskCard(task) {
 
           ${taskAttachments.length > 0 ? `
             <div style="margin: 8px 0 12px 0;">
-              <div style="font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:5px;">Tệp đính kèm bài tập (${taskAttachments.length}):</div>
+              <div style="font-size:13px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:5px;">Tệp đính kèm bài tập (${taskAttachments.length}):</div>
               <div style="display:flex; flex-wrap:wrap; gap:6px;">
                 ${taskAttachments.map(att => `
                   <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
@@ -2615,7 +2615,7 @@ function renderTaskCard(task) {
 
         ${taskAttachments.length > 0 ? `
           <div style="margin: 8px 0 12px 0;">
-            <div style="font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:5px;">Tệp đính kèm bài tập (${taskAttachments.length}):</div>
+            <div style="font-size:13px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:5px;">Tệp đính kèm bài tập (${taskAttachments.length}):</div>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
               ${taskAttachments.map(att => `
                 <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
@@ -2639,7 +2639,7 @@ function renderTaskCard(task) {
           ondragleave="handleDragLeave(event,'${task.id}')"
           ondrop="handleDrop(event,'${task.id}')">
           <div>${UI_ICONS.camera} Chụp ảnh hoặc tải tệp bài làm của bạn</div>
-          <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${hasAnySub ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
+          <div style="font-size:14px;margin-top:4px;color:var(--text-3)">${hasAnySub ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
           <input type="file" id="file-input-${task.id}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none" onchange="handleFileUpload(event, '${task.id}');" />
         </div>` : ''}
 
@@ -2663,10 +2663,10 @@ function renderTaskCard(task) {
                 <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
               </div>
               <div style="display:flex; align-items:center; gap:6px;">
-                <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+                <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:13px; padding:3px 8px;">
                   ${UI_ICONS.download} Tải về
                 </a>
-                ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${fIdx})" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp này">✕</button>` : ''}
+                ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${fIdx})" style="color:var(--danger); font-size:13px; padding:3px 6px;" title="Xóa tệp này">✕</button>` : ''}
               </div>
             </div>
           `).join('')}
@@ -2743,7 +2743,7 @@ function renderStreaks() {
         </div>
 
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;">30 ngày gần nhất</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-3);text-transform:uppercase;">30 ngày gần nhất</div>
           <div class="calendar-grid">${calHtml}</div>
         </div>
       </div>
@@ -2764,7 +2764,7 @@ function openStudentDetail(studentId) {
     <div class="student-avatar" style="background:${student.color}">${initials(student.name)}</div>
     <div>
       <strong>${escHtml(student.name)}</strong>
-      <div style="color:var(--text-2);font-size:12px;display:flex;align-items:center;gap:4px;margin-top:2px;">
+      <div style="color:var(--text-2);font-size:14px;display:flex;align-items:center;gap:4px;margin-top:2px;">
         ${escHtml(student.grade || '')} • <span style="display:inline-flex;align-items:center;gap:3px;color:var(--accent);font-weight:700;">${UI_ICONS.fire} ${streak} Day Streak</span>
       </div>
     </div>
@@ -2787,11 +2787,11 @@ function openStudentDetail(studentId) {
             <div class="student-task-item-header">
               <div class="student-task-item-title"><span class="badge-recurring">${UI_ICONS.repeat} Hằng ngày</span> ${escHtml(task.title)}</div>
             </div>
-            ${task.description ? `<div style="font-size:11px;color:var(--text-2);margin-bottom:6px">${escHtml(task.description)}</div>` : ''}
+            ${task.description ? `<div style="font-size:14px;color:var(--text-2);margin-bottom:6px">${escHtml(task.description)}</div>` : ''}
 
             ${taskAttachments.length > 0 ? `
               <div style="margin: 6px 0 10px 0;">
-                <div style="font-size:10px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:4px;">Tệp đính kèm (${taskAttachments.length}):</div>
+                <div style="font-size:13px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:4px;">Tệp đính kèm (${taskAttachments.length}):</div>
                 <div style="display:flex; flex-wrap:wrap; gap:6px;">
                   ${taskAttachments.map(att => `
                     <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
@@ -2827,7 +2827,7 @@ function openStudentDetail(studentId) {
             <div class="student-task-item-title">${escHtml(task.title)}</div>
             ${getStatusLabel(task)}
           </div>
-          <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">
+          <div style="font-size:14px;color:var(--text-2);margin-bottom:8px">
             ${task.description ? `<div>${escHtml(task.description)}</div>` : ''}
             ${task.dueDate ? `<div>Hạn nộp: ${formatDate(task.dueDate)}</div>` : ''}
             <div>Đã nộp: <strong>${subs.length} ảnh • ${subFiles.length} tệp</strong></div>
@@ -2835,7 +2835,7 @@ function openStudentDetail(studentId) {
 
           ${taskAttachments.length > 0 ? `
             <div style="margin: 6px 0 10px 0;">
-              <div style="font-size:10px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:4px;">Tệp đính kèm (${taskAttachments.length}):</div>
+              <div style="font-size:13px; font-weight:700; color:var(--text-3); text-transform:uppercase; margin-bottom:4px;">Tệp đính kèm (${taskAttachments.length}):</div>
               <div style="display:flex; flex-wrap:wrap; gap:6px;">
                 ${taskAttachments.map(att => `
                   <a class="attachment-chip" href="${att.path_or_url}" target="_blank" download="${escHtml(att.name)}" title="${escHtml(att.name)}">
@@ -2856,7 +2856,7 @@ function openStudentDetail(studentId) {
             ondragleave="handleDragLeave(event,'modal-${task.id}')"
             ondrop="handleDrop(event,'${task.id}')">
             <div>${UI_ICONS.camera} Click để upload ảnh hoặc tệp bài làm</div>
-            <div style="font-size:11px;margin-top:4px;color:var(--text-3)">${hasAnySub ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
+            <div style="font-size:14px;margin-top:4px;color:var(--text-3)">${hasAnySub ? 'Thêm ảnh/tệp hoặc bấm nộp bài bên dưới' : 'Click hoặc kéo thả ảnh/tệp vào đây'}</div>
             <input type="file" id="modal-fi-${task.id}" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" multiple style="display:none"
               onchange="handleFileUpload(event,'${task.id}');refreshStudentDetail('${studentId}')" />
           </div>` : ''}
@@ -2881,10 +2881,10 @@ function openStudentDetail(studentId) {
                   <span class="submitted-file-size">(${formatFileSize(sf.size)})</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px;">
-                  <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:11px; padding:3px 8px;">
+                  <a class="btn btn-secondary btn-sm" href="${sf.path_or_url}" target="_blank" download="${escHtml(sf.name)}" style="font-size:13px; padding:3px 8px;">
                     ${UI_ICONS.download} Tải về
                   </a>
-                  ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${fIdx});refreshStudentDetail('${studentId}')" style="color:var(--danger); font-size:11px; padding:3px 6px;" title="Xóa tệp này">✕</button>` : ''}
+                  ${canUpload ? `<button class="btn btn-ghost btn-sm" onclick="removeSubmittedFile(event, '${task.id}', ${fIdx});refreshStudentDetail('${studentId}')" style="color:var(--danger); font-size:13px; padding:3px 6px;" title="Xóa tệp này">✕</button>` : ''}
                 </div>
               </div>
             `).join('')}

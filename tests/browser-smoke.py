@@ -22,7 +22,7 @@ def js(script):
 call('WebDriver:NewSession',{'capabilities':{'alwaysMatch':{'acceptInsecureCerts':True}}})
 call('WebDriver:Navigate',{'url':'http://127.0.0.1:8765'})
 time.sleep(2)
-print(js('return {title:document.title,art:document.querySelectorAll(".study-art").length,settings:!!document.getElementById("view-settings"),login:document.getElementById("modal-login").className};'))
+print(js('return {title:document.title,art:document.querySelectorAll(".monoline-art").length,settings:!!document.getElementById("view-settings"),login:document.getElementById("modal-login").className};'))
 # Avoid all live cloud writes: replace client and populate temporary browser state.
 js("isCloudEnabled=false;supabaseClient=null;state.students=[{id:'a',name:'An',grade:'English',pin:'0000'},{id:'b',name:'Bình',grade:'English',pin:'0000'}];state.tasks=[];feeState=FeeLedger.empty();state.currentUser={role:'teacher'};closeModal('modal-login');navigateTo('dashboard');")
 for width,height in [(1440,1000),(375,850)]:
@@ -31,7 +31,7 @@ for width,height in [(1440,1000),(375,850)]:
   js(f"navigateTo('{view}');")
   time.sleep(.3)
   if view=='dashboard': print('overflow',js('return [...document.querySelectorAll(".view.active *")].filter(e=>e.getBoundingClientRect().right>innerWidth+5).slice(0,12).map(e=>[e.className,e.getBoundingClientRect().width]);'))
-  print(width,view,js('return {width:innerWidth,scroll:document.documentElement.scrollWidth,hero:getComputedStyle(document.querySelector(".view.active")).backgroundColor,heading:document.querySelector(".view.active h2").innerText};'))
+  print(width,view,js('return {width:innerWidth,scroll:document.documentElement.scrollWidth,hero:getComputedStyle(document.querySelector(".view.active")).backgroundColor,heading:document.querySelector(".view.active h1, .view.active h2")?.innerText};'))
   data=call('WebDriver:TakeScreenshot',{'full':False})
   with open(f'/tmp/homework-{view}-{width}.png','wb') as f:f.write(base64.b64decode(data['value']))
 js("navigateTo('tuition');selectedFeeStudentId='a';adjustFee(100000,'An charge');selectedFeeStudentId='b';adjustFee(200000,'Binh charge');renderFeeWidget();")

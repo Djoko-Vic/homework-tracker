@@ -77,6 +77,10 @@
           <kbd>Ctrl+K</kbd>
         </button>
 
+        <!-- Date display -->
+        <span class="topnav-date" id="sidebar-date"></span>
+        <span id="page-title" class="sr-only">Dashboard</span>
+
         <!-- Primary Add Action -->
         <button class="btn btn-primary btn-sm teacher-only" id="btn-add-primary" type="button">
           + Thêm mới
@@ -94,93 +98,71 @@
       </div>
     </header>
 
-    <!-- ── 2. CONTEXT NAV / BREADCRUMB STRIP ── -->
-    <div id="contextnav" class="contextnav">
-      <div class="contextnav-left">
-        <h1 id="page-title">Dashboard</h1>
-      </div>
-      <div class="contextnav-right">
-        <span class="contextnav-date" id="sidebar-date"></span>
-      </div>
-    </div>
-
     <!-- MAIN CONTENT -->
     <main id="main">
 
       <!-- ===== VIEWS ===== -->
       <div id="view-container">
 
-        <!-- DASHBOARD VIEW (Two-Column Master-Detail Layout) -->
+        <!-- DASHBOARD VIEW -->
         <section id="view-dashboard" class="view active">
+          <div class="dash-top-banner">
+            <div class="dash-top-copy">
+              <span class="hero-eyebrow">TỔNG QUAN HỌC TẬP</span>
+              <h1 class="dash-top-heading">MỖI NGÀY, MỘT BƯỚC TIẾN.</h1>
+              <p class="dash-top-desc">Theo dõi bài tập, chấm điểm trực quan và duy trì chuỗi học tập liên tục.</p>
+              <div class="dash-top-actions">
+                <button class="btn btn-outline teacher-only" onclick="openAddTask()" type="button">+ Giao bài mới</button>
+                <button class="btn btn-outline" onclick="navigateTo('tasks')" type="button">Xem bài tập →</button>
+              </div>
+            </div>
+            <div class="dash-top-art" id="art-dashboard"></div>
+          </div>
+
           <div class="dashboard-split" id="dashboard-split">
-            
-            <!-- MASTER COLUMN (Left, flex: 1) -->
-            <div class="dashboard-master" id="dashboard-master">
-              
-              <!-- Priority Section Header / Hero Action Queue -->
-              <div class="master-hero-section">
-                <div class="master-hero-header">
-                  <div class="hero-title-group">
-                    <span class="hero-eyebrow">Hành động cần làm ngay</span>
-                    <h2 class="hero-title" id="dash-hero-title">Bài tập cần chấm điểm & Nhiệm vụ hôm nay</h2>
-                  </div>
-                  <div class="hero-count-badge" id="dash-urgent-badge">0 mục cần xử lý</div>
+            <!-- 1. Left Card: Urgent Action Queue + Metrics -->
+            <div class="dash-card dash-card-actions">
+              <div class="dash-card-header">
+                <div>
+                  <span class="hero-eyebrow">Hành động cần làm ngay</span>
+                  <h2 class="card-title" id="dash-hero-title">Bài tập cần chấm điểm & Hạn chót</h2>
                 </div>
-                <!-- Action Cards Carousel / Grid -->
-                <div class="hero-action-cards" id="dash-action-cards">
-                  <!-- Rendered dynamically: urgent items -->
-                </div>
+                <div class="hero-count-badge" id="dash-urgent-badge">0 mục cần xử lý</div>
               </div>
-
-              <!-- Supporting Compact Metrics Strip -->
-              <div class="dash-metrics-strip" id="dash-metrics-strip">
-                <!-- Rendered dynamically: students, tasks, waiting, approved, streak, tuition -->
-              </div>
-
-              <!-- Master Task List & Quick Filters -->
-              <div class="master-list-card">
-                <div class="master-list-header">
-                  <div class="master-filter-tabs" id="dash-filter-tabs">
-                    <button class="filter-tab active" data-filter="all" type="button">
-                      Tất cả <span class="tab-count" id="dash-count-all">0</span>
-                    </button>
-                    <button class="filter-tab" data-filter="pending-review" type="button">
-                      Chờ duyệt <span class="tab-count" id="dash-count-pending">0</span>
-                    </button>
-                    <button class="filter-tab" data-filter="pending" type="button">
-                      Đang làm <span class="tab-count" id="dash-count-todo">0</span>
-                    </button>
-                    <button class="filter-tab" data-filter="approved" type="button">
-                      Đã duyệt <span class="tab-count" id="dash-count-approved">0</span>
-                    </button>
-                    <button class="filter-tab" data-filter="overdue" type="button">
-                      Trễ hạn <span class="tab-count" id="dash-count-overdue">0</span>
-                    </button>
-                  </div>
-                  <div class="master-search-wrap">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="dash-quick-search" placeholder="Tìm theo tên bài hoặc học sinh…" autocomplete="off" spellcheck="false" />
-                  </div>
-                </div>
-
-                <!-- Table Header -->
-                <div class="master-table-head">
-                  <span class="col-title">Bài tập</span>
-                  <span class="col-student">Học sinh</span>
-                  <span class="col-due">Hạn nộp</span>
-                  <span class="col-status">Trạng thái</span>
-                </div>
-
-                <!-- Table Body / Rows -->
-                <div class="master-table-body" id="dash-table-body">
-                  <!-- Rendered dynamically -->
-                </div>
-              </div>
-
+              <div class="hero-action-cards" id="dash-action-cards"></div>
+              <div class="dash-metrics-strip" id="dash-metrics-strip"></div>
             </div>
 
-            <!-- DETAIL COLUMN (Right, 390px persistent panel) -->
-            <aside class="dashboard-detail" id="dashboard-detail">
+            <!-- 2. Middle Card: Master Task List -->
+            <div class="dash-card dash-card-tasks">
+              <div class="dash-card-header">
+                <div>
+                  <span class="hero-eyebrow">Danh sách bài tập</span>
+                  <h2 class="card-title">Bài tập gần đây</h2>
+                </div>
+                <div class="master-search-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" id="dash-quick-search" placeholder="Tìm theo tên bài hoặc học sinh…" autocomplete="off" spellcheck="false" />
+                </div>
+              </div>
+              <div class="master-filter-tabs" id="dash-filter-tabs">
+                <button class="filter-tab active" data-filter="all" type="button">Tất cả <span class="tab-count" id="dash-count-all">0</span></button>
+                <button class="filter-tab" data-filter="pending-review" type="button">Chờ duyệt <span class="tab-count" id="dash-count-pending">0</span></button>
+                <button class="filter-tab" data-filter="pending" type="button">Đang làm <span class="tab-count" id="dash-count-todo">0</span></button>
+                <button class="filter-tab" data-filter="approved" type="button">Đã duyệt <span class="tab-count" id="dash-count-approved">0</span></button>
+                <button class="filter-tab" data-filter="overdue" type="button">Trễ hạn <span class="tab-count" id="dash-count-overdue">0</span></button>
+              </div>
+              <div class="master-table-head">
+                <span class="col-title">Bài tập</span>
+                <span class="col-student">Học sinh</span>
+                <span class="col-due">Hạn nộp</span>
+                <span class="col-status">Trạng thái</span>
+              </div>
+              <div class="master-table-body" id="dash-table-body"></div>
+            </div>
+
+            <!-- 3. Right Card: Detail Column -->
+            <aside class="dashboard-detail dash-card dash-card-detail" id="dashboard-detail">
               <div class="detail-header">
                 <div class="detail-title-group">
                   <span class="detail-eyebrow" id="detail-eyebrow">Chi tiết & Thao tác</span>
@@ -188,51 +170,56 @@
                 </div>
                 <button class="detail-close-btn" id="btn-close-detail" type="button" aria-label="Đóng chi tiết">✕</button>
               </div>
-              <div class="detail-body" id="dash-detail-body">
-                <!-- Rendered dynamically when task clicked -->
-              </div>
+              <div class="detail-body" id="dash-detail-body"></div>
             </aside>
-
           </div>
         </section>
 
         <!-- STUDENTS VIEW (TEACHER ONLY) -->
         <section id="view-students" class="view">
-          <div class="view-header-strip">
-            <div class="view-header-titles">
-              <h2>Quản lý học sinh</h2>
-              <p>Danh sách học sinh, mã PIN đăng nhập, chuỗi streak và tiến độ nộp bài.</p>
-            </div>
-            <div class="student-toolbar">
-              <div class="search-box-pill">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="student-search" placeholder="Tìm theo tên học sinh hoặc cấp độ…" autocomplete="off" spellcheck="false" />
+          <div class="page-top-banner">
+            <div class="page-top-copy">
+              <span class="hero-eyebrow">QUẢN LÝ LỚP HỌC</span>
+              <h1 class="page-heading">HỌC SINH</h1>
+              <p class="page-desc">Danh sách học sinh, mã PIN đăng nhập, chuỗi streak và tiến độ nộp bài.</p>
+              <div class="student-toolbar">
+                <div class="search-box-pill">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" id="student-search" placeholder="Tìm theo tên học sinh…" autocomplete="off" spellcheck="false" />
+                </div>
+                <button class="btn btn-outline" id="btn-add-student" type="button">+ Thêm học sinh</button>
               </div>
-              <button class="btn btn-primary" id="btn-add-student" type="button">+ Thêm học sinh</button>
             </div>
+            <div class="page-top-art" id="art-students"></div>
           </div>
-          <div class="student-grid" id="student-grid"></div>
+          <div class="page-scroll-card">
+            <div class="student-grid" id="student-grid"></div>
+          </div>
         </section>
 
         <!-- TASKS VIEW -->
         <section id="view-tasks" class="view">
-          <div class="view-header-strip">
-            <div class="view-header-titles">
-              <h2 id="tasks-view-title">Danh sách bài tập</h2>
-              <p id="tasks-view-desc">Quản lý và theo dõi bài tập hằng ngày và bài tập định kỳ.</p>
-            </div>
-            <div class="tasks-toolbar">
-              <select id="task-filter-student" class="select-input teacher-only" aria-label="Filter assignments by student">
-                <option value="all">Tất cả học sinh</option>
-              </select>
-              <select id="task-filter-status" class="select-input" aria-label="Filter assignments by status">
-                <option value="all">Tất cả trạng thái</option>
-                <option value="pending">Đang làm</option>
-                <option value="submitted">Chờ duyệt</option>
-                <option value="approved">Đã duyệt</option>
-                <option value="overdue">Trễ hạn</option>
-              </select>
-              <button class="btn btn-primary teacher-only" id="btn-add-task" type="button">+ Giao bài tập mới</button>
+          <div class="tasks-sticky-header">
+            <div class="page-top-banner">
+              <div class="page-top-copy">
+                <span class="hero-eyebrow">NHIỆM VỤ & CHẤM ĐIỂM</span>
+                <h1 class="page-heading" id="tasks-view-title">DANH SÁCH BÀI TẬP</h1>
+                <p class="page-desc" id="tasks-view-desc">Quản lý và theo dõi bài tập hằng ngày và bài tập định kỳ.</p>
+                <div class="tasks-toolbar">
+                  <select id="task-filter-student" class="select-input teacher-only" aria-label="Filter assignments by student">
+                    <option value="all">Tất cả học sinh</option>
+                  </select>
+                  <select id="task-filter-status" class="select-input" aria-label="Filter assignments by status">
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="pending">Đang làm</option>
+                    <option value="submitted">Chờ duyệt</option>
+                    <option value="approved">Đã duyệt</option>
+                    <option value="overdue">Trễ hạn</option>
+                  </select>
+                  <button class="btn btn-outline teacher-only" id="btn-add-task" type="button">+ Giao bài tập mới</button>
+                </div>
+              </div>
+              <div class="page-top-art" id="art-tasks"></div>
             </div>
           </div>
           <div class="tasks-list" id="tasks-list"></div>
@@ -240,37 +227,62 @@
 
         <!-- STREAKS VIEW -->
         <section id="view-streaks" class="view">
-          <div class="view-header-strip">
-            <div class="view-header-titles">
-              <h2>Bảng xếp hạng chuỗi học tập (Streak Leaderboard)</h2>
-              <p>Thống kê chuỗi ngày làm bài liên tục và biểu đồ hoạt động 30 ngày gần nhất.</p>
+          <div class="page-top-banner">
+            <div class="page-top-copy">
+              <span class="hero-eyebrow">BỀN BỈ THÀNH THÓI QUEN</span>
+              <h1 class="page-heading">BẢNG XẾP HẠNG STREAK</h1>
+              <p class="page-desc">Thống kê chuỗi ngày làm bài liên tục và hoạt động 30 ngày gần nhất.</p>
             </div>
+            <div class="page-top-art" id="art-streaks"></div>
           </div>
-          <div class="streaks-grid" id="streaks-grid"></div>
+          <div class="page-scroll-card">
+            <div class="streaks-grid" id="streaks-grid"></div>
+          </div>
         </section>
 
         <!-- TUITION & SCHOLARSHIP VIEW -->
         <section id="view-tuition" class="view">
-          <div class="tuition-page-shell">
-            <div class="tuition-page-header">
-              <div class="tuition-header-titles">
-                <h2>Học phí & Quỹ học bổng</h2>
-                <p>Theo dõi số dư học phí, lịch sử thưởng / phạt nộp bài và quản lý giao dịch học phí.</p>
-              </div>
+          <div class="page-top-banner">
+            <div class="page-top-copy">
+              <span class="hero-eyebrow">MINH BẠCH & RÕ RÀNG</span>
+              <h1 class="page-heading">HỌC PHÍ & HỌC BỔNG</h1>
+              <p class="page-desc">Theo dõi số dư học phí, lịch sử thưởng / phạt nộp bài và quản lý giao dịch học phí.</p>
             </div>
-            <!-- Fee Tracker Widget Container -->
-            <div class="fee-widget fee-widget-page" id="fee-widget">
-              <!-- Rendered by renderFeeWidget() in app.js -->
-            </div>
+            <div class="page-top-art" id="art-tuition"></div>
+          </div>
+          <div class="page-scroll-card fee-page-scroll">
+            <div class="fee-widget fee-widget-page" id="fee-widget"></div>
           </div>
         </section>
 
+        <!-- SETTINGS VIEW -->
         <section id="view-settings" class="view">
-          <div class="settings-panel"><h2>Cài đặt hiển thị</h2><p>Lựa chọn được lưu trên thiết bị này.</p>
-            <label class="setting-row"><input id="setting-motion" type="checkbox" /> Giảm chuyển động</label>
-            <label class="setting-row"><input id="setting-text" type="checkbox" /> Cỡ chữ lớn hơn</label>
+          <div class="page-top-banner">
+            <div class="page-top-copy">
+              <span class="hero-eyebrow">TÙY CHỌN KHÔNG GIAN</span>
+              <h1 class="page-heading">CÀI ĐẶT</h1>
+              <p class="page-desc">Lựa chọn hiển thị và kết nối đồng bộ đám mây.</p>
+            </div>
+            <div class="page-top-art" id="art-settings"></div>
+          </div>
+          <div class="page-scroll-card settings-scroll-card">
+            <div class="settings-panel">
+              <h2>Cài đặt hiển thị</h2>
+              <p>Lựa chọn được lưu trên thiết bị này.</p>
+              <div class="settings-options">
+                <label class="setting-row"><input id="setting-motion" type="checkbox" /> Giảm chuyển động</label>
+                <label class="setting-row"><input id="setting-text" type="checkbox" /> Cỡ chữ lớn hơn</label>
+              </div>
+              <div class="settings-cloud-box">
+                <h3>Đồng bộ đám mây Supabase</h3>
+                <p>Kết nối Supabase Project URL và Anon Key để đồng bộ dữ liệu thời gian thực.</p>
+                <button class="btn btn-outline" id="btn-open-supabase" type="button" onclick="openModal('modal-supabase-config')">Cấu hình kết nối Supabase</button>
+              </div>
+            </div>
           </div>
         </section>
+      </div>
+    </main>
       </div>
     </main>
 
