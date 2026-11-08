@@ -27,3 +27,33 @@ test('cloud writes are blocked until migration/schema is ready',()=>{
  const run=app();run('isCloudEnabled=true');
  assert.equal(run("adjustFee(100,'blocked')"),false);assert.equal(run('feeState.log.length'),0);
 });
+test('automatic event keys deduplicate transactions and hydrate cloud markers',()=>{
+ const run=app();
+ run("adjustFee(100,'late','penalty_late','a',null,'late:task1');adjustFee(100,'late','penalty_late','a',null,'late:task1')");
+ assert.equal(run("FeeLedger.totals(feeState,'a').balance"),100);
+ run("feeState.lateCharged={};restoreFeeMarkers()");assert.ok(run('feeState.lateCharged.task1'));
+});
+test('failed automatic cloud insert rolls back transaction and consumed marker',async()=>{
+ const run=app();
+ run("isCloudEnabled=true;feeCloudReady=true;supabaseClient={from:()=>({insert:()=>Promise.resolve({error:{message:'network unavailable'}})})};feeState.lateCharged.task1='now';adjustFee(100,'late','penalty_late','a',null,'late:task1')");
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(run('feeState.log.length'),0);assert.equal(run('feeState.lateCharged.task1'),undefined);
+});
+test('cloud hydration recognizes legacy task penalties and refunds without guessing collisions',()=>{
+ const run=app();
+ run("state.students[0].name='An';state.tasks=[{id:'t',studentId:'a',title:'Reading'}];feeState.log=[{id:'old',student_id:'a',amount:10000,type:'penalty_late',reason:'An trễ hạn bài tập: Reading'}];restoreFeeMarkers()");
+ assert.ok(run('feeState.lateCharged.t'));assert.equal(run('feeState.legacyEventAmbiguity'),undefined);
+ run("state.tasks.push({id:'other',studentId:'a',title:'Reading'});feeState.log[0].event_key=null;restoreFeeMarkers()");
+ assert.equal(run('feeState.legacyEventAmbiguity'),true);assert.equal(run('automaticFeeWritable()'),false);
+});
+test('failed approval credit is persisted for retry and stale cloud markers are removed',async()=>{
+ const run=app();
+ run("isCloudEnabled=true;feeCloudReady=true;supabaseClient={from:()=>({insert:()=>Promise.resolve({error:{message:'network unavailable'}})})};adjustFee(-2500,'approval','reward','a',null,'reward:t__single')");
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(run('Object.keys(feeState.pendingFees).length'),1);
+ run("supabaseClient={from:()=>({insert:()=>Promise.resolve({error:null})})};feeCloudReady=true");
+ await run('retryPendingFees()');
+ assert.equal(run('Object.keys(feeState.pendingFees).length'),0);
+ assert.equal(run("FeeLedger.totals(feeState,'a').balance"),-2500);
+ run("feeState.log=[];restoreFeeMarkers(true)");assert.equal(run("feeState.rewardedApprovals['t__single']"),undefined);
+});

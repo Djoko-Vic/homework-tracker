@@ -32,6 +32,8 @@ BEGIN
  END IF;
 END $$;
 ALTER TABLE public.fee_logs ADD COLUMN IF NOT EXISTS due_date date;
+ALTER TABLE public.fee_logs ADD COLUMN IF NOT EXISTS event_key text;
+CREATE UNIQUE INDEX IF NOT EXISTS fee_logs_student_event_idx ON public.fee_logs(student_id,event_key) WHERE event_key IS NOT NULL;
 ALTER TABLE public.fee_logs DROP CONSTRAINT IF EXISTS fee_logs_student_id_fkey;
 ALTER TABLE public.fee_logs ALTER COLUMN student_id SET NOT NULL;
 ALTER TABLE public.fee_logs ADD CONSTRAINT fee_logs_student_id_fkey

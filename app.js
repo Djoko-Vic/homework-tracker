@@ -329,6 +329,7 @@ function loadFeeState() {
     const current = localStorage.getItem(FEE_V2_KEY);
     const legacy = localStorage.getItem(FEE_STORAGE_KEY);
     feeState = current ? JSON.parse(current) : legacy ? FeeLedger.migrate(JSON.parse(legacy), state.students) : FeeLedger.empty();
+    restoreFeeMarkers();
     saveFeeState(); // The original v1 key is never overwritten.
   } catch (e) { console.warn('Fee data retained; unable to load:', e); }
 }
@@ -340,6 +341,7 @@ function feeWritable() {
   return true;
 }
 let feeCloudReady = false;
+const feeInFlight = new Set();
 async function persistFee(entry, operation = 'insert') {
   if (!isCloudEnabled || !supabaseClient) return true;
   const payload = {...entry}; delete payload.date; delete payload.balance_after;
@@ -353,17 +355,96 @@ async function persistFee(entry, operation = 'insert') {
     const {error} = await query;
     if (error) throw error;
     return true;
-  } catch(e) { feeCloudReady=false; toast('Không thể lưu học phí lên cloud: ' + e.message, 'error'); return false; }
+  } catch(e) { if(['42703','PGRST204','PGRST205'].includes(e.code)) feeCloudReady=false; toast('Không thể lưu học phí lên cloud: ' + e.message, 'error'); return false; }
 }
-function adjustFee(amount, reason, type = 'manual', studentId = feeStudentId(), dueDate = null) {
+function adjustFee(amount, reason, type = 'manual', studentId = feeStudentId(), dueDate = null, eventKey = null) {
   if (!feeWritable()) return false;
+  if (eventKey && [...feeState.log,...Object.values(feeState.pendingFees || {})].some(e=>e.student_id===studentId && e.event_key===eventKey)) return true;
   try {
-    const entry = FeeLedger.add(feeState,state.students,{student_id:studentId,amount,reason,type,due_date:dueDate});
+    const entry = FeeLedger.add(feeState,state.students,{student_id:studentId,amount,reason,type,due_date:dueDate,event_key:eventKey});
+    if(eventKey && isCloudEnabled) (feeState.pendingFees ||= {})[entry.id]=entry;
     saveFeeState(); renderFeeWidget();
-    persistFee(entry).then(ok => { if (!ok) { FeeLedger.remove(feeState,studentId,entry.id); saveFeeState(); renderFeeWidget(); } });
+    feeInFlight.add(entry.id);
+    persistFee(entry).then(ok => {
+      if(ok) {
+        if(!feeState.log.some(e=>e.id===entry.id) && state.students.some(s=>s.id===entry.student_id)) FeeLedger.add(feeState,state.students,entry);
+        if(feeState.pendingFees) delete feeState.pendingFees[entry.id];
+      }
+      else {
+        if(feeState.log.some(e=>e.id===entry.id)) FeeLedger.remove(feeState,studentId,entry.id);
+        rollbackFeeMarker(entry);
+      }
+      feeInFlight.delete(entry.id);
+      saveFeeState(); renderFeeWidget();
+    });
     return true;
   } catch(e) { toast(e.message,'error'); return false; }
 }
+// Rebuild automatic-event markers on every device from owned, persisted records.
+function legacyFeeEvent(entry) {
+  if (entry.event_key) return entry.event_key;
+  if (!['reward','refund','penalty_late'].includes(entry.type)) return null;
+  const student=state.students.find(s=>s.id===entry.student_id);
+  const candidates=[];
+  for(const task of state.tasks.filter(t=>t.studentId===entry.student_id)) {
+    const title=task.title.slice(0,24), name=student?.name || 'Học sinh';
+    const date=(entry.reason.match(/\((\d{4}-\d{2}-\d{2})\)/) || entry.reason.match(/duyệt (\d{4}-\d{2}-\d{2})/))?.[1];
+    if(entry.type==='penalty_late' && entry.reason===`${name} trễ hạn bài tập: ${title}`) candidates.push('late:'+task.id);
+    if(entry.type==='penalty_late' && date && entry.reason===`${name} chưa làm bài hằng ngày (${date}): ${title}`) candidates.push('daily:'+task.id+'__'+date);
+    if(entry.type==='reward' && entry.reason===`${name} hoàn thành bài: ${title}${date ? ' ('+date+')' : ''}`) candidates.push('reward:'+task.id+'__'+(date || 'single'));
+    if(entry.type==='refund' && entry.reason===`Hoàn phí trễ hạn (thầy đã duyệt): ${title}`) candidates.push('refund-late:'+task.id);
+    if(entry.type==='refund' && date && entry.reason===`Hoàn phí trễ hạn (thầy đã duyệt ${date}): ${title}`) candidates.push('refund-daily:'+task.id+'__'+date);
+  }
+  // Unknown or colliding old descriptions require reconciliation, never a guessed task.
+  if(candidates.length!==1) feeState.legacyEventAmbiguity=true;
+  return candidates.length===1 ? candidates[0] : null;
+}
+function restoreFeeMarkers(authoritative = false) {
+  if(authoritative) { feeState.rewardedApprovals={};feeState.lateCharged={};feeState.dailyCharged={}; }
+  delete feeState.legacyEventAmbiguity;
+  for(const entry of feeState.log.slice().reverse()) {
+    entry.event_key=legacyFeeEvent(entry);
+    const event=entry.event_key; if(!event) continue;
+    const split=event.indexOf(':'), kind=event.slice(0,split), key=event.slice(split+1);
+    const time=entry.created_at || entry.date || new Date().toISOString();
+    if(kind==='reward') feeState.rewardedApprovals[key]=time;
+    if(kind==='late') feeState.lateCharged[key]=time;
+    if(kind==='daily') feeState.dailyCharged[key]=time;
+    if(kind==='refund-late') delete feeState.lateCharged[key];
+    if(kind==='refund-daily') delete feeState.dailyCharged[key];
+  }
+}
+function rollbackFeeMarker(entry) {
+  const event=entry.event_key;if(!event) return;
+  const split=event.indexOf(':'), kind=event.slice(0,split), key=event.slice(split+1);
+  if(kind==='streak') feeState.studentStreaks[entry.student_id]=Number(entry.reason.match(/\((\d+) ngày/)?.[1] || 1);
+  if(kind==='reward') delete feeState.rewardedApprovals[key];
+  if(kind==='late') delete feeState.lateCharged[key];
+  if(kind==='daily') delete feeState.dailyCharged[key];
+  if(kind==='refund-late') feeState.lateCharged[key]=entry.created_at;
+  if(kind==='refund-daily') feeState.dailyCharged[key]=entry.created_at;
+}
+let feeRetrying = false;
+async function retryPendingFees() {
+  if(!isTeacher() || !isCloudEnabled || !supabaseClient || !feeCloudReady || feeRetrying) return;
+  feeRetrying=true;
+  try {
+    for(const entry of Object.values(feeState.pendingFees || {})) {
+      if(feeInFlight.has(entry.id)) continue;
+      if(!state.students.some(s=>s.id===entry.student_id)) { delete feeState.pendingFees[entry.id]; continue; }
+      if(feeState.log.some(e=>e.student_id===entry.student_id && e.event_key===entry.event_key)) {
+        delete feeState.pendingFees[entry.id];continue;
+      }
+      if(!await persistFee(entry)) continue;
+      FeeLedger.add(feeState,state.students,entry);
+      delete feeState.pendingFees[entry.id];
+    }
+    restoreFeeMarkers(true);saveFeeState();renderFeeWidget();
+  } finally {feeRetrying=false;}
+}
+
+function automaticFeeWritable() {return !feeState.legacyEventAmbiguity && feeWritable();}
+
 function resetFeeBalance() {
   if (!feeWritable()) return;
   const id=feeStudentId(), balance=feeTotals().balance;
@@ -462,7 +543,7 @@ function renderFeeWidget() {
           <span class="fee-log-amount" style="color:${col}">${sign}${entry.amount !== 0 ? formatVND(entry.amount) : '0đ'}</span>
           <span class="fee-log-date">${entry.due_date ? 'Hạn: '+escHtml(entry.due_date) : 'Không có hạn'} · ${entry.amount < 0 ? 'Đã ghi nhận' : totals.balance <= 0 ? 'Đã thanh toán' : entry.due_date && entry.due_date < getVNDate() ? 'Quá hạn' : 'Chưa thanh toán'}</span>
           ${isT ? `<button type="button" data-fee-edit="${escHtml(entry.id)}">Sửa</button><button type="button" data-fee-delete="${escHtml(entry.id)}">Xóa</button>` : ''}
-          ${typeof entry.balance_after === 'number' ? `<span class="fee-log-bal-after">Số dư: ${formatVND(entry.balance_after)}</span>` : ''}
+
         </div>
       </div>`;
     }).join('');
@@ -474,11 +555,13 @@ function renderFeeWidget() {
   widget.innerHTML = `
     ${isT ? `<label for="fee-student-select">Học sinh</label><select id="fee-student-select" class="select-input"><option value="">Chọn học sinh</option>${state.students.map(s=>`<option value="${escHtml(s.id)}" ${s.id===selectedId?'selected':''}>${escHtml(s.name)}</option>`).join('')}</select>` : ''}
     ${isT && feeState.legacy ? `<p role="status">Dữ liệu học phí cũ chưa rõ chủ sở hữu. ${isCloudEnabled ? 'Chạy fee-migration.sql với mã học sinh đã xác nhận.' : '<button id="fee-resolve" type="button">Gán cho học sinh đang chọn</button>'}</p>` : ''}
+    ${isT && Object.keys(feeState.pendingFees || {}).length ? '<p role="status">Giao dịch tự động đang chờ đồng bộ lại.</p>' : ''}
+    ${isT && feeState.legacyEventAmbiguity ? '<p role="status">Giao dịch tự động cũ chưa rõ bài tập. Tạm dừng tự động thưởng/phạt; cần đối chiếu dữ liệu cũ.</p>' : ''}
     ${!selectedId ? '<p>Chưa có học sinh. Thêm học sinh để ghi nhận học phí.</p>' : ''}
     <dl class="fee-totals"><div><dt>Tổng phí</dt><dd>${formatVND(totals.due)}</dd></div><div><dt>Đã trả / giảm trừ</dt><dd>${formatVND(totals.paid)}</dd></div><div><dt>Còn lại</dt><dd>${formatVND(totals.balance)}</dd></div><div><dt>Quá hạn</dt><dd>${formatVND(totals.overdue)}</dd></div></dl>
     <div class="fee-widget-header">
       <span class="fee-widget-title">${UI_ICONS.wallet} Học phí & Quỹ học bổng</span>
-      ${isT 
+      ${isT
         ? `<button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Đã nhận tiền — đặt lại số dư về 1,000,000đ">Nhận thanh toán / Reset</button>`
         : `<span class="fee-read-only-pill">${UI_ICONS.info} Chế độ xem học sinh (Chỉ đọc)</span>`}
     </div>
@@ -688,11 +771,13 @@ async function syncFromCloud() {
         if(error) throw error;
         dbFeeLogs.push(...data); if(data.length<1000) break;
       }
-      const {error: schemaError}=await supabaseClient.from('fee_logs').select('due_date').limit(1);
+      const {error: schemaError}=await supabaseClient.from('fee_logs').select('due_date,event_key').limit(1);
       feeCloudReady=!schemaError && !dbFeeLogs.some(e=>!e.student_id);
       if(!schemaError) {
         // Cloud is authoritative; no stale local fee records survive deletion on another device.
         feeState.log=dbFeeLogs.filter(e=>e.student_id);
+        restoreFeeMarkers(true);
+        await retryPendingFees();
         if(feeCloudReady) delete feeState.legacy;
         saveFeeState(); renderFeeWidget();
       }
@@ -3139,10 +3224,10 @@ async function approveTask(taskId, submissionDate) {
   const student = state.students.find(s => s.id === task.studentId);
   const studentName = student ? student.name : 'Học sinh';
 
-  if (feeWritable() && !feeState.rewardedApprovals[rewardKey]) {
+  if (automaticFeeWritable() && !feeState.rewardedApprovals[rewardKey]) {
     feeState.rewardedApprovals[rewardKey] = new Date().toISOString();
     const subLabel = submissionDate ? ` (${submissionDate})` : '';
-    adjustFee(FEE_PER_ASSIGNMENT, `${studentName} hoàn thành bài: ${task.title.slice(0, 24)}${subLabel}`, 'reward', task.studentId);
+    adjustFee(FEE_PER_ASSIGNMENT, `${studentName} hoàn thành bài: ${task.title.slice(0, 24)}${subLabel}`, 'reward', task.studentId, null, 'reward:'+rewardKey);
   }
 
   // If a late penalty was previously charged for this task/day before the teacher reviewed it,
@@ -3150,14 +3235,14 @@ async function approveTask(taskId, submissionDate) {
   if (task.isRecurring) {
     const dateKey = submissionDate || todayKey();
     const dailyChargeKey = `${task.id}__${dateKey}`;
-    if (feeWritable() && feeState.dailyCharged && feeState.dailyCharged[dailyChargeKey]) {
+    if (automaticFeeWritable() && feeState.dailyCharged && feeState.dailyCharged[dailyChargeKey]) {
       delete feeState.dailyCharged[dailyChargeKey];
-      adjustFee(-FEE_LATE_DAILY, `Hoàn phí trễ hạn (thầy đã duyệt ${dateKey}): ${task.title.slice(0, 24)}`, 'refund', task.studentId);
+      adjustFee(-FEE_LATE_DAILY, `Hoàn phí trễ hạn (thầy đã duyệt ${dateKey}): ${task.title.slice(0, 24)}`, 'refund', task.studentId, null, 'refund-daily:'+dailyChargeKey);
     }
   } else {
-    if (feeWritable() && feeState.lateCharged && feeState.lateCharged[task.id]) {
+    if (automaticFeeWritable() && feeState.lateCharged && feeState.lateCharged[task.id]) {
       delete feeState.lateCharged[task.id];
-      adjustFee(-FEE_LATE_REGULAR, `Hoàn phí trễ hạn (thầy đã duyệt): ${task.title.slice(0, 24)}`, 'refund', task.studentId);
+      adjustFee(-FEE_LATE_REGULAR, `Hoàn phí trễ hạn (thầy đã duyệt): ${task.title.slice(0, 24)}`, 'refund', task.studentId, null, 'refund-late:'+task.id);
     }
   }
 
@@ -3786,7 +3871,7 @@ function seedDemoData() {
 // Only charges when an ACTIVE streak (>= 1 day) drops to 0.
 // Never repeatedly charges students who are already at streak 0.
 function checkStreakLosses() {
-  if (!feeWritable()) return;
+  if (!automaticFeeWritable()) return;
   if (isCloudEnabled && isSyncing) return; // Wait until cloud data is fully loaded
   if (!state.students || !state.students.length) return;
 
@@ -3798,7 +3883,7 @@ function checkStreakLosses() {
 
     // Case: student previously had an active streak (>= 1) and now streak is 0
     if (typeof prev === 'number' && prev >= 1 && streak === 0) {
-      adjustFee(FEE_STREAK_LOST, `${s.name} mất chuỗi streak (${prev} ngày → 0)`, 'penalty_streak', s.id);
+      adjustFee(FEE_STREAK_LOST, `${s.name} mất chuỗi streak (${prev} ngày → 0)`, 'penalty_streak', s.id, null, 'streak:'+s.id+':'+getVNDate());
       toast(`${s.name} đã mất streak (${prev} ngày)! +10,000đ`, 'info');
     }
 
@@ -3813,7 +3898,7 @@ function checkStreakLosses() {
 // Charges +5,000đ ONCE for missed daily tasks of YESTERDAY (never penalizes current day in progress).
 // NEVER penalizes students who have already submitted and are awaiting teacher review.
 function checkLateFees() {
-  if (!feeWritable()) return;
+  if (!automaticFeeWritable()) return;
   if (isCloudEnabled && isSyncing) return; // Wait until cloud data is fully loaded
   if (!state.tasks || !state.tasks.length) return;
 
@@ -3853,7 +3938,7 @@ function checkLateFees() {
         if (taskCreatedDate && taskCreatedDate <= yesterday && !hadSubmissionYesterday && !wasApprovedYesterday && !isAwaitingApproval) {
           feeState.dailyCharged[dailyChargeKey] = new Date().toISOString();
           saveFeeState();
-          adjustFee(FEE_LATE_DAILY, `${studentName} chưa làm bài hằng ngày (${yesterday}): ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId);
+          adjustFee(FEE_LATE_DAILY, `${studentName} chưa làm bài hằng ngày (${yesterday}): ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId, null, 'daily:'+dailyChargeKey);
           toast(`${studentName} trễ bài hằng ngày hôm qua! +5,000đ`, 'info');
         }
       }
@@ -3868,7 +3953,7 @@ function checkLateFees() {
           !isAwaitingReview && status !== 'approved' && task.status !== 'approved') {
         feeState.lateCharged[task.id] = new Date().toISOString();
         saveFeeState();
-        adjustFee(FEE_LATE_REGULAR, `${studentName} trễ hạn bài tập: ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId);
+        adjustFee(FEE_LATE_REGULAR, `${studentName} trễ hạn bài tập: ${task.title.slice(0, 24)}`, 'penalty_late', task.studentId, null, 'late:'+task.id);
         toast(`${studentName} trễ hạn bài tập! +10,000đ`, 'info');
       }
     }
@@ -3890,8 +3975,9 @@ function init() {
   renderFeeWidget();
 
   // Check streaks & late fees periodically (every 60s)
-  setInterval(() => {
+  setInterval(async () => {
     if (isTeacher()) {
+      if(!isSyncing) await retryPendingFees();
       checkStreakLosses();
       checkLateFees();
     }

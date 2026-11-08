@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS public.fee_logs (
     student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
     amount INTEGER NOT NULL,            -- e.g. -2500 (thưởng nộp bài), +10000 (mất streak), +10000 (trễ bài thường), +5000 (trễ hằng ngày), hoặc số tiền thanh toán/điều chỉnh
     due_date DATE,
+    event_key TEXT,
     balance_after INTEGER NOT NULL,     -- Số dư sau giao dịch
     type TEXT NOT NULL DEFAULT 'manual', -- 'reward' | 'penalty_streak' | 'penalty_late' | 'payment' | 'reset' | 'manual'
     reason TEXT NOT NULL,               -- Chi tiết lý do giao dịch
@@ -83,3 +84,5 @@ INSERT INTO public.students (name, grade, pin, color)
 VALUES ('Khải', 'English Student', '0000', '#d96b43')
 ON CONFLICT DO NOTHING;
 
+
+CREATE UNIQUE INDEX IF NOT EXISTS fee_logs_student_event_idx ON public.fee_logs(student_id,event_key) WHERE event_key IS NOT NULL;
