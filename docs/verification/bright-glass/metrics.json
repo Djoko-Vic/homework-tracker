@@ -1,0 +1,1598 @@
+[
+  {
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "scrollHeight": 768,
+    "scrollWidth": 1366,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "dashboard",
+    "target": [
+      1366,
+      768
+    ]
+  },
+  {
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "scrollHeight": 768,
+    "scrollWidth": 1366,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "students",
+    "target": [
+      1366,
+      768
+    ]
+  },
+  {
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "scrollHeight": 2888,
+    "scrollWidth": 1360,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tasks",
+    "target": [
+      1366,
+      768
+    ]
+  },
+  {
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "scrollHeight": 768,
+    "scrollWidth": 1366,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.12,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "streaks",
+    "target": [
+      1366,
+      768
+    ]
+  },
+  {
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "scrollHeight": 768,
+    "scrollWidth": 1366,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.45,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tuition",
+    "target": [
+      1366,
+      768
+    ]
+  },
+  {
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "scrollHeight": 768,
+    "scrollWidth": 1366,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.77,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "settings",
+    "target": [
+      1366,
+      768
+    ]
+  },
+  {
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "scrollHeight": 768,
+    "scrollWidth": 1366,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 6.67,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "login",
+    "target": [
+      1366,
+      768
+    ]
+  },
+  {
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "scrollHeight": 900,
+    "scrollWidth": 1440,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "dashboard",
+    "target": [
+      1440,
+      900
+    ]
+  },
+  {
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "scrollHeight": 900,
+    "scrollWidth": 1440,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "students",
+    "target": [
+      1440,
+      900
+    ]
+  },
+  {
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "scrollHeight": 2891,
+    "scrollWidth": 1434,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tasks",
+    "target": [
+      1440,
+      900
+    ]
+  },
+  {
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "scrollHeight": 900,
+    "scrollWidth": 1440,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.12,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "streaks",
+    "target": [
+      1440,
+      900
+    ]
+  },
+  {
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "scrollHeight": 900,
+    "scrollWidth": 1440,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.45,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tuition",
+    "target": [
+      1440,
+      900
+    ]
+  },
+  {
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "scrollHeight": 900,
+    "scrollWidth": 1440,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.77,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "settings",
+    "target": [
+      1440,
+      900
+    ]
+  },
+  {
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "scrollHeight": 900,
+    "scrollWidth": 1440,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 6.67,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "login",
+    "target": [
+      1440,
+      900
+    ]
+  },
+  {
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "scrollHeight": 1080,
+    "scrollWidth": 1920,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "dashboard",
+    "target": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "scrollHeight": 1080,
+    "scrollWidth": 1920,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "students",
+    "target": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "scrollHeight": 2898,
+    "scrollWidth": 1914,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tasks",
+    "target": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "scrollHeight": 1080,
+    "scrollWidth": 1920,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.12,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "streaks",
+    "target": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "scrollHeight": 1080,
+    "scrollWidth": 1920,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.45,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tuition",
+    "target": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "scrollHeight": 1080,
+    "scrollWidth": 1920,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.77,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "settings",
+    "target": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "scrollHeight": 1080,
+    "scrollWidth": 1920,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 6.67,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "login",
+    "target": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "scrollHeight": 2426,
+    "scrollWidth": 384,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "dashboard",
+    "target": [
+      390,
+      844
+    ]
+  },
+  {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "scrollHeight": 2093,
+    "scrollWidth": 384,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "students",
+    "target": [
+      390,
+      844
+    ]
+  },
+  {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "scrollHeight": 5094,
+    "scrollWidth": 384,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 4.7,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tasks",
+    "target": [
+      390,
+      844
+    ]
+  },
+  {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "scrollHeight": 2645,
+    "scrollWidth": 384,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.12,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "streaks",
+    "target": [
+      390,
+      844
+    ]
+  },
+  {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "scrollHeight": 2121,
+    "scrollWidth": 384,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.45,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "tuition",
+    "target": [
+      390,
+      844
+    ]
+  },
+  {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "scrollHeight": 844,
+    "scrollWidth": 390,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 5.77,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "settings",
+    "target": [
+      390,
+      844
+    ]
+  },
+  {
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "scrollHeight": 844,
+    "scrollWidth": 390,
+    "tooSmall": [],
+    "dark": [],
+    "lime": [],
+    "edges": [],
+    "wrap": [],
+    "headingClips": [],
+    "layoutClips": [],
+    "glyphOverflow": [],
+    "navOverlap": [],
+    "minContrast": 6.67,
+    "contrastFailures": [],
+    "diacritics": [
+      {
+        "text": "BÀI TẬP CẦN CHẤM ĐIỂM",
+        "font": "800 32px Montserrat",
+        "loaded": true,
+        "inkHeight": 41,
+        "lineHeight": 36.8,
+        "verticalSpace": 43.2
+      },
+      {
+        "text": "Hạn nộp",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Chưa duyệt",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 17,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      },
+      {
+        "text": "Nguyễn Thị Lượng",
+        "font": "400 16px \"Be Vietnam Pro\"",
+        "loaded": true,
+        "inkHeight": 20,
+        "lineHeight": 24,
+        "verticalSpace": 24
+      }
+    ],
+    "fonts": "loaded",
+    "view": "login",
+    "target": [
+      390,
+      844
+    ]
+  }
+]

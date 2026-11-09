@@ -50,7 +50,7 @@
 html,
 body {
   height: 100%;
-  font-family: 'IBM Plex Mono', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
   overflow: hidden;
@@ -168,7 +168,7 @@ body {
 }
 
 .brand-text {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 800;
   font-size: 17px;
   color: var(--text);
@@ -219,7 +219,7 @@ body {
 .nav-badge {
   background: var(--bg3);
   color: var(--text-2);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   padding: 1px 6px;
   border-radius: var(--radius-pill);
@@ -268,8 +268,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 10px;
-  font-family: monospace;
+  font-size: 13px;
+  font-family: var(--font-body);
   color: var(--text-2);
 }
 
@@ -302,8 +302,8 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 11px;
-  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-family: 'Montserrat', sans-serif;
   flex-shrink: 0;
 }
 
@@ -325,7 +325,7 @@ body {
 }
 
 .user-role-badge {
-  font-size: 9.5px;
+  font-size: 13px;
   color: var(--text-3);
   font-weight: 600;
   text-transform: uppercase;
@@ -358,7 +358,7 @@ body {
 }
 
 #page-title {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -416,7 +416,7 @@ body {
   background: transparent;
   border: none;
   color: var(--text-3);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
@@ -517,8 +517,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 2px 7px;
-  font-size: 10px;
-  font-family: monospace;
+  font-size: 13px;
+  font-family: var(--font-body);
   color: var(--text-3);
   cursor: pointer;
   user-select: none;
@@ -534,7 +534,7 @@ body {
 }
 
 .cmd-section-label {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-3);
   text-transform: uppercase;
@@ -593,7 +593,7 @@ body {
 }
 
 .cmd-item-desc {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--text-3);
   white-space: nowrap;
   overflow: hidden;
@@ -601,9 +601,9 @@ body {
 }
 
 .cmd-item-shortcut {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
-  font-family: monospace;
+  font-family: var(--font-body);
 }
 
 .cmd-empty {
@@ -620,7 +620,7 @@ body {
   padding: 10px 18px;
   background: var(--bg);
   border-top: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
 }
 
@@ -629,8 +629,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 1px 5px;
-  font-size: 10px;
-  font-family: monospace;
+  font-size: 13px;
+  font-family: var(--font-body);
 }
 
 /* =========================================================
@@ -646,7 +646,7 @@ body {
 }
 
 .tuition-header-titles h2 {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
@@ -877,7 +877,7 @@ body {
 }
 
 .hero-eyebrow {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -885,7 +885,7 @@ body {
 }
 
 .hero-title {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -893,7 +893,7 @@ body {
 }
 
 .hero-count-badge {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: var(--radius-pill);
@@ -959,7 +959,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
   flex-shrink: 0;
@@ -1003,7 +1003,7 @@ body {
 }
 
 .action-card-time {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
   margin-top: 2px;
 }
@@ -1019,7 +1019,7 @@ body {
 .action-btn-pill {
   padding: 4px 10px;
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   background: var(--text);
   color: #ffffff;
@@ -1068,7 +1068,7 @@ body {
 }
 
 .metric-val {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
@@ -1077,7 +1077,7 @@ body {
 }
 
 .metric-label {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-3);
   text-transform: uppercase;
@@ -1139,7 +1139,7 @@ body {
 }
 
 .tab-count {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 99px;
@@ -1188,7 +1188,7 @@ body {
   padding: 9px 18px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1244,7 +1244,7 @@ body {
 }
 
 .col-task-sub {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
   margin-top: 1px;
   white-space: nowrap;
@@ -1270,7 +1270,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9.5px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
   flex-shrink: 0;
@@ -1293,7 +1293,7 @@ body {
   gap: 4px;
   padding: 3px 8px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   width: fit-content;
   line-height: 1.2;
@@ -1364,7 +1364,7 @@ body {
 }
 
 .detail-eyebrow {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -1372,7 +1372,7 @@ body {
 }
 
 .detail-title {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
@@ -1407,7 +1407,7 @@ body {
 }
 
 .detail-section-label {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1446,7 +1446,7 @@ body {
 }
 
 .detail-student-info span {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
 }
 
@@ -1524,7 +1524,7 @@ body {
 }
 
 .btn-approve-lg:hover {
-  background: color-mix(in srgb, var(--ok) 85%, #000);
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 
@@ -1558,7 +1558,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: transform var(--transition), background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
-  font-family: 'IBM Plex Mono', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1576,7 +1576,7 @@ body {
 }
 
 .btn-primary:hover {
-  background: #332f2a;
+  background: var(--accent-hover);
   transform: translateY(-1px);
   box-shadow: 0 5px 14px rgba(31, 28, 24, 0.24);
 }
@@ -1619,7 +1619,7 @@ body {
 
 .btn-sm {
   padding: 5px 11px;
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .text-input {
@@ -1694,7 +1694,7 @@ body {
 }
 
 .view-header-titles h2 {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
@@ -1788,7 +1788,7 @@ body {
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .student-info-main {
@@ -1815,8 +1815,8 @@ body {
 }
 
 .student-card-grade code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--font-body);
+  font-size: 13px;
   background: var(--bg3);
   padding: 1px 6px;
   border-radius: 4px;
@@ -1833,7 +1833,7 @@ body {
   background: var(--accent-bg);
   border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   color: var(--accent);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1856,7 +1856,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--text-2);
   margin-bottom: 6px;
 }
@@ -1894,7 +1894,7 @@ body {
 }
 
 .student-stat-val {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1905,7 +1905,7 @@ body {
 }
 
 .student-stat-lbl {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--text-3);
   text-transform: uppercase;
   font-weight: 700;
@@ -2024,7 +2024,7 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(24, 24, 27, 0.85);
+  background: var(--glass);
   color: #fff;
   border: none;
   font-size: 12px;
@@ -2084,7 +2084,7 @@ body {
 }
 
 .streak-count {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 40px;
   font-weight: 800;
   color: var(--accent);
@@ -2093,7 +2093,7 @@ body {
 }
 
 .streak-count-label {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-2);
   text-transform: uppercase;
   font-weight: 700;
@@ -2115,14 +2115,14 @@ body {
 }
 
 .streak-mini-stat-val {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .streak-mini-stat-lbl {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--text-3);
   font-weight: 600;
 }
@@ -2186,14 +2186,14 @@ body {
 }
 
 .role-title {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
 }
 
 .role-desc {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-2);
   margin-top: 4px;
   line-height: 1.4;
@@ -2292,7 +2292,7 @@ body {
 }
 
 .modal-header h3 {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
@@ -2332,7 +2332,7 @@ body {
 
 /* IMAGE VIEWER */
 .modal-img {
-  background: #14120f;
+  background: var(--glass);
   border: 1px solid rgba(255, 255, 255, 0.1);
   max-width: 92vw;
   width: 92vw;
@@ -2410,7 +2410,7 @@ body {
   min-width: 48px;
   padding: 0 8px;
   height: 36px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
@@ -2483,7 +2483,7 @@ body {
 }
 
 .file-drop-hint {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
 }
 
@@ -2551,7 +2551,7 @@ body {
 }
 
 .file-item-size {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
 }
@@ -2609,7 +2609,7 @@ body {
 
 .attachment-chip-size {
   color: var(--text-3);
-  font-size: 11px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2696,7 +2696,7 @@ body {
 
 .form-group label {
   display: block;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-2);
   text-transform: uppercase;
@@ -2865,7 +2865,7 @@ body {
 
 .toggle-desc {
   font-weight: 400;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
   margin-left: 2px;
 }
@@ -2877,7 +2877,7 @@ body {
   gap: 4px;
   background: var(--info-bg);
   color: var(--info);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
@@ -3023,8 +3023,8 @@ body {
 }
 
 .fee-widget-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 11.5px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
   text-transform: uppercase;
@@ -3040,10 +3040,10 @@ body {
   border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
   border-radius: var(--radius-pill);
   padding: 3px 9px;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'IBM Plex Mono', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   transition: background-color var(--transition), color var(--transition);
   white-space: nowrap;
 }
@@ -3062,12 +3062,12 @@ body {
   border: 1px solid var(--border);
   padding: 4px 10px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .fee-balance {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 21px;
   font-weight: 800;
   text-align: center;
@@ -3083,7 +3083,7 @@ body {
   display: flex;
   justify-content: space-between;
   padding: 0 12px 8px;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--text-3);
   font-weight: 600;
   gap: 4px;
@@ -3104,7 +3104,7 @@ body {
 }
 
 .fee-log-title-text {
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-3);
   text-transform: uppercase;
@@ -3115,12 +3115,12 @@ body {
   background: none;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-2);
   cursor: pointer;
   padding: 2px 8px;
-  font-family: 'IBM Plex Mono', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   transition: background-color var(--transition), border-color var(--transition), color var(--transition);
 }
 
@@ -3179,7 +3179,7 @@ body {
 
 .fee-log-date {
   color: var(--text-3);
-  font-size: 11px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3199,7 +3199,7 @@ body {
 }
 
 .fee-log-amount {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 700;
   font-size: 14px;
   white-space: nowrap;
@@ -3207,7 +3207,7 @@ body {
 }
 
 .fee-log-bal-after {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
 }
@@ -3217,7 +3217,7 @@ body {
   align-items: center;
   padding: 2px 7px;
   border-radius: var(--radius-pill);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -3274,7 +3274,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 9px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text);
   font-family: inherit;
   outline: none;
@@ -3288,7 +3288,7 @@ body {
 }
 
 .fee-manual-input {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -3303,10 +3303,10 @@ body {
   padding: 5px 0;
   border-radius: var(--radius-sm);
   border: none;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'IBM Plex Mono', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   transition: background-color var(--transition), color var(--transition);
   display: inline-flex;
   align-items: center;

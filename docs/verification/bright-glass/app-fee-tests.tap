@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: teacher selection and automatic explicit student target stay isolated
+ok 1 - teacher selection and automatic explicit student target stay isolated
+  ---
+  duration_ms: 20.489677
+  type: 'test'
+  ...
+# Subtest: student cannot write or choose another account
+ok 2 - student cannot write or choose another account
+  ---
+  duration_ms: 1.678127
+  type: 'test'
+  ...
+# Subtest: cloud writes are blocked until migration/schema is ready
+ok 3 - cloud writes are blocked until migration/schema is ready
+  ---
+  duration_ms: 1.173443
+  type: 'test'
+  ...
+# Subtest: automatic event keys deduplicate transactions and hydrate cloud markers
+ok 4 - automatic event keys deduplicate transactions and hydrate cloud markers
+  ---
+  duration_ms: 1.391695
+  type: 'test'
+  ...
+# Subtest: failed automatic cloud insert rolls back transaction and consumed marker
+ok 5 - failed automatic cloud insert rolls back transaction and consumed marker
+  ---
+  duration_ms: 5.493893
+  type: 'test'
+  ...
+# Subtest: cloud hydration recognizes legacy task penalties and refunds without guessing collisions
+ok 6 - cloud hydration recognizes legacy task penalties and refunds without guessing collisions
+  ---
+  duration_ms: 2.14866
+  type: 'test'
+  ...
+# Subtest: failed approval credit is persisted for retry and stale cloud markers are removed
+ok 7 - failed approval credit is persisted for retry and stale cloud markers are removed
+  ---
+  duration_ms: 2.1801
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 39.305447

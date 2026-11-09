@@ -1,0 +1,50 @@
+[
+  {
+    "glass": "#fff",
+    "surface": "rgb(255, 255, 255)",
+    "backdrop": "none",
+    "supportsBlur": true,
+    "motion": false,
+    "transition": "0.18s, 0.18s, 0.18s",
+    "mode": "reduced-transparency"
+  },
+  {
+    "glass": "#fff",
+    "surface": "rgb(255, 255, 255)",
+    "backdrop": "none",
+    "supportsBlur": true,
+    "motion": false,
+    "transition": "0.18s, 0.18s, 0.18s",
+    "mode": "high-contrast"
+  },
+  {
+    "glass": "rgba(255,255,255,.9)",
+    "surface": "rgba(255, 255, 255, 0.9)",
+    "backdrop": null,
+    "supportsBlur": false,
+    "motion": false,
+    "transition": "0.18s, 0.18s, 0.18s",
+    "mode": "no-blur-support"
+  },
+  {
+    "glass": "rgba(255,255,255,.60)",
+    "surface": "rgba(255, 255, 255, 0.6)",
+    "backdrop": "blur(20px) saturate(1.6)",
+    "supportsBlur": true,
+    "motion": true,
+    "transition": "0s",
+    "mode": "reduced-motion"
+  },
+  {
+    "mode": "keyboard-focus",
+    "width": "2px",
+    "style": "solid",
+    "color": "rgb(255, 122, 26)"
+  },
+  {
+    "mode": "command-focus",
+    "width": "2px",
+    "style": "solid",
+    "color": "rgb(255, 122, 26)"
+  }
+]

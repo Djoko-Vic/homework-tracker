@@ -1,8 +1,8 @@
 # 📖 HomeworkHub — Student Homework Tracker
 
-An editorial black-and-white web application with a single orange accent for teachers and tutors to track student homework completion, image uploads, and daily study streaks.
+A bright glass web application with a warm orange accent for teachers and tutors to track student homework completion, image uploads, and daily study streaks.
 
-![Retro Homework Tracker](https://img.shields.io/badge/Theme-Retro%20White-d96b43)
+![Bright Glass Theme](https://img.shields.io/badge/Theme-Bright%20Glass-FF7A1A)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Stack](https://img.shields.io/badge/Stack-HTML5%20%7C%20CSS3%20%7C%20JS-4a7c59)
 
@@ -10,7 +10,7 @@ An editorial black-and-white web application with a single orange accent for tea
 
 ## ✨ Features
 
-- **Editorial interface**: Alternating white and charcoal views, Inter headings, IBM Plex Mono data, square ink borders, original study SVGs and reduced-motion support.
+- **Bright glass interface**: Warm mesh background, frosted rounded surfaces, local Montserrat headings and Be Vietnam Pro text, bounded desktop layouts, and reduced transparency/contrast/motion support.
 - **🔒 Role-Based Login (Teacher vs Student)**:
   - **Teacher Portal**: Full administrative access — create/edit/delete students, assign homework tasks, review & approve uploaded photos, and track all student progress. Use the configured teacher passcode.
   - **Student Portal**: Student selection & 4-digit PIN authentication (default: `0000`). Displays only their personal assigned tasks, homework photo uploader, and individual streak stats.
@@ -36,7 +36,7 @@ This project is built with static web standards (HTML5, CSS3, ES6 JS) and can be
 
 ```text
 ├── index.html     # Main HTML structure & modals
-├── style.css      # Retro White theme design system
+├── style.css      # Base component styles
 ├── app.js         # State management, role auth, streaks & uploads
 └── README.md      # Documentation
 ```

@@ -7,11 +7,7 @@
   <title>HomeworkHub — Homework Tracker</title>
   <meta name="description"
     content="Minimalist student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-    rel="stylesheet" />
+  <link rel="stylesheet" href="assets/fonts/fonts.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="editorial.css" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -66,8 +62,7 @@
           aria-controls="editorial-menu"><span></span><span></span></button>
         <!-- Command Palette Trigger -->
         <button class="cmd-trigger" id="cmd-trigger-btn" type="button" aria-label="Open command palette (Ctrl+K)">
-          <span class="cmd-trigger-text">Tìm kiếm & lệnh…</span>
-          <kbd>Ctrl+K</kbd>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 6 6"/></svg>
         </button>
 
         <!-- Date display (shown once) -->
@@ -136,13 +131,13 @@
                 <button class="filter-tab" data-filter="overdue" type="button">Trễ hạn <span class="tab-count"
                     id="dash-count-overdue">0</span></button>
               </div>
-              <div class="master-table-head">
+              <div class="master-table-scroll" tabindex="0" role="region" aria-label="Bài tập gần đây, cuộn ngang để xem đủ cột"><div class="master-table-head">
                 <span class="col-title">Bài tập</span>
                 <span class="col-student">Học sinh</span>
                 <span class="col-due">Hạn nộp</span>
                 <span class="col-status">Trạng thái</span>
               </div>
-              <div class="master-table-body" id="dash-table-body"></div>
+              <div class="master-table-body" id="dash-table-body"></div></div>
             </div>
 
             <!-- 3. Right Card: Detail Column -->
@@ -194,6 +189,7 @@
                 <option value="approved">Đã duyệt</option>
                 <option value="overdue">Trễ hạn</option>
               </select>
+              <input type="date" id="task-filter-date" aria-label="Lọc theo hạn nộp" /><input type="search" id="task-search" placeholder="Tìm bài tập hoặc học sinh…" aria-label="Tìm bài tập hoặc học sinh" />
               <button class="btn btn-outline teacher-only" id="btn-add-task" type="button">+ Giao bài tập mới</button>
             </div>
           </div>
@@ -327,45 +323,45 @@
   <div class="modal-overlay" id="modal-login">
     <div class="modal modal-md">
       <div class="modal-header">
-        <h3>Login to HomeworkHub</h3>
+        <h3>ĐĂNG NHẬP</h3>
         <button class="modal-close hidden-if-unauth" data-modal="modal-login" type="button"
           aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
-        <p class="modal-intro-text">Select your role to log in:</p>
+        <p class="modal-intro-text">Chọn vai trò để tiếp tục vào HomeworkHub.</p>
 
         <div class="role-selector">
           <button class="role-card active" id="role-btn-teacher" type="button">
-            <div class="role-title">Teacher Portal</div>
-            <div class="role-desc">Full access: assign tasks, review & approve photos, manage students</div>
+            <div class="role-title">Giáo viên</div>
+            <div class="role-desc">Giao bài, chấm điểm và quản lý học sinh</div>
           </button>
 
           <button class="role-card" id="role-btn-student" type="button">
-            <div class="role-title">Student Portal</div>
-            <div class="role-desc">Upload homework photos, view assigned tasks & streak progress</div>
+            <div class="role-title">Học sinh</div>
+            <div class="role-desc">Nộp bài và theo dõi tiến độ học tập</div>
           </button>
         </div>
 
         <div id="student-login-select-wrap" class="form-group hidden form-group-spaced">
-          <label for="login-student-select">Select Student Name:</label>
+          <label for="login-student-select">Họ tên học sinh</label>
           <select id="login-student-select" class="select-input select-full"></select>
 
           <div class="form-group form-group-sm-spaced">
-            <label for="input-student-pin">Student PIN:</label>
-            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN (e.g. 0000)…"
+            <label for="input-student-pin">Mã PIN</label>
+            <input type="password" id="input-student-pin" class="text-input" placeholder="Nhập mã PIN…"
               inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" spellcheck="false" />
           </div>
         </div>
 
         <div id="teacher-login-pass-wrap" class="form-group form-group-spaced">
-          <label for="input-teacher-pass">Teacher Password:</label>
-          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password…"
+          <label for="input-teacher-pass">Mật khẩu giáo viên</label>
+          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Nhập mật khẩu…"
             autocomplete="current-password" spellcheck="false" />
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost hidden-if-unauth" data-modal="modal-login" type="button">Cancel</button>
-        <button class="btn btn-primary" id="btn-do-login" type="button">Login Now</button>
+        <button class="btn btn-ghost hidden-if-unauth" data-modal="modal-login" type="button">Hủy</button>
+        <button class="btn btn-primary" id="btn-do-login" type="button">Đăng nhập</button>
       </div>
     </div>
   </div>
@@ -429,7 +425,7 @@
         <input type="hidden" id="input-student-id" />
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" data-modal="modal-student" type="button">Cancel</button>
+        <button class="btn btn-ghost" data-modal="modal-student" type="button">Hủy</button>
         <button class="btn btn-primary" id="btn-save-student" type="button">Save Student</button>
       </div>
     </div>
@@ -487,7 +483,7 @@
         <input type="hidden" id="input-task-id" />
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" data-modal="modal-task" type="button">Cancel</button>
+        <button class="btn btn-ghost" data-modal="modal-task" type="button">Hủy</button>
         <button class="btn btn-primary" id="btn-save-task" type="button">Save Assignment</button>
       </div>
     </div>
@@ -604,7 +600,7 @@
         <p id="confirm-message">Are you sure you want to delete this item?</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" data-modal="modal-confirm" type="button">Cancel</button>
+        <button class="btn btn-ghost" data-modal="modal-confirm" type="button">Hủy</button>
         <button class="btn btn-danger" id="btn-confirm-delete" type="button">Delete</button>
       </div>
     </div>
@@ -615,7 +611,7 @@
     <nav aria-label="Menu"><button type="button" data-go="dashboard">Tổng quan</button><button type="button"
         data-go="tasks">Bài tập</button><button type="button" data-go="tuition">Học phí</button><button type="button"
         data-go="students" class="teacher-only">Học sinh</button><button type="button" data-go="streaks">Chuỗi học
-        tập</button><button type="button" data-go="settings">Cài đặt</button></nav>
+        tập</button><button type="button" data-go="settings">Cài đặt</button></nav><div class="menu-utilities"><p id="menu-date"></p><button type="button" id="menu-search">Tìm kiếm & lệnh (Ctrl+K)</button><button type="button" id="menu-add" class="teacher-only">+ Thêm mới</button><button type="button" id="menu-account">Đổi tài khoản</button></div>
   </dialog>
   <button id="scroll-top" type="button" aria-label="Về đầu trang">↑</button>
   <!-- Toast Notifications -->

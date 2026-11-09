@@ -44,6 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Utilities that collapse into the navigation menu on smaller screens.
+  const menuDate = document.getElementById('menu-date');
+  if (menuDate) menuDate.textContent = document.getElementById('sidebar-date')?.textContent || '';
+  for (const [menuId, targetId] of [['menu-search','cmd-trigger-btn'], ['menu-add','btn-add-primary'], ['menu-account','btn-switch-user']]) {
+    document.getElementById(menuId)?.addEventListener('click', () => {
+      closeMenu();
+      document.getElementById(targetId)?.click();
+    });
+  }
+
   // Scroll to Top Button — ONLY visible/active on Bài tập (tasks) view
   const scrollBtn = document.getElementById('scroll-top');
   if (scrollBtn) {
