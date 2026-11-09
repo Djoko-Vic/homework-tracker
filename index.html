@@ -1,19 +1,24 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HomeworkHub — Homework Tracker</title>
-  <meta name="description" content="Minimalist student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
+  <meta name="description"
+    content="Minimalist student homework tracker with image uploads, streak tracking, role-based login, and Supabase Cloud synchronization." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="editorial.css" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
   <!-- Keyboard Accessible Skip Link -->
   <a href="#main" class="skip-link">Skip to main content</a>
@@ -27,40 +32,28 @@
     <!-- ── 1. TOP NAVIGATION ── -->
     <header id="topnav" class="topnav">
       <div class="topnav-brand">
-        <div class="brand-icon-box" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
-            <path d="M6 6h10"/>
-            <path d="M6 10h10"/>
-          </svg>
-        </div>
         <span class="brand-text">HomeworkHub</span>
       </div>
 
       <!-- Main Navigation Items -->
       <nav class="topnav-items" aria-label="Main Navigation">
         <button class="nav-item topnav-item active" data-view="dashboard" id="nav-dashboard" type="button">
-          <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           <span>Dashboard</span>
           <span class="nav-badge" id="badge-nav-pending">0 chờ</span>
         </button>
         <button class="nav-item topnav-item teacher-only" data-view="students" id="nav-students" type="button">
-          <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>Học sinh</span>
           <span class="nav-badge" id="badge-nav-students">0</span>
         </button>
         <button class="nav-item topnav-item" data-view="tasks" id="nav-tasks" type="button">
-          <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <span id="nav-tasks-label">Bài tập</span>
           <span class="nav-badge" id="badge-nav-tasks">0</span>
         </button>
         <button class="nav-item topnav-item" data-view="streaks" id="nav-streaks" type="button">
-          <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
           <span>Streak Tracker</span>
           <span class="nav-badge" id="badge-nav-streak">0↑</span>
         </button>
         <button class="nav-item topnav-item" data-view="tuition" id="nav-tuition" type="button">
-          <svg class="ui-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
           <span>Học phí</span>
           <span class="nav-badge" id="badge-nav-tuition">0đ</span>
         </button>
@@ -69,20 +62,19 @@
 
       <!-- Right Utilities -->
       <div class="topnav-right">
-        <button id="editorial-menu-toggle" type="button" aria-label="Mở menu" aria-expanded="false" aria-controls="editorial-menu"><span></span><span></span></button>
+        <button id="editorial-menu-toggle" type="button" aria-label="Mở menu" aria-expanded="false"
+          aria-controls="editorial-menu"><span></span><span></span></button>
         <!-- Command Palette Trigger -->
         <button class="cmd-trigger" id="cmd-trigger-btn" type="button" aria-label="Open command palette (Ctrl+K)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <span class="cmd-trigger-text">Tìm kiếm & lệnh…</span>
           <kbd>Ctrl+K</kbd>
         </button>
 
-        <!-- Date display -->
+        <!-- Date display (shown once) -->
         <span class="topnav-date" id="sidebar-date"></span>
-        <span id="page-title" class="sr-only">Dashboard</span>
 
         <!-- Primary Add Action -->
-        <button class="btn btn-primary btn-sm teacher-only" id="btn-add-primary" type="button">
+        <button class="btn btn-outline btn-sm teacher-only" id="btn-add-primary" type="button">
           + Thêm mới
         </button>
 
@@ -93,7 +85,6 @@
             <span class="user-name" id="sidebar-user-name">Not Logged In</span>
             <span class="user-role-badge" id="sidebar-user-role">Login</span>
           </div>
-          <svg class="user-chip-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
       </div>
     </header>
@@ -106,51 +97,44 @@
 
         <!-- DASHBOARD VIEW -->
         <section id="view-dashboard" class="view active">
-          <div class="dash-top-banner">
-            <div class="dash-top-copy">
-              <span class="hero-eyebrow">TỔNG QUAN HỌC TẬP</span>
-              <h1 class="dash-top-heading">MỖI NGÀY, MỘT BƯỚC TIẾN.</h1>
-              <p class="dash-top-desc">Theo dõi bài tập, chấm điểm trực quan và duy trì chuỗi học tập liên tục.</p>
-              <div class="dash-top-actions">
-                <button class="btn btn-outline teacher-only" onclick="openAddTask()" type="button">+ Giao bài mới</button>
-                <button class="btn btn-outline" onclick="navigateTo('tasks')" type="button">Xem bài tập →</button>
-              </div>
-            </div>
-            <div class="dash-top-art" id="art-dashboard"></div>
+          <div class="view-header">
+            <h1 class="page-title">DASHBOARD</h1>
+            <p class="page-subtitle">Tổng quan bài tập và tiến độ học tập</p>
           </div>
 
+          <!-- Row 1: 6 compact stat tiles -->
+          <div class="dash-metrics-strip" id="dash-metrics-strip"></div>
+
+          <!-- Row 2: 3 equal-height columns -->
           <div class="dashboard-split" id="dashboard-split">
-            <!-- 1. Left Card: Urgent Action Queue + Metrics -->
+            <!-- 1. Left Card: Urgent Action Queue -->
             <div class="dash-card dash-card-actions">
               <div class="dash-card-header">
-                <div>
-                  <span class="hero-eyebrow">Hành động cần làm ngay</span>
-                  <h2 class="card-title" id="dash-hero-title">Bài tập cần chấm điểm & Hạn chót</h2>
-                </div>
+                <h2 class="card-title" id="dash-hero-title">Bài tập cần chấm điểm & Hạn chót</h2>
                 <div class="hero-count-badge" id="dash-urgent-badge">0 mục cần xử lý</div>
               </div>
-              <div class="hero-action-cards" id="dash-action-cards"></div>
-              <div class="dash-metrics-strip" id="dash-metrics-strip"></div>
+              <div class="dash-card-scroll-body hero-action-cards" id="dash-action-cards"></div>
             </div>
 
             <!-- 2. Middle Card: Master Task List -->
             <div class="dash-card dash-card-tasks">
               <div class="dash-card-header">
-                <div>
-                  <span class="hero-eyebrow">Danh sách bài tập</span>
-                  <h2 class="card-title">Bài tập gần đây</h2>
-                </div>
+                <h2 class="card-title">Bài tập gần đây</h2>
                 <div class="master-search-wrap">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   <input type="text" id="dash-quick-search" placeholder="Tìm theo tên bài hoặc học sinh…" autocomplete="off" spellcheck="false" />
                 </div>
               </div>
               <div class="master-filter-tabs" id="dash-filter-tabs">
-                <button class="filter-tab active" data-filter="all" type="button">Tất cả <span class="tab-count" id="dash-count-all">0</span></button>
-                <button class="filter-tab" data-filter="pending-review" type="button">Chờ duyệt <span class="tab-count" id="dash-count-pending">0</span></button>
-                <button class="filter-tab" data-filter="pending" type="button">Đang làm <span class="tab-count" id="dash-count-todo">0</span></button>
-                <button class="filter-tab" data-filter="approved" type="button">Đã duyệt <span class="tab-count" id="dash-count-approved">0</span></button>
-                <button class="filter-tab" data-filter="overdue" type="button">Trễ hạn <span class="tab-count" id="dash-count-overdue">0</span></button>
+                <button class="filter-tab active" data-filter="all" type="button">Tất cả <span class="tab-count"
+                    id="dash-count-all">0</span></button>
+                <button class="filter-tab" data-filter="pending-review" type="button">Chờ duyệt <span class="tab-count"
+                    id="dash-count-pending">0</span></button>
+                <button class="filter-tab" data-filter="pending" type="button">Đang làm <span class="tab-count"
+                    id="dash-count-todo">0</span></button>
+                <button class="filter-tab" data-filter="approved" type="button">Đã duyệt <span class="tab-count"
+                    id="dash-count-approved">0</span></button>
+                <button class="filter-tab" data-filter="overdue" type="button">Trễ hạn <span class="tab-count"
+                    id="dash-count-overdue">0</span></button>
               </div>
               <div class="master-table-head">
                 <span class="col-title">Bài tập</span>
@@ -163,36 +147,31 @@
 
             <!-- 3. Right Card: Detail Column -->
             <aside class="dashboard-detail dash-card dash-card-detail" id="dashboard-detail">
-              <div class="detail-header">
-                <div class="detail-title-group">
+              <div class="dash-card-header">
+                <div>
                   <span class="detail-eyebrow" id="detail-eyebrow">Chi tiết & Thao tác</span>
-                  <h3 class="detail-title" id="detail-task-title">Chọn một bài tập</h3>
+                  <h2 class="card-title" id="detail-task-title">Chọn một bài tập</h2>
                 </div>
-                <button class="detail-close-btn" id="btn-close-detail" type="button" aria-label="Đóng chi tiết">✕</button>
+                <button class="btn btn-outline btn-sm" id="btn-close-detail" type="button" aria-label="Đóng chi tiết">✕</button>
               </div>
-              <div class="detail-body" id="dash-detail-body"></div>
+              <div class="dash-card-scroll-body detail-body" id="dash-detail-body"></div>
             </aside>
           </div>
         </section>
 
         <!-- STUDENTS VIEW (TEACHER ONLY) -->
         <section id="view-students" class="view">
-          <div class="page-top-banner">
-            <div class="page-top-copy">
-              <span class="hero-eyebrow">QUẢN LÝ LỚP HỌC</span>
-              <h1 class="page-heading">HỌC SINH</h1>
-              <p class="page-desc">Danh sách học sinh, mã PIN đăng nhập, chuỗi streak và tiến độ nộp bài.</p>
-              <div class="student-toolbar">
-                <div class="search-box-pill">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  <input type="text" id="student-search" placeholder="Tìm theo tên học sinh…" autocomplete="off" spellcheck="false" />
-                </div>
-                <button class="btn btn-outline" id="btn-add-student" type="button">+ Thêm học sinh</button>
-              </div>
-            </div>
-            <div class="page-top-art" id="art-students"></div>
+          <div class="view-header">
+            <h1 class="page-title">HỌC SINH</h1>
+            <p class="page-subtitle">Danh sách học sinh, mã PIN đăng nhập, chuỗi streak và tiến độ nộp bài</p>
           </div>
-          <div class="page-scroll-card">
+          <div class="view-toolbar">
+            <div class="search-box-pill">
+              <input type="text" id="student-search" placeholder="Tìm theo tên học sinh…" autocomplete="off" spellcheck="false" />
+            </div>
+            <button class="btn btn-outline" id="btn-add-student" type="button">+ Thêm học sinh</button>
+          </div>
+          <div class="view-scroll-card">
             <div class="student-grid" id="student-grid"></div>
           </div>
         </section>
@@ -200,26 +179,22 @@
         <!-- TASKS VIEW -->
         <section id="view-tasks" class="view">
           <div class="tasks-sticky-header">
-            <div class="page-top-banner">
-              <div class="page-top-copy">
-                <span class="hero-eyebrow">NHIỆM VỤ & CHẤM ĐIỂM</span>
-                <h1 class="page-heading" id="tasks-view-title">DANH SÁCH BÀI TẬP</h1>
-                <p class="page-desc" id="tasks-view-desc">Quản lý và theo dõi bài tập hằng ngày và bài tập định kỳ.</p>
-                <div class="tasks-toolbar">
-                  <select id="task-filter-student" class="select-input teacher-only" aria-label="Filter assignments by student">
-                    <option value="all">Tất cả học sinh</option>
-                  </select>
-                  <select id="task-filter-status" class="select-input" aria-label="Filter assignments by status">
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="pending">Đang làm</option>
-                    <option value="submitted">Chờ duyệt</option>
-                    <option value="approved">Đã duyệt</option>
-                    <option value="overdue">Trễ hạn</option>
-                  </select>
-                  <button class="btn btn-outline teacher-only" id="btn-add-task" type="button">+ Giao bài tập mới</button>
-                </div>
-              </div>
-              <div class="page-top-art" id="art-tasks"></div>
+            <div class="view-header">
+              <h1 class="page-title" id="tasks-view-title">DANH SÁCH BÀI TẬP</h1>
+              <p class="page-subtitle" id="tasks-view-desc">Quản lý và theo dõi bài tập hằng ngày và bài tập định kỳ</p>
+            </div>
+            <div class="tasks-toolbar">
+              <select id="task-filter-student" class="select-input teacher-only" aria-label="Filter assignments by student">
+                <option value="all">Tất cả học sinh</option>
+              </select>
+              <select id="task-filter-status" class="select-input" aria-label="Filter assignments by status">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Đang làm</option>
+                <option value="submitted">Chờ duyệt</option>
+                <option value="approved">Đã duyệt</option>
+                <option value="overdue">Trễ hạn</option>
+              </select>
+              <button class="btn btn-outline teacher-only" id="btn-add-task" type="button">+ Giao bài tập mới</button>
             </div>
           </div>
           <div class="tasks-list" id="tasks-list"></div>
@@ -227,45 +202,33 @@
 
         <!-- STREAKS VIEW -->
         <section id="view-streaks" class="view">
-          <div class="page-top-banner">
-            <div class="page-top-copy">
-              <span class="hero-eyebrow">BỀN BỈ THÀNH THÓI QUEN</span>
-              <h1 class="page-heading">BẢNG XẾP HẠNG STREAK</h1>
-              <p class="page-desc">Thống kê chuỗi ngày làm bài liên tục và hoạt động 30 ngày gần nhất.</p>
-            </div>
-            <div class="page-top-art" id="art-streaks"></div>
+          <div class="view-header">
+            <h1 class="page-title">BẢNG XẾP HẠNG STREAK</h1>
+            <p class="page-subtitle">Thống kê chuỗi ngày làm bài liên tục và hoạt động 30 ngày gần nhất</p>
           </div>
-          <div class="page-scroll-card">
+          <div class="view-scroll-card">
             <div class="streaks-grid" id="streaks-grid"></div>
           </div>
         </section>
 
         <!-- TUITION & SCHOLARSHIP VIEW -->
         <section id="view-tuition" class="view">
-          <div class="page-top-banner">
-            <div class="page-top-copy">
-              <span class="hero-eyebrow">MINH BẠCH & RÕ RÀNG</span>
-              <h1 class="page-heading">HỌC PHÍ & HỌC BỔNG</h1>
-              <p class="page-desc">Theo dõi số dư học phí, lịch sử thưởng / phạt nộp bài và quản lý giao dịch học phí.</p>
-            </div>
-            <div class="page-top-art" id="art-tuition"></div>
+          <div class="view-header">
+            <h1 class="page-title">HỌC PHÍ & HỌC BỔNG</h1>
+            <p class="page-subtitle">Theo dõi số dư học phí, lịch sử thưởng / phạt nộp bài và quản lý giao dịch học phí</p>
           </div>
-          <div class="page-scroll-card fee-page-scroll">
+          <div class="view-scroll-card fee-page-scroll">
             <div class="fee-widget fee-widget-page" id="fee-widget"></div>
           </div>
         </section>
 
         <!-- SETTINGS VIEW -->
         <section id="view-settings" class="view">
-          <div class="page-top-banner">
-            <div class="page-top-copy">
-              <span class="hero-eyebrow">TÙY CHỌN KHÔNG GIAN</span>
-              <h1 class="page-heading">CÀI ĐẶT</h1>
-              <p class="page-desc">Lựa chọn hiển thị và kết nối đồng bộ đám mây.</p>
-            </div>
-            <div class="page-top-art" id="art-settings"></div>
+          <div class="view-header">
+            <h1 class="page-title">CÀI ĐẶT</h1>
+            <p class="page-subtitle">Lựa chọn hiển thị và kết nối đồng bộ đám mây</p>
           </div>
-          <div class="page-scroll-card settings-scroll-card">
+          <div class="view-scroll-card settings-scroll-card">
             <div class="settings-panel">
               <h2>Cài đặt hiển thị</h2>
               <p>Lựa chọn được lưu trên thiết bị này.</p>
@@ -276,48 +239,75 @@
               <div class="settings-cloud-box">
                 <h3>Đồng bộ đám mây Supabase</h3>
                 <p>Kết nối Supabase Project URL và Anon Key để đồng bộ dữ liệu thời gian thực.</p>
-                <button class="btn btn-outline" id="btn-open-supabase" type="button" onclick="openModal('modal-supabase-config')">Cấu hình kết nối Supabase</button>
+                <button class="btn btn-outline" id="btn-open-supabase" type="button"
+                  onclick="openModal('modal-supabase-config')">Cấu hình kết nối Supabase</button>
               </div>
             </div>
           </div>
         </section>
       </div>
     </main>
-      </div>
-    </main>
 
-    <!-- ── 3. MOBILE BOTTOM TABS ── -->
-    <nav class="mobile-tabs" id="mobile-tabs" aria-label="Mobile Navigation">
-      <button class="mob-tab nav-item active" data-view="dashboard" type="button">
-        <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        <span>Tổng quan</span>
-      </button>
-      <button class="mob-tab nav-item teacher-only" data-view="students" type="button">
-        <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Học sinh</span>
-      </button>
-      <button class="mob-tab nav-item" data-view="tasks" type="button">
-        <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        <span id="mob-nav-tasks-label">Bài tập</span>
-      </button>
-      <button class="mob-tab nav-item" data-view="streaks" type="button">
-        <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-        <span>Streak</span>
-      </button>
-      <button class="mob-tab nav-item" data-view="tuition" type="button">
-        <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-        <span>Học phí</span>
-      </button>
-    </nav>
+  <!-- ── 3. MOBILE BOTTOM TABS ── -->
+  <nav class="mobile-tabs" id="mobile-tabs" aria-label="Mobile Navigation">
+    <button class="mob-tab nav-item active" data-view="dashboard" type="button">
+      <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+      <span>Tổng quan</span>
+    </button>
+    <button class="mob-tab nav-item teacher-only" data-view="students" type="button">
+      <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+      <span>Học sinh</span>
+    </button>
+    <button class="mob-tab nav-item" data-view="tasks" type="button">
+      <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2">
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+      </svg>
+      <span id="mob-nav-tasks-label">Bài tập</span>
+    </button>
+    <button class="mob-tab nav-item" data-view="streaks" type="button">
+      <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2">
+        <path
+          d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+      </svg>
+      <span>Streak</span>
+    </button>
+    <button class="mob-tab nav-item" data-view="tuition" type="button">
+      <svg class="ui-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2">
+        <rect width="20" height="14" x="2" y="5" rx="2" />
+        <line x1="2" x2="22" y1="10" y2="10" />
+      </svg>
+      <span>Học phí</span>
+    </button>
+  </nav>
 
   </div>
 
   <!-- ── 4. GLOBAL COMMAND PALETTE (Ctrl+K) ── -->
-  <div id="cmd-overlay" class="cmd-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Command Palette">
+  <div id="cmd-overlay" class="cmd-overlay" aria-hidden="true" role="dialog" aria-modal="true"
+    aria-label="Command Palette">
     <div class="cmd-modal">
       <div class="cmd-search-bar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="cmd-input" placeholder="Tìm học sinh, bài tập, hoặc nhập lệnh..." autocomplete="off" spellcheck="false" />
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" id="cmd-input" placeholder="Tìm học sinh, bài tập, hoặc nhập lệnh..." autocomplete="off"
+          spellcheck="false" />
         <kbd class="cmd-badge" id="cmd-esc-btn">ESC</kbd>
       </div>
       <div class="cmd-body" id="cmd-results">
@@ -338,17 +328,18 @@
     <div class="modal modal-md">
       <div class="modal-header">
         <h3>Login to HomeworkHub</h3>
-        <button class="modal-close hidden-if-unauth" data-modal="modal-login" type="button" aria-label="Close modal">✕</button>
+        <button class="modal-close hidden-if-unauth" data-modal="modal-login" type="button"
+          aria-label="Close modal">✕</button>
       </div>
       <div class="modal-body">
         <p class="modal-intro-text">Select your role to log in:</p>
-        
+
         <div class="role-selector">
           <button class="role-card active" id="role-btn-teacher" type="button">
             <div class="role-title">Teacher Portal</div>
             <div class="role-desc">Full access: assign tasks, review & approve photos, manage students</div>
           </button>
-          
+
           <button class="role-card" id="role-btn-student" type="button">
             <div class="role-title">Student Portal</div>
             <div class="role-desc">Upload homework photos, view assigned tasks & streak progress</div>
@@ -358,16 +349,18 @@
         <div id="student-login-select-wrap" class="form-group hidden form-group-spaced">
           <label for="login-student-select">Select Student Name:</label>
           <select id="login-student-select" class="select-input select-full"></select>
-          
+
           <div class="form-group form-group-sm-spaced">
             <label for="input-student-pin">Student PIN:</label>
-            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN (e.g. 0000)…" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" spellcheck="false" />
+            <input type="password" id="input-student-pin" class="text-input" placeholder="Enter PIN (e.g. 0000)…"
+              inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" spellcheck="false" />
           </div>
         </div>
 
         <div id="teacher-login-pass-wrap" class="form-group form-group-spaced">
           <label for="input-teacher-pass">Teacher Password:</label>
-          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password…" autocomplete="current-password" spellcheck="false" />
+          <input type="password" id="input-teacher-pass" class="text-input" placeholder="Enter teacher password…"
+            autocomplete="current-password" spellcheck="false" />
         </div>
       </div>
       <div class="modal-footer">
@@ -386,15 +379,18 @@
       </div>
       <div class="modal-body">
         <p class="modal-intro-text">
-          Enter your Supabase <strong>Project URL</strong> and <strong>Anon Key</strong> to enable real-time online synchronization between Teacher and Students:
+          Enter your Supabase <strong>Project URL</strong> and <strong>Anon Key</strong> to enable real-time online
+          synchronization between Teacher and Students:
         </p>
         <div class="form-group">
           <label for="input-supabase-url">Supabase Project URL</label>
-          <input type="url" id="input-supabase-url" class="text-input" placeholder="https://your-project.supabase.co" autocomplete="off" spellcheck="false" />
+          <input type="url" id="input-supabase-url" class="text-input" placeholder="https://your-project.supabase.co"
+            autocomplete="off" spellcheck="false" />
         </div>
         <div class="form-group">
           <label for="input-supabase-key">Supabase Anon Key</label>
-          <input type="password" id="input-supabase-key" class="text-input" placeholder="eyJhbGciOi…" autocomplete="off" spellcheck="false" />
+          <input type="password" id="input-supabase-key" class="text-input" placeholder="eyJhbGciOi…" autocomplete="off"
+            spellcheck="false" />
         </div>
       </div>
       <div class="modal-footer">
@@ -418,11 +414,13 @@
         </div>
         <div class="form-group">
           <label for="input-student-grade">Grade / Level</label>
-          <input type="text" id="input-student-grade" class="text-input" placeholder="e.g. English Student…" autocomplete="off" />
+          <input type="text" id="input-student-grade" class="text-input" placeholder="e.g. English Student…"
+            autocomplete="off" />
         </div>
         <div class="form-group">
           <label for="input-student-passcode">Student Login PIN</label>
-          <input type="text" id="input-student-passcode" class="text-input" placeholder="4-digit PIN (e.g. 0000)…" value="0000" inputmode="numeric" pattern="[0-9]*" autocomplete="off" spellcheck="false" />
+          <input type="text" id="input-student-passcode" class="text-input" placeholder="4-digit PIN (e.g. 0000)…"
+            value="0000" inputmode="numeric" pattern="[0-9]*" autocomplete="off" spellcheck="false" />
         </div>
         <div class="form-group">
           <label id="label-avatar-color">Avatar Color</label>
@@ -447,7 +445,8 @@
       <div class="modal-body">
         <div class="form-group">
           <label for="input-task-title">Task Title</label>
-          <input type="text" id="input-task-title" class="text-input" placeholder="e.g. Grammar Unit 4 Exercises…" autocomplete="off" />
+          <input type="text" id="input-task-title" class="text-input" placeholder="e.g. Grammar Unit 4 Exercises…"
+            autocomplete="off" />
         </div>
         <div class="form-group">
           <label for="input-task-desc">Description & Instructions</label>
@@ -460,7 +459,8 @@
         <div class="form-group">
           <label class="toggle-row" for="input-task-recurring">
             <input type="checkbox" id="input-task-recurring" class="toggle-checkbox" />
-            <span class="toggle-text">Repeat Daily <span class="toggle-desc">(Auto-resets due date every day)</span></span>
+            <span class="toggle-text">Repeat Daily <span class="toggle-desc">(Auto-resets due date every
+                day)</span></span>
           </label>
         </div>
         <div class="form-group" id="form-group-task-due">
@@ -470,10 +470,17 @@
         <div class="form-group">
           <label>Tệp đính kèm bài tập</label>
           <div class="file-drop-zone" id="task-attach-drop-zone">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <div class="file-drop-text">Kéo thả tệp vào đây hoặc <button type="button" class="btn-link" id="btn-select-task-files">chọn tệp từ máy</button></div>
-            <div class="file-drop-hint">Hỗ trợ PDF, Word, Excel, PowerPoint, Text, Zip, Audio (MP3/WAV), Ảnh (Tối đa 10MB)</div>
-            <input type="file" id="input-task-files" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" style="display: none;" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+            <div class="file-drop-text">Kéo thả tệp vào đây hoặc <button type="button" class="btn-link"
+                id="btn-select-task-files">chọn tệp từ máy</button></div>
+            <div class="file-drop-hint">Hỗ trợ PDF, Word, Excel, PowerPoint, Text, Zip, Audio (MP3/WAV), Ảnh (Tối đa
+              10MB)</div>
+            <input type="file" id="input-task-files" multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.wav,image/*" style="display: none;" />
           </div>
           <div class="file-list" id="task-attachments-list"></div>
         </div>
@@ -504,33 +511,78 @@
       <div class="viewer-toolbar">
         <div class="viewer-caption" id="viewer-caption"></div>
         <div class="viewer-actions">
-          <button class="viewer-btn" id="viewer-btn-prev" type="button" title="Ảnh trước (Mũi tên trái)" aria-label="Previous Image">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          <button class="viewer-btn" id="viewer-btn-prev" type="button" title="Ảnh trước (Mũi tên trái)"
+            aria-label="Previous Image">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
           </button>
-          <button class="viewer-btn" id="viewer-btn-next" type="button" title="Ảnh tiếp (Mũi tên phải)" aria-label="Next Image">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          <button class="viewer-btn" id="viewer-btn-next" type="button" title="Ảnh tiếp (Mũi tên phải)"
+            aria-label="Next Image">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
           </button>
           <span class="viewer-zoom-val" id="viewer-zoom-val">100%</span>
-          <button class="viewer-btn" id="viewer-btn-reset" type="button" title="Đặt lại phóng to (Phím 0)" aria-label="Reset Zoom">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+          <button class="viewer-btn" id="viewer-btn-reset" type="button" title="Đặt lại phóng to (Phím 0)"
+            aria-label="Reset Zoom">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <polyline points="3 3 3 8 8 8" />
+            </svg>
           </button>
           <button class="viewer-btn" id="viewer-btn-zoom-out" type="button" title="Thu nhỏ (-)" aria-label="Zoom Out">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
           </button>
           <button class="viewer-btn" id="viewer-btn-zoom-in" type="button" title="Phóng to (+)" aria-label="Zoom In">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="11" y1="8" x2="11" y2="14" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
           </button>
-          <button class="viewer-btn" id="viewer-btn-rotate-ccw" type="button" title="Xoay ngược chiều kim đồng hồ" aria-label="Rotate Counter-Clockwise">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <button class="viewer-btn" id="viewer-btn-rotate-ccw" type="button" title="Xoay ngược chiều kim đồng hồ"
+            aria-label="Rotate Counter-Clockwise">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+            </svg>
           </button>
-          <button class="viewer-btn" id="viewer-btn-rotate-cw" type="button" title="Xoay theo chiều kim đồng hồ" aria-label="Rotate Clockwise">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <button class="viewer-btn" id="viewer-btn-rotate-cw" type="button" title="Xoay theo chiều kim đồng hồ"
+            aria-label="Rotate Clockwise">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
           </button>
-          <button class="viewer-btn" id="viewer-btn-download" type="button" title="Tải ảnh về máy" aria-label="Download Image">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <button class="viewer-btn" id="viewer-btn-download" type="button" title="Tải ảnh về máy"
+            aria-label="Download Image">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
           </button>
-          <button class="viewer-btn viewer-btn-close" id="viewer-btn-close" data-modal="modal-image-viewer" type="button" title="Đóng (Esc)" aria-label="Close Image Viewer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <button class="viewer-btn viewer-btn-close" id="viewer-btn-close" data-modal="modal-image-viewer"
+            type="button" title="Đóng (Esc)" aria-label="Close Image Viewer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
       </div>
@@ -560,7 +612,10 @@
 
   <dialog id="editorial-menu" aria-label="Điều hướng">
     <button type="button" id="editorial-menu-close" aria-label="Đóng menu">Đóng ×</button>
-    <nav aria-label="Menu"><button type="button" data-go="dashboard">Tổng quan</button><button type="button" data-go="tasks">Bài tập</button><button type="button" data-go="tuition">Học phí</button><button type="button" data-go="students" class="teacher-only">Học sinh</button><button type="button" data-go="streaks">Chuỗi học tập</button><button type="button" data-go="settings">Cài đặt</button></nav>
+    <nav aria-label="Menu"><button type="button" data-go="dashboard">Tổng quan</button><button type="button"
+        data-go="tasks">Bài tập</button><button type="button" data-go="tuition">Học phí</button><button type="button"
+        data-go="students" class="teacher-only">Học sinh</button><button type="button" data-go="streaks">Chuỗi học
+        tập</button><button type="button" data-go="settings">Cài đặt</button></nav>
   </dialog>
   <button id="scroll-top" type="button" aria-label="Về đầu trang">↑</button>
   <!-- Toast Notifications -->
@@ -570,4 +625,5 @@
   <script src="app.js"></script>
   <script src="editorial.js"></script>
 </body>
+
 </html>

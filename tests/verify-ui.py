@@ -1,5 +1,6 @@
 import socket, json, base64, time, os, subprocess, shutil, sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+import threading
 
 screenshot_dir = '/home/djokov1c/.gemini/antigravity/brain/5d05e88d-e046-49e5-a88b-40aea2947076/screenshots'
 os.makedirs(screenshot_dir, exist_ok=True)
@@ -9,7 +10,6 @@ os.makedirs('/tmp/screenshots', exist_ok=True)
 shutil.rmtree('/tmp/ffprofile', ignore_errors=True)
 os.makedirs('/tmp/ffprofile', exist_ok=True)
 
-# Custom HTTP handler with no-cache headers
 class NoCacheHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
@@ -18,7 +18,6 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
 server = HTTPServer(('127.0.0.1', 8765), NoCacheHandler)
-import threading
 server_thread = threading.Thread(target=server.serve_forever, daemon=True)
 server_thread.start()
 
@@ -28,47 +27,58 @@ firefox_proc = subprocess.Popen([
     '--no-remote'
 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-time.sleep(3)
+s = None
+for _ in range(20):
+    try:
+        s = socket.create_connection(('127.0.0.1', 2828))
+        break
+    except Exception:
+        time.sleep(0.5)
+
+if not s:
+    print("Could not connect to Marionette on 2828")
+    firefox_proc.terminate()
+    server.shutdown()
+    sys.exit(1)
+
+counter = 0
+
+def recv():
+    n = b''
+    while (c := s.recv(1)) != b':':
+        n += c
+    size = int(n)
+    data = b''
+    while len(data) < size:
+        data += s.recv(size - len(data))
+    return json.loads(data)
+
+recv()
+
+def call(name, args={}):
+    global counter
+    counter += 1
+    d = json.dumps([0, counter, name, args]).encode()
+    s.sendall(str(len(d)).encode() + b':' + d)
+    r = recv()
+    if r[2]:
+        raise RuntimeError(r)
+    return r[3]
+
+def js(script):
+    source = 'try { window.__checkResult=(()=>{' + script + '})() } catch(e) {window.__checkResult={error:e.stack}}'
+    wrapper = "const el=document.createElement('script');el.textContent=" + json.dumps(source) + ";document.head.append(el);el.remove();return window.__checkResult;"
+    res = call('WebDriver:ExecuteScript', {'script': wrapper, 'args': [], 'sandbox': None})
+    if isinstance(res.get('value'), dict) and 'error' in res['value']:
+        raise RuntimeError(res['value']['error'])
+    return res.get('value')
+
+call('WebDriver:NewSession', {'capabilities': {'alwaysMatch': {'acceptInsecureCerts': True}}})
+call('WebDriver:Navigate', {'url': 'http://127.0.0.1:8765'})
+time.sleep(1)
 
 try:
-    s = socket.create_connection(('127.0.0.1', 2828))
-    counter = 0
-
-    def recv():
-        n = b''
-        while (c := s.recv(1)) != b':':
-            n += c
-        size = int(n)
-        data = b''
-        while len(data) < size:
-            data += s.recv(size - len(data))
-        return json.loads(data)
-
-    recv()
-
-    def call(name, args={}):
-        global counter
-        counter += 1
-        d = json.dumps([0, counter, name, args]).encode()
-        s.sendall(str(len(d)).encode() + b':' + d)
-        r = recv()
-        if r[2]:
-            raise RuntimeError(r)
-        return r[3]
-
-    def js(script):
-        source = 'try { window.__checkResult=(()=>{' + script + '})() } catch(e) {window.__checkResult={error:e.stack}}'
-        wrapper = "const el=document.createElement('script');el.textContent=" + json.dumps(source) + ";document.head.append(el);el.remove();return window.__checkResult;"
-        res = call('WebDriver:ExecuteScript', {'script': wrapper, 'args': [], 'sandbox': None})
-        if isinstance(res.get('value'), dict) and 'error' in res['value']:
-            raise RuntimeError(res['value']['error'])
-        return res.get('value')
-
-    call('WebDriver:NewSession', {'capabilities': {'alwaysMatch': {'acceptInsecureCerts': True}}})
-    call('WebDriver:Navigate', {'url': 'http://127.0.0.1:8765'})
-    time.sleep(1)
-
-    # Populate state
+    # Populate initial state
     js("""
         isCloudEnabled = false;
         supabaseClient = null;
@@ -86,7 +96,6 @@ try:
         state.currentUser = { role: 'teacher' };
         feeState = FeeLedger.empty();
         FeeLedger.add(feeState, state.students, { student_id: 'st1', amount: 500000, reason: 'Học phí tháng 11', type: 'opening' });
-        FeeLedger.add(feeState, state.students, { student_id: 'st1', amount: -2500, reason: 'Thưởng nộp bài đúng hạn', type: 'reward' });
         FeeLedger.add(feeState, state.students, { student_id: 'st2', amount: 800000, reason: 'Học phí tháng 11', type: 'opening' });
         closeModal('modal-login');
         navigateTo('dashboard');
@@ -95,8 +104,7 @@ try:
     views = ['dashboard', 'students', 'tasks', 'streaks', 'tuition', 'settings']
     resolutions = [(1366, 768), (1440, 900)]
 
-    results = []
-
+    print("\n================== DESKTOP VERIFICATION ==================")
     for width, height in resolutions:
         call('WebDriver:SetWindowRect', {'width': width, 'height': height})
         time.sleep(0.5)
@@ -106,68 +114,91 @@ try:
             time.sleep(0.3)
 
             info = js("""
-                const viewEl = document.querySelector('.view.active');
                 const mainEl = document.getElementById('main');
                 const winH = window.innerHeight;
                 const docScroll = document.documentElement.scrollHeight;
-                const mainScroll = mainEl ? mainEl.scrollHeight : 0;
-                const mainClient = mainEl ? mainEl.clientHeight : 0;
-                
                 const bodyBg = getComputedStyle(document.body).backgroundColor;
-                const viewBg = getComputedStyle(viewEl).backgroundColor;
 
-                // Elements with font-size < 12px with actual text
+                // Elements with text smaller than 12px
                 const all = [...document.querySelectorAll('*')];
                 const tiny = all.filter(el => {
                     const fs = parseFloat(getComputedStyle(el).fontSize);
                     return fs > 0 && fs < 12 && el.childNodes.length && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
                 }).map(el => ({ tag: el.tagName, cls: el.className, fs: getComputedStyle(el).fontSize, txt: el.innerText.slice(0, 20) }));
 
+                // Elements with dark background (luminance < 0.3)
+                const dark = [];
+                for (const el of all) {
+                    if (el.tagName === 'BODY' || el.tagName === 'HTML' || el.classList.contains('sidebar-backdrop') || el.classList.contains('skip-link')) continue;
+                    // Check if element is visible
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > winH) continue;
+                    const cs = getComputedStyle(el);
+                    const bg = cs.backgroundColor;
+                    const m = bg.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?\\)/);
+                    if (m) {
+                        const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+                        const a = m[4] !== undefined ? parseFloat(m[4]) : 1;
+                        if (a > 0.1) {
+                            const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+                            if (lum < 0.3) {
+                                dark.push({ tag: el.tagName, id: el.id, cls: el.className, bg, lum: Math.round(lum*1000)/1000, txt: (el.innerText || '').slice(0, 25).trim() });
+                            }
+                        }
+                    }
+                }
+
+                // Check edge padding on main container
+                const mainRect = mainEl ? mainEl.getBoundingClientRect() : { left: 0, right: window.innerWidth };
+                const leftPad = mainRect.left;
+                const rightPad = window.innerWidth - mainRect.right;
+
                 return {
                     docScroll,
                     winH,
-                    mainScroll,
-                    mainClient,
                     bodyBg,
-                    viewBg,
                     tinyCount: tiny.length,
-                    tinySample: tiny.slice(0, 3)
+                    tinySample: tiny.slice(0, 3),
+                    darkCount: dark.length,
+                    darkSample: dark.slice(0, 5),
+                    leftPad,
+                    rightPad
                 };
             """)
 
-            # Outer page scroll check: docScroll <= winH
-            page_scrolls = info['docScroll'] > info['winH'] + 2
+            exceeds = info['docScroll'] > info['winH'] + 2
+            # On desktop, only tasks may exceed window height
+            if view != 'tasks':
+                assert not exceeds, f"View {view} exceeded window height! docScroll={info['docScroll']} vs winH={info['winH']}"
             
-            # Record
-            record = {
-                'res': f"{width}x{height}",
-                'view': view,
-                'page_scrolls': page_scrolls,
-                'body_bg': info['bodyBg'],
-                'view_bg': info['viewBg'],
-                'tiny_count': info['tinyCount'],
-                'tiny_sample': info['tinySample']
-            }
-            results.append(record)
-            print(f"[{width}x{height}] {view}: PageScrolls={page_scrolls} (docScroll={info['docScroll']}, winH={info['winH']}), bodyBg={info['bodyBg']}, tinyCount={info['tinyCount']}")
+            print(f"[{width}x{height}] {view.upper()}:")
+            print(f"  • scrollHeight={info['docScroll']} vs innerHeight={info['winH']} (Exceeds: {exceeds})")
+            print(f"  • bodyBg={info['bodyBg']}, edgePadding=(L:{info['leftPad']}px, R:{info['rightPad']}px)")
+            print(f"  • tinyFontCount (<12px) = {info['tinyCount']}")
+            print(f"  • darkElementCount (lum<0.3) = {info['darkCount']}")
+            if info['darkCount'] > 0:
+                print(f"    Dark samples: {info['darkSample']}")
 
+            # Save screenshot
             shot = call('WebDriver:TakeScreenshot', {'full': False})
             data = base64.b64decode(shot['value'])
             for p in [f"{screenshot_dir}/{view}-{width}x{height}.png", f"/tmp/screenshots/{view}-{width}x{height}.png"]:
                 with open(p, 'wb') as f:
                     f.write(data)
 
-        # Login Modal at this desktop resolution
+        # Login Modal at this resolution
         js("openLoginDialog();")
         time.sleep(0.3)
-        login_info = js("""
+        modal_info = js("""
             const modal = document.querySelector('#modal-login .modal');
+            const overlay = document.getElementById('modal-login');
             return {
                 bg: getComputedStyle(modal).backgroundColor,
-                border: getComputedStyle(modal).border
+                border: getComputedStyle(modal).border,
+                overlayBg: getComputedStyle(overlay).backgroundColor
             };
         """)
-        print(f"[{width}x{height}] login modal: bg={login_info['bg']}, border={login_info['border']}")
+        print(f"[{width}x{height}] LOGIN MODAL: modalBg={modal_info['bg']}, border={modal_info['border']}")
         shot = call('WebDriver:TakeScreenshot', {'full': False})
         data = base64.b64decode(shot['value'])
         for p in [f"{screenshot_dir}/login-{width}x{height}.png", f"/tmp/screenshots/login-{width}x{height}.png"]:
@@ -175,7 +206,7 @@ try:
                 f.write(data)
         js("closeModal('modal-login');")
 
-    # Mobile Verification at 390px
+    print("\n================== MOBILE VERIFICATION (390x844) ==================")
     js("""
         const frame = document.createElement('iframe');
         frame.id = 'mobile-verify-frame';
@@ -203,6 +234,18 @@ try:
     for view in views:
         js(f"navigateTo('{view}');")
         time.sleep(0.3)
+        m_info = js("""
+            const mainEl = document.getElementById('main');
+            const mainRect = mainEl ? mainEl.getBoundingClientRect() : { left: 0, right: window.innerWidth };
+            return {
+                docScroll: document.documentElement.scrollHeight,
+                winH: window.innerHeight,
+                leftPad: mainRect.left,
+                rightPad: window.innerWidth - mainRect.right
+            };
+        """)
+        print(f"[390x844] {view.upper()}: scrollHeight={m_info['docScroll']}, innerHeight={m_info['winH']}, edgePadding=(L:{m_info['leftPad']}px, R:{m_info['rightPad']}px)")
+
         call('WebDriver:SwitchToFrame', {'id': None})
         shot = call('WebDriver:TakeScreenshot', {'full': False})
         data = base64.b64decode(shot['value'])
@@ -219,25 +262,26 @@ try:
     for p in [f"{screenshot_dir}/login-mobile-390.png", f"/tmp/screenshots/login-mobile-390.png"]:
         with open(p, 'wb') as f:
             f.write(data)
+    call('WebDriver:SwitchToFrame', {'id': 0})
 
-    # Tuition multi-student fee interaction tests
+    print("\n================== TUITION & MULTI-STUDENT FEE VERIFICATION ==================")
     js("feeState=FeeLedger.empty();navigateTo('tuition');selectedFeeStudentId='st1';adjustFee(100000,'An charge');selectedFeeStudentId='st2';adjustFee(200000,'Binh charge');renderFeeWidget();")
-    fee_b = js("return {balance:feeTotals().balance,logs:document.getElementById('fee-log-body').innerText};")
+    fee_b = js("return {balance:feeTotals().balance,logs:document.getElementById('fee-log-body') ? document.getElementById('fee-log-body').innerText : document.querySelector('.fee-log').innerText};")
     assert fee_b['balance']==200000 and 'An charge' not in fee_b['logs'], fee_b
-    print('Tuition student B verified:', fee_b)
+    print('  ✔ Student B ledger isolated: balance=200.000đ')
 
     js("selectedFeeStudentId='st1';renderFeeWidget();")
-    fee_a = js("return {balance:feeTotals().balance,logs:document.getElementById('fee-log-body').innerText};")
+    fee_a = js("return {balance:feeTotals().balance,logs:document.getElementById('fee-log-body') ? document.getElementById('fee-log-body').innerText : document.querySelector('.fee-log').innerText};")
     assert fee_a['balance']==100000 and 'Binh charge' not in fee_a['logs'], fee_a
-    print('Tuition student A verified:', fee_a)
+    print('  ✔ Student A ledger isolated: balance=100.000đ')
 
     js("document.getElementById('fee-student-select').value='st2';document.getElementById('fee-student-select').dispatchEvent(new Event('change'));document.getElementById('fee-manual-input').value='50000';document.getElementById('btn-fee-pay').click();")
     assert js('return feeTotals().balance;')==150000
-    print('Tuition payment verified balance=150000')
+    print('  ✔ Payment deducted correctly: balance=150.000đ')
 
     js("state.currentUser={role:'student',studentId:'st1'};renderFeeWidget();")
     assert js("return !document.getElementById('btn-fee-pay') && feeTotals().balance===100000;")
-    print('Student role tuition view verified (read-only, correct balance)')
+    print('  ✔ Student role access locked: read-only, correct balance=100.000đ')
 
     call('WebDriver:DeleteSession')
     print("\nALL VERIFICATIONS PASSED & SCREENSHOTS SAVED.")

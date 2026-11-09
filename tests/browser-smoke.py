@@ -22,7 +22,7 @@ def js(script):
 call('WebDriver:NewSession',{'capabilities':{'alwaysMatch':{'acceptInsecureCerts':True}}})
 call('WebDriver:Navigate',{'url':'http://127.0.0.1:8765'})
 time.sleep(2)
-print(js('return {title:document.title,art:document.querySelectorAll(".monoline-art").length,settings:!!document.getElementById("view-settings"),login:document.getElementById("modal-login").className};'))
+print(js('return {title:document.title,settings:!!document.getElementById("view-settings"),login:document.getElementById("modal-login").className};'))
 # Avoid all live cloud writes: replace client and populate temporary browser state.
 js("isCloudEnabled=false;supabaseClient=null;state.students=[{id:'a',name:'An',grade:'English',pin:'0000'},{id:'b',name:'Bình',grade:'English',pin:'0000'}];state.tasks=[];feeState=FeeLedger.empty();state.currentUser={role:'teacher'};closeModal('modal-login');navigateTo('dashboard');")
 for width,height in [(1440,1000),(375,850)]:
