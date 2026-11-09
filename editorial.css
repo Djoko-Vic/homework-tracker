@@ -66,7 +66,7 @@ h3 { font-size: 18px; }
 img { max-width: 100%; }
 /* Only functional search, menu, and avatar marks remain in the interface. */
 .ui-icon, .empty-state-icon, .streak-fire, .role-icon, .cmd-item-icon, .brand-icon-box, .mob-tab svg, .attachment-chip-icon, .file-item-icon { display: none !important; }
-.action-card-thumb:not(:has(img)) { display: none; }
+.action-card-thumb:not(:has(img)):not(:has(svg)) { display: none !important; }
 .student-avatar, .user-avatar, .action-card-av, .col-student-av, .detail-student-av {
   background: var(--accent-soft) !important; color: var(--on-accent) !important; border-radius: 50%; border: 1px solid rgba(255,255,255,.8); width: 36px; height: 36px; min-width: 36px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; box-shadow: none; flex-shrink: 0;
 }
@@ -129,9 +129,12 @@ label, .form-group label { font-size: 14px; color: var(--text-2); text-transform
 .dash-card-actions .dash-card-header { flex-direction: column; gap: 8px; }
 .card-badge, .hero-count-badge { background: var(--accent-soft); color: var(--text); font-size: 13px; padding: 4px 10px; border: var(--glass-border); border-radius: 999px; white-space: nowrap; font-weight: 600; }
 .dash-card-scroll-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.dash-card-actions .dash-card-scroll-body, #dash-action-cards { padding: 4px 6px 10px; }
 .hero-action-cards { display: flex; flex-direction: column; gap: 12px; max-height: none; grid-template-columns: none; }
-.action-card { flex-shrink: 0; padding: 14px; border: var(--glass-border); border-left: 3px solid transparent; border-radius: 14px; background: var(--glass-nested); display: flex; flex-direction: column; gap: 10px; box-shadow: none; }
-.action-card:hover, .action-card.selected, .master-row:hover, .master-row.selected { background: rgba(255,138,61,.18); border-left: 3px solid var(--accent); }
+.action-card { flex-shrink: 0; padding: 14px 16px; border: 1.5px solid rgba(255,122,26,.3); border-radius: 14px; background: var(--glass-nested); display: flex; flex-direction: column; gap: 10px; box-shadow: none !important; transform: none !important; box-sizing: border-box; transition: border-color var(--transition), background var(--transition); }
+.action-card:hover { background: rgba(255,138,61,.12); border-color: var(--accent); transform: none !important; box-shadow: none !important; }
+.action-card.selected { background: rgba(255,138,61,.18) !important; border: 2px solid var(--accent) !important; border-radius: 14px !important; box-shadow: none !important; outline: none !important; transform: none !important; }
+.master-row:hover, .master-row.selected { background: rgba(255,138,61,.18); border-left: 3px solid var(--accent); }
 .action-card-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .action-card-student { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
 .action-card-av { width: 28px; height: 28px; min-width: 28px; font-size: 12px; }
@@ -139,7 +142,7 @@ label, .form-group label { font-size: 14px; color: var(--text-2); text-transform
 .action-card-meta { min-width: 0; }
 .action-card-task-title { font-size: 16px; font-weight: 600; line-height: 1.5; }
 .action-card-time { font-size: 13px; color: var(--text-2); }
-.action-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0; }
+.action-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 0; padding-top: 10px; border-top: 1px solid rgba(255,122,26,.18); }
 .master-search-wrap { width: 100%; }
 .master-search-wrap input { width: 100%; }
 .master-filter-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; margin: 0 0 12px; padding: 0; }
@@ -389,9 +392,9 @@ body.large-text { --font-body: 'Be Vietnam Pro',sans-serif; font-size: 18px; }
 #modal-student-detail { padding: 20px; }
 #modal-student-detail .modal { height: calc(100dvh - 40px); max-height: calc(100dvh - 40px); max-width: calc(100vw - 40px); border-radius: 20px; }
 .color-swatch { width: 32px; height: 32px; border-radius: 50%; padding: 0; }
-.action-card { gap: 8px; padding: 12px; }
+.action-card { gap: 10px; padding: 14px 16px; }
 .action-card-student { font-size: 13px; }
-.action-card-body { gap: 8px; }
+.action-card-body { gap: 10px; }
 .action-card-foot { font-size: 13px; }
 .action-card-thumb { width: 36px; height: 36px; border-radius: 10px; }
 .action-card-task-title { overflow: visible; white-space: normal; display: block; line-height: 1.4; }

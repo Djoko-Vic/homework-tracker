@@ -926,14 +926,11 @@ body {
 .action-card:hover {
   background: var(--bg2);
   border-color: var(--border-h);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
 }
 
 .action-card.selected {
   background: var(--bg2);
   border-color: var(--ink);
-  box-shadow: 0 0 0 2px var(--ink);
 }
 
 .action-card-top {

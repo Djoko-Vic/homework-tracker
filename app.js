@@ -14,7 +14,7 @@ const FEE_LATE_DAILY = 5000;    // +5,000đ  if daily task has no submission tod
 const TEACHER_PASSWORD = '2992006bot1';
 
 const AVATAR_COLORS = [
-  '#FF7A1A', '#FF8A3D', '#FFD2AE', '#FFE6CC', '#D6E8FF', '#FFF8F1'
+  '#111111', '#444444', '#777777', '#AAAAAA', '#DDDDDD', '#F4561D'
 ];
 
 // ── SUPABASE CLIENT CONFIG ─────────────────────────────────
@@ -508,6 +508,7 @@ function renderFeeWidget() {
   const totals = feeTotals();
   const displayLogs = feeState.log.filter(l => selectedId && l.student_id === selectedId);
 
+  const PREVIEW_COUNT = 6;
   const totalLog = displayLogs.length;
 
   const TYPE_BADGES = {
@@ -548,46 +549,48 @@ function renderFeeWidget() {
     }).join('');
   }
 
-  const visibleStudents = state.students.filter(student => isT || student.id === currentStudentId);
+  const previewHtml = buildLogHtml(displayLogs.slice(0, PREVIEW_COUNT));
+  const hasMore = totalLog > PREVIEW_COUNT;
+
   widget.innerHTML = `
-    <div class="fee-student-overview" role="region" aria-label="Tổng quan học phí từng học sinh" tabindex="0">
-      ${visibleStudents.map(student => {
-        const account = FeeLedger.totals(feeState, student.id, getVNDate());
-        return `<button type="button" class="fee-student-tile ${student.id === selectedId ? 'selected' : ''}" data-fee-student="${escHtml(student.id)}" aria-pressed="${student.id === selectedId}">
-          <span class="fee-student-name"><span class="user-avatar">${initials(student.name)}</span>${escHtml(student.name)}</span>
-          <span class="fee-student-numbers"><span>Tổng phí<strong>${formatVND(account.due)}</strong></span><span>Đã trả / giảm<strong>${formatVND(account.paid)}</strong></span><span>Còn lại<strong>${formatVND(account.balance)}</strong></span></span>
-        </button>`;
-      }).join('') || '<p>Thêm học sinh để bắt đầu theo dõi học phí.</p>'}
+    ${isT ? `<label for="fee-student-select">Học sinh</label><select id="fee-student-select" class="select-input"><option value="">Chọn học sinh</option>${state.students.map(s => `<option value="${escHtml(s.id)}" ${s.id === selectedId ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('')}</select>` : ''}
+    ${isT && feeState.legacy ? `<p role="status">Dữ liệu học phí cũ chưa rõ chủ sở hữu. ${isCloudEnabled ? 'Chạy fee-migration.sql với mã học sinh đã xác nhận.' : '<button id="fee-resolve" type="button">Gán cho học sinh đang chọn</button>'}</p>` : ''}
+    ${isT && Object.keys(feeState.pendingFees || {}).length ? '<p role="status">Giao dịch tự động đang chờ đồng bộ lại.</p>' : ''}
+    ${isT && feeState.legacyEventAmbiguity ? '<p role="status">Giao dịch tự động cũ chưa rõ bài tập. Tạm dừng tự động thưởng/phạt; cần đối chiếu dữ liệu cũ.</p>' : ''}
+    ${!selectedId ? '<p>Chưa có học sinh. Thêm học sinh để ghi nhận học phí.</p>' : ''}
+    <dl class="fee-totals"><div><dt>Tổng phí</dt><dd>${formatVND(totals.due)}</dd></div><div><dt>Đã trả / giảm trừ</dt><dd>${formatVND(totals.paid)}</dd></div><div><dt>Còn lại</dt><dd>${formatVND(totals.balance)}</dd></div><div><dt>Quá hạn</dt><dd>${formatVND(totals.overdue)}</dd></div></dl>
+    <div class="fee-widget-header">
+      <span class="fee-widget-title">Học phí & Quỹ học bổng</span>
+      ${isT
+      ? `<button class="fee-reset-btn" id="btn-fee-reset" type="button" title="Đã nhận tiền — đặt lại số dư về 1,000,000đ">Nhận thanh toán / Reset</button>`
+      : `<span class="fee-read-only-pill">Chế độ xem học sinh (Chỉ đọc)</span>`}
     </div>
-    <div class="fee-workspace">
-      <section class="fee-account-panel" aria-label="Tài khoản học phí">
-        <div class="fee-widget-header"><h2>Học phí học sinh</h2>${!isT ? '<span class="fee-read-only-pill">Chỉ đọc</span>' : ''}</div>
-        ${isT ? `<label for="fee-student-select">Học sinh</label><select id="fee-student-select" class="select-input"><option value="">Chọn học sinh</option>${state.students.map(student => `<option value="${escHtml(student.id)}" ${student.id === selectedId ? 'selected' : ''}>${escHtml(student.name)}</option>`).join('')}</select>` : ''}
-        ${isT && feeState.legacy ? `<p role="status">Dữ liệu học phí cũ chưa rõ chủ sở hữu. ${isCloudEnabled ? 'Chạy fee-migration.sql với mã học sinh đã xác nhận.' : '<button id="fee-resolve" type="button">Gán cho học sinh đang chọn</button>'}</p>` : ''}
-        ${isT && Object.keys(feeState.pendingFees || {}).length ? '<p role="status">Giao dịch tự động đang chờ đồng bộ lại.</p>' : ''}
-        ${isT && feeState.legacyEventAmbiguity ? '<p role="status">Giao dịch cũ cần đối chiếu; tạm dừng tự động thưởng/phạt.</p>' : ''}
-        <dl class="fee-totals"><div><dt>Tổng phí</dt><dd>${formatVND(totals.due)}</dd></div><div><dt>Đã trả / giảm trừ</dt><dd>${formatVND(totals.paid)}</dd></div><div><dt>Còn lại</dt><dd>${formatVND(totals.balance)}</dd></div><div><dt>Quá hạn</dt><dd>${formatVND(totals.overdue)}</dd></div></dl>
-        ${isT ? `<div class="fee-manual-wrap">
-          <label for="fee-manual-input">Số tiền (đ)</label><input type="number" id="fee-manual-input" min="0" placeholder="Nhập số tiền…" />
-          <label for="fee-manual-reason">Ghi chú</label><input type="text" id="fee-manual-reason" placeholder="Lý do giao dịch (không bắt buộc)" />
-          <label for="fee-due-date">Ngày đến hạn</label><input type="date" id="fee-due-date" />
-          <div class="fee-manual-btns"><button type="button" id="btn-fee-pay" class="btn-primary">Ghi nhận thanh toán</button><button type="button" id="btn-fee-add">+ Cộng</button><button type="button" id="btn-fee-sub">− Trừ</button></div>
-          <button id="btn-fee-reset" type="button">Thanh toán & mở kỳ mới</button>
-        </div>` : ''}
-        <div class="fee-rules"><span>Nộp bài: <strong>−2.500đ</strong></span><span>Mất streak: <strong>+10.000đ</strong></span><span>Trễ bài: <strong>+10.000đ</strong></span><span>Trễ hằng ngày: <strong>+5.000đ</strong></span></div>
-      </section>
-      <section class="fee-history-panel" aria-label="Lịch sử giao dịch">
-        <div class="fee-log-title-row"><h2>Lịch sử giao dịch</h2><span class="card-badge">${totalLog} giao dịch</span></div>
-        <div class="fee-log" id="fee-log-body">${buildLogHtml(displayLogs)}</div>
-      </section>
+    <div class="fee-balance">
+      ${formatVND(bal)}
     </div>
+    <div class="fee-rules">
+      <span>Nộp bài: <strong>-2,500đ</strong></span>
+      <span>Mất streak: <strong>+10,000đ</strong></span>
+      <span>Trễ bài thường: <strong>+10,000đ</strong></span>
+      <span>Trễ hằng ngày: <strong>+5,000đ</strong></span>
+    </div>
+    ${isT ? `
+    <div class="fee-manual-wrap">
+      <label for="fee-manual-input">Số tiền</label><input type="number" id="fee-manual-input" class="fee-manual-input" placeholder="Số tiền (đ)…" min="0" />
+      <label for="fee-manual-reason">Ghi chú</label><input type="text" id="fee-manual-reason" class="fee-manual-reason" placeholder="Lý do cộng/trừ (không bắt buộc)" />
+      <label for="fee-due-date">Ngày đến hạn</label><input type="date" id="fee-due-date" /><div class="fee-manual-btns"><button type="button" id="btn-fee-pay">Ghi nhận thanh toán</button>
+        <button class="fee-manual-btn fee-manual-add" id="btn-fee-add" type="button" title="Cộng tiền phạt / phát sinh">+ Cộng</button>
+        <button class="fee-manual-btn fee-manual-sub" id="btn-fee-sub" type="button" title="Trừ tiền thưởng / thanh toán">− Trừ</button>
+      </div>
+    </div>
+    ` : ''}
+    <div class="fee-log-title-row">
+      <span class="fee-log-title-text">${!isT ? `Lịch sử giao dịch của bạn (${totalLog})` : 'Lịch sử giao dịch học phí'}</span>
+      ${hasMore ? `<button class="fee-log-expand-btn" id="btn-fee-log-expand" type="button">Xem thêm (${totalLog - PREVIEW_COUNT})</button>` : ''}
+    </div>
+    <div class="fee-log" id="fee-log-body">${previewHtml}</div>
+    ${hasMore ? `<div class="fee-log-more-wrap" id="fee-log-more" style="display:none">${buildLogHtml(displayLogs.slice(PREVIEW_COUNT))}</div>` : ''}
   `;
-  widget.querySelectorAll('[data-fee-student]').forEach(button => button.addEventListener('click', () => {
-    if (!isTeacher()) return;
-    selectedFeeStudentId = button.dataset.feeStudent;
-    renderFeeWidget();
-    updateRoleUI();
-  }));
 
   if (isT) {
     document.getElementById('fee-student-select')?.addEventListener('change', e => { selectedFeeStudentId = e.target.value; renderFeeWidget(); updateRoleUI(); });
@@ -608,6 +611,18 @@ function renderFeeWidget() {
     });
   }
 
+  // Expand/collapse older history
+  const expandBtn = document.getElementById('btn-fee-log-expand');
+  const moreWrap = document.getElementById('fee-log-more');
+  if (expandBtn && moreWrap) {
+    expandBtn.addEventListener('click', () => {
+      const isExpanded = moreWrap.style.display !== 'none';
+      moreWrap.style.display = isExpanded ? 'none' : 'block';
+      expandBtn.textContent = isExpanded
+        ? `Xem thêm (${totalLog - PREVIEW_COUNT})`
+        : 'Thu gọn ▲';
+    });
+  }
 }
 
 // ── PERSISTENCE ────────────────────────────────────────────
@@ -820,7 +835,7 @@ function parseDateLocal(iso) {
 function formatDate(iso) {
   if (!iso) return '—';
   const d = parseDateLocal(iso);
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function isOverdue(iso) {
@@ -1022,8 +1037,8 @@ function updateRoleUI() {
   if (isT) {
     if (avatarEl) {
       avatarEl.textContent = 'T';
-      avatarEl.style.background = 'var(--accent-soft)';
-      avatarEl.style.color = 'var(--on-accent)';
+      avatarEl.style.background = '#FFFFFF';
+      avatarEl.style.color = '#1B1B1B';
     }
     if (nameEl) nameEl.textContent = 'Giáo viên';
     if (roleEl) roleEl.textContent = 'Admin';
@@ -1031,8 +1046,8 @@ function updateRoleUI() {
     const s = state.students.find(st => st.id === user.studentId);
     if (avatarEl) {
       avatarEl.textContent = s ? initials(s.name) : 'S';
-      avatarEl.style.background = 'var(--accent-soft)';
-      avatarEl.style.color = 'var(--on-accent)';
+      avatarEl.style.background = '#FFFFFF';
+      avatarEl.style.color = '#1B1B1B';
     }
     if (nameEl) nameEl.textContent = s ? s.name : 'Học sinh';
     if (roleEl) roleEl.textContent = s ? (s.grade || 'Học sinh') : 'Học sinh';
@@ -1060,7 +1075,6 @@ function updateRoleUI() {
     const pendingList = getPendingReviewTasks(true);
     const pendingCount = pendingList.length;
     badgePending.textContent = pendingCount > 0 ? `${pendingCount} chờ` : '0 chờ';
-    document.getElementById('nav-dashboard')?.classList.toggle('needs-attention', pendingCount > 0);
   }
 
   const badgeStudents = document.getElementById('badge-nav-students');
@@ -1464,7 +1478,7 @@ function renderDashHero() {
   let urgentItems = [];
 
   if (isT) {
-    if (heroTitle) heroTitle.textContent = 'Cần xử lý';
+    if (heroTitle) heroTitle.textContent = 'Bài tập cần chấm điểm & Hạn chót';
 
     // 1. Pending review tasks from getPendingReviewTasks (Single Source of Truth)
     const pendingTasks = getPendingReviewTasks(true);
@@ -1542,7 +1556,7 @@ function renderDashHero() {
     });
   } else {
     // Student portal hero: tasks due today or needing upload
-    if (heroTitle) heroTitle.textContent = 'Cần hoàn thành';
+    if (heroTitle) heroTitle.textContent = 'Bài tập cần hoàn thành hôm nay';
     state.tasks.filter(t => t.studentId === currentStudentId).forEach(task => {
       const student = state.students.find(s => s.id === task.studentId);
       if (!student) return;
@@ -1574,8 +1588,8 @@ function renderDashHero() {
 
   if (!urgentItems.length) {
     cardsContainer.innerHTML = `
-      <div class="queue-empty" style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--text-2); background: var(--bg); border-radius: var(--radius-sm); border: 1px dashed var(--border);">
-
+      <div style="grid-column: 1 / -1; padding: 22px; text-align: center; color: var(--text-2); background: var(--bg); border-radius: var(--radius-sm); border: 1px dashed var(--border);">
+        <div style="font-size: 22px; margin-bottom: 6px;">✓</div>
         <strong style="font-size: 15px; color: var(--text);">Tất cả bài tập đã được xử lý hoàn tất!</strong>
         <p style="font-size: 14px; color: var(--text-3); margin-top: 2px;">Không có bài nộp nào đang chờ duyệt hoặc bị trễ hạn.</p>
       </div>
@@ -1583,8 +1597,8 @@ function renderDashHero() {
     return;
   }
 
-  // The bounded card body scrolls through the entire action queue.
-  const visibleItems = urgentItems;
+  // Render at most 6 action cards (Task 1b)
+  const visibleItems = urgentItems.slice(0, 6);
   let cardsHtml = visibleItems.map(item => {
     const { task, student, badge, badgeClass, timeStr, sub, file } = item;
     const isSelected = selectedDashTaskId === task.id;
@@ -1609,11 +1623,7 @@ function renderDashHero() {
             <div class="action-card-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--info);background:var(--info-bg);">
               ${getFileIcon(file.name, file.type)}
             </div>
-          ` : `
-            <div class="action-card-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-3);">
-              ${UI_ICONS.book}
-            </div>
-          `}
+          ` : ''}
           <div class="action-card-meta">
             <div class="action-card-task-title">${escHtml(task.title)}</div>
             <div class="action-card-time">${timeStr}</div>
@@ -1628,6 +1638,20 @@ function renderDashHero() {
       </div>
     `;
   }).join('');
+
+  // If more than 6 exist, add "Xem tất cả (N)" button card (Task 1b)
+  if (urgentItems.length > 6) {
+    cardsHtml += `
+      <div class="action-card action-card-view-all" onclick="navigateToTasksWithFilter('submitted')">
+        <div class="action-card-view-all-inner">
+          <div class="action-card-view-all-text">
+            <strong>Xem tất cả (${urgentItems.length})</strong>
+            <span>Chuyển sang danh sách bài tập →</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   cardsContainer.innerHTML = cardsHtml;
 }
@@ -1646,13 +1670,6 @@ function renderDashMetrics() {
   const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
   const container = document.getElementById('dash-metrics-strip');
   if (!container) return;
-  const balance = feeTotals().balance;
-  const fullMoney = formatVND(balance);
-  const compactMoney = new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 0 }).format(balance);
-  const moneyMarkup = fullMoney.length > 9
-    ? `<span title="${fullMoney}" aria-label="${fullMoney}">${compactMoney}</span>`
-    : `<span class="metric-money-full">${fullMoney}</span><span class="metric-money-compact" title="${fullMoney}" aria-label="${fullMoney}">${compactMoney}</span>`;
-
 
   if (isT) {
     const totalStudents = state.students.length;
@@ -1679,14 +1696,14 @@ function renderDashMetrics() {
         <div class="metric-label">Đã duyệt</div>
       </div>
       <div class="metric-tile clickable" onclick="navigateTo('streaks')">
-        <div class="metric-val">${maxStreak}</div>
-        <div class="metric-label">Chuỗi dài nhất (ngày)</div>
+        <div class="metric-val">${maxStreak} ngày ↑</div>
+        <div class="metric-label">Top Streak</div>
       </div>
       <div class="metric-tile clickable" onclick="navigateTo('tuition')">
         <div class="metric-val">
-          ${moneyMarkup}
+          ${formatVND(feeTotals().balance)}
         </div>
-        <div class="metric-label">Học phí còn lại</div>
+        <div class="metric-label">Học phí & Quỹ →</div>
       </div>
     `;
   } else {
@@ -1698,7 +1715,7 @@ function renderDashMetrics() {
 
     container.innerHTML = `
       <div class="metric-tile clickable" onclick="navigateTo('streaks')">
-        <div class="metric-val">${streak}</div>
+        <div class="metric-val">${streak} ngày ↑</div>
         <div class="metric-label">Chuỗi học tập</div>
       </div>
       <div class="metric-tile">
@@ -1714,12 +1731,12 @@ function renderDashMetrics() {
         <div class="metric-label">Đã được duyệt</div>
       </div>
       <div class="metric-tile clickable" onclick="navigateTo('tuition')">
-        <div class="metric-val">${moneyMarkup}</div>
-        <div class="metric-label">Học phí còn lại</div>
+        <div class="metric-val">${formatVND(feeTotals().balance)}</div>
+        <div class="metric-label">Học phí & Quỹ →</div>
       </div>
       <div class="metric-tile">
-        <div class="metric-val">${myTasks.filter(t => getTaskStatus(t) === 'pending').length}</div>
-        <div class="metric-label">Cần hoàn thành</div>
+        <div class="metric-val">${pendingReview ? 'Chờ duyệt' : 'Đã làm xong'}</div>
+        <div class="metric-label">Trạng thái bài</div>
       </div>
     `;
   }
@@ -1806,8 +1823,7 @@ function renderDashTable() {
         Không tìm thấy bài tập nào theo bộ lọc hiện tại.
       </div>
     `;
-    selectedDashTaskId = null;
-    renderDashDetail(null);
+    if (!selectedDashTaskId) renderDashDetail(null);
     return;
   }
 
@@ -1853,7 +1869,7 @@ function renderDashTable() {
           <div class="col-student-av" style="background:${student ? (student.color || 'var(--ink)') : 'var(--text-3)'}">
             ${student ? initials(student.name) : '?'}
           </div>
-          <span title="${student ? escHtml(student.name) : ''}">${student ? escHtml(student.name) : '—'}</span>
+          <span>${student ? escHtml(student.name) : '—'}</span>
         </div>
         <div class="col-due ${overdue ? 'overdue' : ''}">
           ${dueStr}
@@ -1927,7 +1943,7 @@ function renderDashDetail(taskId) {
     if (titleEl) titleEl.textContent = 'Chọn một bài tập';
     container.innerHTML = `
       <div class="detail-empty-state">
-
+        <div style="font-size: 28px;">≡</div>
         <strong style="font-size: 15px; color: var(--text);">Chưa chọn bài tập</strong>
         <p style="font-size: 14px; color: var(--text-3); max-width: 220px;">
           Bấm vào bất kỳ bài tập nào ở danh sách bên trái để xem ảnh nộp, hướng dẫn và chấm điểm.
@@ -2190,8 +2206,6 @@ function applyTaskFilters() {
   const currentStudentId = state.currentUser ? state.currentUser.studentId : null;
   const studentFilter = isT ? document.getElementById('task-filter-student').value : currentStudentId;
   const statusFilter = document.getElementById('task-filter-status').value;
-  const dueFilter = document.getElementById('task-filter-date')?.value || '';
-  const searchQuery = (document.getElementById('task-search')?.value || '').trim().toLocaleLowerCase('vi');
 
   let filtered = [...state.tasks];
   if (!isT) {
@@ -2203,12 +2217,6 @@ function applyTaskFilters() {
   if (statusFilter !== 'all') {
     filtered = filtered.filter(t => getTaskStatus(t) === statusFilter);
   }
-
-  if (dueFilter) filtered = filtered.filter(task => (task.isRecurring ? getVNDate() : (task.dueDate || '').slice(0, 10)) === dueFilter);
-  if (searchQuery) filtered = filtered.filter(task => {
-    const student = state.students.find(student => student.id === task.studentId);
-    return [task.title, task.description, task.desc, student?.name].filter(Boolean).join(' ').toLocaleLowerCase('vi').includes(searchQuery);
-  });
 
   const list = document.getElementById('tasks-list');
   if (!filtered.length) {
@@ -2355,9 +2363,9 @@ function getStatusLabel(task) {
   const labels = {
     approved: 'ĐÃ DUYỆT',
     submitted: 'CHỜ DUYỆT',
-    draft:    'ĐÃ NỘP ẢNH',
-    pending:  'ĐANG LÀM',
-    overdue:  'QUÁ HẠN',
+    draft: 'ĐÃ NỘP ẢNH',
+    pending: 'ĐANG LÀM',
+    overdue: 'QUÁ HẠN',
   };
   const recurBadge = task.isRecurring ? `<span class="badge-recurring">HẰNG NGÀY</span> ` : '';
   return `${recurBadge}<span class="status-chip chip-${s}">${labels[s] || s}</span>`;
@@ -2760,7 +2768,7 @@ function openStudentDetail(studentId) {
     <div>
       <strong>${escHtml(student.name)}</strong>
       <div style="color:var(--text-2);font-size:14px;display:flex;align-items:center;gap:4px;margin-top:2px;">
-        ${escHtml(student.grade || '')} • <span style="display:inline-flex;align-items:center;gap:3px;color:var(--accent-text);font-weight:700;">${UI_ICONS.fire} ${streak} Day Streak</span>
+        ${escHtml(student.grade || '')} • <span style="display:inline-flex;align-items:center;gap:3px;color:var(--accent);font-weight:700;">${UI_ICONS.fire} ${streak} Day Streak</span>
       </div>
     </div>
   `;
@@ -3984,7 +3992,7 @@ function init() {
   // Sidebar date
   const dateEl = document.getElementById('sidebar-date');
   if (dateEl) {
-    dateEl.textContent = new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' });
+    dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   }
 
   // Mobile drawer navigation toggle
@@ -4014,9 +4022,6 @@ function init() {
       navigateTo(btn.dataset.view);
     });
   });
-
-  document.getElementById('task-filter-date')?.addEventListener('change', () => { tasksViewLimit = 10; applyTaskFilters(); });
-  document.getElementById('task-search')?.addEventListener('input', () => { tasksViewLimit = 10; applyTaskFilters(); });
 
   // Command Palette trigger & keyboard shortcuts
   const cmdTriggerBtn = document.getElementById('cmd-trigger-btn');
